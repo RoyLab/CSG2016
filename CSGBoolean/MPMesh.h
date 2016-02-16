@@ -3,6 +3,7 @@
 #include "csgdefs.h"
 #include <OpenMesh\Core\Mesh\PolyMesh_ArrayKernelT.hh>
 #include <include_fade25d\Fade_2D.h>
+#include <CGAL\bounding_box.h>
 
 namespace CSG
 {
@@ -10,11 +11,22 @@ namespace CSG
     struct ISectTriangle;
     class FeitoISectZone;
 
+    class MyPoint : public OpenMesh::Vec3d
+    {
+
+    };
+
+    class MyVector : public OpenMesh::Vec3d
+    {
+
+    };
+
 
     struct MyTraits : OpenMesh::DefaultTraits
     {
-        typedef OpenMesh::Vec3d Point;
-        typedef OpenMesh::Vec3d Normal;
+        //typedef OpenMesh::Vec3d Point;
+        typedef MyPoint Point;
+        typedef MyVector Normal;
 
         VertexAttributes(OpenMesh::Attributes::Color);
         FaceAttributes(OpenMesh::Attributes::Normal);
@@ -32,6 +44,11 @@ namespace CSG
     public:
         MPMesh(){}
         ~MPMesh(){}
+
+        void calcBbox()
+        {
+            m_bbox = CGAL::bounding_box(this->points(), vertices_end());
+        }
 
         int  ID;
         bool bInverse;

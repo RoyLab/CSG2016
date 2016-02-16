@@ -5,7 +5,7 @@
 
 namespace CSG
 {
-    class MPMesh;
+    class MyMesh;
 
     class MyAlgorithm
     {
@@ -13,17 +13,17 @@ namespace CSG
         MyAlgorithm(){}
         ~MyAlgorithm(){}
 
-        void solve(const std::string& expr, std::vector<MPMesh*>& meshList);
-        MPMesh* getResultMesh();
-        MPMesh* popResultMesh();
+        void solve(const std::string& expr, std::vector<MyMesh*>& meshList);
+        MyMesh* getResultMesh();
+        MyMesh* popResultMesh();
 
     private:
         void doIntersection();
-        void floodColoring(CSGTree<MPMesh>* pCsg, Octree* pOctree);
+        void floodColoring(CSGTree<MyMesh>* pCsg, Octree* pOctree);
 
     private:
         std::vector<Octree::Node*> octreeLeaves;
-        MPMesh* result = nullptr;
+        MyMesh* result = nullptr;
     };
 
 }

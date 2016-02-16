@@ -1,11 +1,11 @@
 #define CSG_EXPORTS
 #include "bool.h"
 #include "MyAlgorithm.h"
-#include "MPMesh.h"
+#include "MyMesh.h"
 #include <string>
 //#include "precompile.h"
 //#include <OpenMesh/Core/IO/MeshIO.hh>
-//#include "MPMesh.h"
+//#include "MyMesh.h"
 //#include <ctime>
 //#include <list>
 //#include "COctree.h"
@@ -34,7 +34,7 @@
 
 namespace CSG
 {
-    extern "C" CSG_API int loadMesh(std::vector<MPMesh*>& meshes, const std::vector<std::string>& names)
+    extern "C" CSG_API int loadMesh(std::vector<MyMesh*>& meshes, const std::vector<std::string>& names)
     {
         return 0;
     }
@@ -45,13 +45,16 @@ namespace CSG
         std::vector<std::string> names;
         std::string expr;
 
-        std::vector<MPMesh*> meshList;
+        std::vector<MyMesh*> meshList;
         loadMesh(meshList, names);
+
+        for (auto pMesh : meshList)
+            pMesh->update();
 
         MyAlgorithm *alg = new MyAlgorithm;
         alg->solve(expr, meshList);
 
-        MPMesh* res = alg->popResultMesh();
+        MyMesh* res = alg->popResultMesh();
         SAFE_DELETE(alg);
     }
 
@@ -119,10 +122,10 @@ namespace CSG
 //            auto iEnd = leaf->TriangleTable.end();
 //            decltype(iEnd) itr2;
 //            unsigned i, j, ni, nj;
-//            MPMesh *meshi, *meshj;
-//            MPMesh::FaceHandle tri1, tri2;
+//            MyMesh *meshi, *meshj;
+//            MyMesh::FaceHandle tri1, tri2;
 //            Vec3d *v0,*v1,*v2, nv,*u0,*u1,*u2,nu,start,end;
-//            MPMesh::FVIter fvItr;
+//            MyMesh::FVIter fvItr;
 //            int isISect;
 //            int startT(0), endT(0);
 //            ISectTriangle **si=nullptr, **sj=nullptr;
@@ -251,7 +254,7 @@ namespace CSG
 //    static GS::BaseMesh* BooleanOperation2(GS::CSGExprNode* input, HANDLE stdoutput, bool bd)
 //    {
 //        _output= stdoutput;
-//        MPMesh** arrMesh = NULL;
+//        MyMesh** arrMesh = NULL;
 //        result = new GS::BaseMesh;
 //        int nMesh = -1;
 //        StdOutput("Start:");
@@ -311,7 +314,7 @@ namespace CSG
 //
 //    extern "C" CSG_API void SnapModel(const GS::BaseMesh* mesh)
 //    {
-//        MPMesh *kk = ConvertToMPMeshChrome(mesh);
+//        MyMesh *kk = ConvertToMPMeshChrome(mesh);
 //        OpenMesh::IO::Options wopt;
 //        //wopt += OpenMesh::IO::Options::FaceNormal;
 //        wopt += OpenMesh::IO::Options::FaceColor;
@@ -341,8 +344,8 @@ namespace CSG
 //
 //    struct FacePair
 //    {
-//        MPMesh::FaceHandle seed, current;
-//        const MPMesh::FaceHandle& operator[](int index) const
+//        MyMesh::FaceHandle seed, current;
+//        const MyMesh::FaceHandle& operator[](int index) const
 //        {
 //            switch (index)
 //            {
@@ -354,7 +357,7 @@ namespace CSG
 //            }
 //        }
 //
-//        MPMesh::FaceHandle& operator[](int index)
+//        MyMesh::FaceHandle& operator[](int index)
 //        {
 //            switch (index)
 //            {
@@ -410,7 +413,7 @@ namespace CSG
 //    }
 //
 //
-//        static void AddTriangle(MPMesh* pMesh, MPMesh::FaceHandle face)
+//        static void AddTriangle(MyMesh* pMesh, MyMesh::FaceHandle face)
 //    {
 //#ifdef _DEBUG
 //        countd1 ++;
@@ -425,7 +428,7 @@ namespace CSG
 //        result->AddTriangle(v);
 //    }
 //
-//    static void AddTriangle(MPMesh* pMesh, MPMesh::FaceHandle face, GS::float4& color)
+//    static void AddTriangle(MyMesh* pMesh, MyMesh::FaceHandle face, GS::float4& color)
 //    {
 //#ifdef _DEBUG
 //        countd1 ++;
@@ -471,11 +474,11 @@ namespace CSG
 //#endif
 //        const int seeded = 4;
 //
-//        MPMesh *pMesh;
-//        std::queue<MPMesh::FaceHandle> faceQueue;
+//        MyMesh *pMesh;
+//        std::queue<MyMesh::FaceHandle> faceQueue;
 //        std::queue<SeedInfo> seedQueueList;
-//        MPMesh::FaceHandle curFace, relatedFace;
-//        MPMesh::FaceFaceIter ffItr;
+//        MyMesh::FaceHandle curFace, relatedFace;
+//        MyMesh::FaceFaceIter ffItr;
 //        Vec3d *v0, *v1, *v2;
 //        Relation *curRelationTable, curRelation;
 //        CSGTreeNode* curTree;

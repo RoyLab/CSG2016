@@ -1,6 +1,7 @@
 #include "COctree.h"
+#include "CGALext.h"
 //#include "precompile.h"
-//#include "MPMesh.h"
+//#include "MyMesh.h"
 //#include "isect.h"
 //#include "Plane.h"
 //#include "Box3.h"
@@ -8,92 +9,96 @@
 
 namespace CSG
 {
-    static const int MAX_TRIANGLE_COUNT = 30;
-    static const int MAX_LEVEL = 9;
+    int Octree::MAX_TRIANGLE_COUNT = 30;
+    int Octree::MAX_LEVEL = 9;
 
-    void Octree::build(const std::vector<MPMesh*>& meshList, std::vector<Node*>* leaves)
+    Octree::Node* Octree::createRootNode()
+    {
+        Node* root = new Node;
+        CGAL::Bbox_3 tmpBox;
+        for (size_t i = 0; i < m_nMesh; i++)
+        {
+            auto pcMesh = mp_meshes[i];
+            tmpBox += pcMesh->get_bbox();
+
+            for (auto fItr = pcMesh->facets_begin(); fItr != pcMesh->facets_end(); fItr++)
+            {
+                root->triCount++;
+                root->triTable[i].push_back(fItr);
+            }
+        }
+
+        root->bbox = myext::enlarge(tmpBox, 1e-4);
+        return root;
+    }
+
+    void Octree::build(const std::vector<MyMesh*>& meshList, std::vector<Node*>* leaves)
     {
         if (!meshList.size()) throw std::exception("mesh list size 0.");
 
         mp_meshes = meshList.data();
         m_nMesh = meshList.size();
 
-        mp_root = new Node;
-
-        CGAL::Bbox_3 bb;
-        for (size_t i = 0; i < m_nMesh; i++)
-        {
-            auto pcMesh = mp_meshes[i];
-            mp_root->bbox += pcMesh->get_bbox();
-
-            for (auto fItr = pcMesh->faces_begin(); fItr != pcMesh->faces_end(); fItr++)
-            {
-                mp_root->triCount++;
-                mp_root->triTable[i].push_back(fItr);
-            }
-        }
-
-        // make sure every triangle is inside the box.
-        mpRoot->BoundingBox.Enlarge(0.001);
-
-        // start recursion
-        BuildOctree(root, pOctree, 0);
-
-        return pOctree;
+        mp_root = createRootNode();
+        build(mp_root, 0);
     }
 
-    static void BuildOctree(OctreeNode* root, Octree<>* pOctree, int level)
+    void Octree::build(Node* root, size_t level)
     {
-        assert(root && pOctree);
+        assert(root);
 
-        if (root->TriangleTable.size() <= 1)
-            root->Type = NODE_SIMPLE;
-        else if (root->TriangleCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
+        if (root->triTable.size() <= 1)
         {
-            root->Type = NODE_COMPOUND;
+            root->type = NODE_SIMPLE;
+        }
+        else if (root->triCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
+        {
+            root->type = NODE_COMPOUND;
         }
         else
         {
-            if (root->TriangleTable.size() > 1)
-                root->Type = NODE_MIDSIDE;
-            else root->Type = NODE_SIMPLE;
+            if (root->triTable.size() > 1) root->type = NODE_MIDSIDE;
+            else root->type = NODE_SIMPLE;
 
-            root->Child = new OctreeNode[8];
+            root->pChildren = new Node[8];
 
-            Vec3d minOffset, maxOffset;
-            AABBmp &bbox = root->BoundingBox;
-            Vec3d step = bbox.Diagonal()*0.5;
+            Vector minOffset, maxOffset;
+            Bbox bbox = root->bbox;
+            Vector step = (bbox.max() - bbox.min()) * 0.5;
     
             for (unsigned i = 0; i < 8 ; i++)
             {
-                auto pChild = &root->Child[i];
+                auto pChild = &root->pChildren[i];
 
-                maxOffset[2] = i & 1 ?  0 : -step[2]; 
-                maxOffset[1] = i & 2 ?  0 : -step[1];
-                maxOffset[0] = i & 4 ?  0 : -step[0];
-                minOffset[2] = i & 1 ?  step[2] : 0; 
-                minOffset[1] = i & 2 ?  step[1] : 0;
-                minOffset[0] = i & 4 ?  step[0] : 0;
-                pChild->BoundingBox.Set(bbox.Min() + minOffset, 
-                    bbox.Max()+ maxOffset);
+                maxOffset = Vector(i & 4 ? 0 : -step[0],
+                    i & 2 ? 0 : -step[1],
+                    i & 1 ? 0 : -step[2]);
 
-                pChild->Parent = root;
+                minOffset = Vector(i & 4 ? step[0] : 0,
+                    i & 2 ? step[1] : 0,
+                    i & 1 ? step[2] : 0);
+
+                pChild->bbox = Bbox(bbox.min() + minOffset, 
+                    bbox.max() + maxOffset);
+
+                pChild->pParent = root;
             }
-            Vec3d *v0, *v1, *v2;
 
-            for (auto &triTab: root->TriangleTable)
+            for (auto &triTab: root->triTable)
             {
-                auto &triangles = triTab.second;
-                auto pMesh = pOctree->pMesh[triTab.first];
+                MyMesh* pMesh = mp_meshes[triTab.first];
+                std::vector<MyMesh::Face_handle> &triangles = triTab.second;
 
-                const unsigned tn = triangles.size();
-                int count;
-                MPMesh::FaceHandle fhandle;
-                MPMesh::FaceVertexIter fvItr;
-                for (unsigned i = 0; i < tn; i++)
+                //int count;
+
+                //MyMesh::FaceHandle fhandle;
+                //MyMesh::FaceVertexIter fvItr;
+                const size_t tn = triangles.size();
+                for (size_t i = 0; i < tn; i++)
                 {
                     // intersection test, can be optimized!!!
-                    fhandle = triangles[i];
+                    auto fhandle = triangles[i];
+                    fhandle->triangle;
                     count = 0;
 
                     for (unsigned j = 0; j < 8; j++)
@@ -110,14 +115,14 @@ namespace CSG
                         if (aabb.IsInBox_LORC(*v2)) count++;
                         if (count > 0)
                         {
-                            root->Child[j].TriangleTable[triTab.first].push_back(triangles[i]);
-                            root->Child[j].TriangleCount++;
+                            root->Child[j].triTable[triTab.first].push_back(triangles[i]);
+                            root->Child[j].triCount++;
                             if (count == 3) break;
                         }
                         else if(TriangleAABBIntersectTest(*v0, *v1, *v2, aabb))
                         {
-                            root->Child[j].TriangleTable[triTab.first].push_back(triangles[i]);
-                            root->Child[j].TriangleCount++;
+                            root->Child[j].triTable[triTab.first].push_back(triangles[i]);
+                            root->Child[j].triCount++;
                         }
                     }
                 }
@@ -125,16 +130,16 @@ namespace CSG
 
             for (unsigned i = 0; i < 8; i++)
             {
-                for (auto &itr: root->TriangleTable)
+                for (auto &itr: root->triTable)
                 {
-                    auto &childTab = root->Child[i].TriangleTable;
+                    auto &childTab = root->Child[i].triTable;
                     if (childTab.find(itr.first) == childTab.end())
                         root->Child[i].DiffMeshIndex.emplace_back(itr.first);
                 }
 
                 BuildOctree(root->Child+i, pOctree, level+1);
             }
-            root->TriangleTable.clear(); // can it?
+            root->triTable.clear(); // can it?
         }
     }
 
@@ -142,17 +147,17 @@ namespace CSG
     {
         assert(root && pOctree);
         
-        if (root->TriangleCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
+        if (root->triCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
         {
-                if (root->TriangleTable.size() <= 1)
-                root->Type = NODE_SIMPLE;
-            else root->Type = NODE_COMPOUND;
+                if (root->triTable.size() <= 1)
+                root->type = NODE_SIMPLE;
+            else root->type = NODE_COMPOUND;
         }
         else
         {
-            if (root->TriangleTable.size() > 1)
-                root->Type = NODE_MIDSIDE;
-            else root->Type = NODE_SIMPLE;
+            if (root->triTable.size() > 1)
+                root->type = NODE_MIDSIDE;
+            else root->type = NODE_SIMPLE;
 
             root->Child = new OctreeNode[8];
 
@@ -177,15 +182,15 @@ namespace CSG
             }
             Vec3d *v0, *v1, *v2;
 
-            for (auto &triTab: root->TriangleTable)
+            for (auto &triTab: root->triTable)
             {
                 auto &triangles = triTab.second;
                 auto pMesh = pOctree->pMesh[triTab.first];
 
                 const unsigned tn = triangles.size();
                 int count;
-                MPMesh::FaceHandle fhandle;
-                MPMesh::FaceVertexIter fvItr;
+                MyMesh::FaceHandle fhandle;
+                MyMesh::FaceVertexIter fvItr;
                 for (unsigned i = 0; i < tn; i++)
                 {
                     // intersection test, can be optimized!!!
@@ -206,14 +211,14 @@ namespace CSG
                         if (aabb.IsInBox_LORC(*v2)) count++;
                         if (count > 0)
                         {
-                            root->Child[j].TriangleTable[triTab.first].push_back(triangles[i]);
-                            root->Child[j].TriangleCount++;
+                            root->Child[j].triTable[triTab.first].push_back(triangles[i]);
+                            root->Child[j].triCount++;
                             if (count == 3) break;
                         }
                         else if(TriangleAABBIntersectTest(*v0, *v1, *v2, aabb))
                         {
-                            root->Child[j].TriangleTable[triTab.first].push_back(triangles[i]);
-                            root->Child[j].TriangleCount++;
+                            root->Child[j].triTable[triTab.first].push_back(triangles[i]);
+                            root->Child[j].triCount++;
                         }
                     }
                 }
@@ -221,16 +226,16 @@ namespace CSG
 
             for (unsigned i = 0; i < 8; i++)
             {
-                for (auto &itr: root->TriangleTable)
+                for (auto &itr: root->triTable)
                 {
-                    auto &childTab = root->Child[i].TriangleTable;
+                    auto &childTab = root->Child[i].triTable;
                     if (childTab.find(itr.first) == childTab.end())
                         root->Child[i].DiffMeshIndex.emplace_back(itr.first);
                 }
 
                 BuildOctree2(root->Child+i, pOctree, level+1);
             }
-            root->TriangleTable.clear(); // can it?
+            root->triTable.clear(); // can it?
         }
     }
 
@@ -254,12 +259,12 @@ namespace CSG
 
             for (auto fItr = pMesh->faces_begin(); fItr != pMesh->faces_end(); fItr++)
             {
-                root->TriangleCount++;
-                root->TriangleTable[i].push_back(*fItr);
+                root->triCount++;
+                root->triTable[i].push_back(*fItr);
             }
         }
 
-        if (!root->TriangleTable.size())
+        if (!root->triTable.size())
         {
             delete pOctree;
             return NULL;
@@ -274,7 +279,7 @@ namespace CSG
         return pOctree;
     }
 
-    Octree<>* BuildOctree(MPMesh** meshList, unsigned num)
+    Octree<>* BuildOctree(MyMesh** meshList, unsigned num)
     {
         if (!num) return NULL;
 
@@ -286,7 +291,7 @@ namespace CSG
         root = new OctreeNode;
         
         root->BoundingBox.Clear();
-        MPMesh *pMesh;
+        MyMesh *pMesh;
         for (unsigned i = 0; i < num; i++)
         {
             pMesh = meshList[i];
@@ -294,12 +299,12 @@ namespace CSG
 
             for (auto fItr = pMesh->faces_begin(); fItr != pMesh->faces_end(); fItr++)
             {
-                root->TriangleCount++;
-                root->TriangleTable[i].push_back(*fItr);
+                root->triCount++;
+                root->triTable[i].push_back(*fItr);
             }
         }
 
-        if (!root->TriangleTable.size())
+        if (!root->triTable.size())
         {
             delete pOctree;
             return NULL;
@@ -395,7 +400,7 @@ namespace CSG
     }
 
 
-    static int RayFaceTest(RayCastInfo* rayInfo, MPMesh* pMesh, MPMesh::FaceHandle triHandle)
+    static int RayFaceTest(RayCastInfo* rayInfo, MyMesh* pMesh, MyMesh::FaceHandle triHandle)
     {
         Vec3d normal = pMesh->normal(triHandle);
         auto fvItr = pMesh->fv_begin(triHandle);
@@ -428,17 +433,17 @@ namespace CSG
         return Inte;
     }
 
-    static void RayCastThroughNode(OctreeNode* pNode, MPMesh* pMesh, RayCastInfo* rayInfo, unsigned Id)
+    static void RayCastThroughNode(OctreeNode* pNode, MyMesh* pMesh, RayCastInfo* rayInfo, unsigned Id)
     {
         if (pNode == NULL) return;
 
-        auto trianglesItr = pNode->TriangleTable.find(pMesh->ID);
-        if (trianglesItr == pNode->TriangleTable.end()) return;
+        auto trianglesItr = pNode->triTable.find(pMesh->ID);
+        if (trianglesItr == pNode->triTable.end()) return;
 
         auto &triangles = trianglesItr->second;
         unsigned n = triangles.size();
 
-        MPMesh::FaceHandle fhandle;
+        MyMesh::FaceHandle fhandle;
         for (unsigned i = 0 ; i < n; i++)
         {
             fhandle = triangles[i];
@@ -460,7 +465,7 @@ namespace CSG
     }
 
     static void ProcessSubNode(double tx0, double ty0, double tz0, double tx1, double ty1, double tz1, 
-                               OctreeNode* pNode, int& a, MPMesh* pMesh, RayCastInfo* rayInfo, unsigned Id)
+                               OctreeNode* pNode, int& a, MyMesh* pMesh, RayCastInfo* rayInfo, unsigned Id)
     {
         if (pNode == nullptr) return;
 
@@ -468,7 +473,7 @@ namespace CSG
         int currNode;
         if(tx1 < 0 || ty1 < 0 || tz1 < 0) 
             return; 
-        if (pNode->Type != NODE_MIDSIDE)
+        if (pNode->type != NODE_MIDSIDE)
         {
             RayCastThroughNode(pNode, pMesh, rayInfo, Id);
             return ; 
@@ -520,7 +525,7 @@ namespace CSG
 
     }
 
-    static void RayTraverse(Octree<>* pOctree,  MPMesh* pMesh, RayCastInfo* rayInfo)
+    static void RayTraverse(Octree<>* pOctree,  MyMesh* pMesh, RayCastInfo* rayInfo)
     {
         assert(pOctree);
         AABBmp &RootBBox = pOctree->Root->BoundingBox;
@@ -597,7 +602,7 @@ namespace CSG
     }
 
     OctreeNode::OctreeNode():
-        Child(0), Parent(0), TriangleCount(0)
+        Child(0), Parent(0), triCount(0)
         , pRelationData(nullptr)
     {
     }
@@ -606,7 +611,7 @@ namespace CSG
     {
         if (pRelationData)
         {
-            //if (Type == NODE_SIMPLE)
+            //if (type == NODE_SIMPLE)
             //    delete (SimpleData*)pRelationData;
             //else delete (ComplexData*)pRelationData;
         }

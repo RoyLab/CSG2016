@@ -1,7 +1,9 @@
 #pragma once
 #include "csg.h"
 #include "csgdefs.h"
-#include "MPMesh.h"
+#include "macro_util.h"
+#include "MyMesh.h"
+
 #include <vector>
 #include <map>
 
@@ -16,56 +18,67 @@ namespace CSG
         NODE_COMPOUND
     };
 
-    struct DiffMeshInfo
-    {
-        unsigned ID;
-        Relation Rela;
+    //struct DiffMeshInfo
+    //{
+    //    unsigned ID;
+    //    Relation Rela;
 
-        DiffMeshInfo(
-            unsigned i, 
-            Relation rel = REL_UNKNOWN
-            ): ID(i), Rela(rel)
-        {}
-    };
+    //    DiffMeshInfo(
+    //        unsigned i, 
+    //        Relation rel = REL_UNKNOWN
+    //        ): ID(i), Rela(rel)
+    //    {}
+    //};
 
-    typedef std::map<size_t, std::vector<MPMesh::FaceHandle>> TriTableT;
 
     class Octree
     {
+        typedef CGAL::Point_3<K> Point;
+        typedef CGAL::Vector_3<K> Vector;
+        typedef Cube_3 Bbox;
     public:
         struct Node
         {
-            Bbox_3 bbox;
-            NodeType type;
+            typedef std::map<size_t, std::vector<MyMesh::Face_handle>> TriTableT;
 
-            Node *pChildren, *pParent;
+            Bbox        bbox;
+            NodeType    type;
 
-            //std::vector<DiffMeshInfo> DiffMeshIndex;
+            Node        *pChildren = nullptr,
+                        *pParent = nullptr;
+
             TriTableT   triTable;
             size_t      triCount;
 
-            //void *pRelationData;
+            virtual ~Node() { SAFE_DELETE_ARRAY(pChildren); }
 
-            Node();
-            ~Node();
+            //std::vector<DiffMeshInfo> DiffMeshIndex;
+            //void *pRelationData;
         };
 
     public:
         Octree(){}
         ~Octree(){ release(); }
 
-        void build(const std::vector<MPMesh*>& meshList, std::vector<Node*>* leaves = nullptr);
+        void build(const std::vector<MyMesh*>& meshList, std::vector<Node*>* leaves = nullptr);
         void release();
 
     private:
+        Node* createRootNode();
+        void build(Node* root, size_t level);
+
+    private:
         Node*               mp_root;
-        MPMesh* const*      mp_meshes;
+        MyMesh* const*      mp_meshes;
         unsigned            m_nMesh;
+
+        static int MAX_TRIANGLE_COUNT;
+        static int MAX_LEVEL;
     };
 
 
-    //typedef Octree<MPMesh> MyOctree;
-    //Octree<>* BuildOctree(MPMesh** meshList, unsigned nMesh);
+    //typedef Octree<MyMesh> MyOctree;
+    //Octree<>* BuildOctree(MyMesh** meshList, unsigned nMesh);
     //Relation PolyhedralInclusionTest(Vec3d& point, Octree<>* pOctree, unsigned meshId, bool = false);
 
     //inline bool IsLeaf(OctreeNode* node) {return !node->Child;}

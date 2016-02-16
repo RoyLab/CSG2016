@@ -1,18 +1,18 @@
 #include "MyAlgorithm.h"
 #include "csg.h"
 #include "COctree.h"
-#include "MPMesh.h"
+#include "MyMesh.h"
 
 
 namespace CSG
 {
-    void MyAlgorithm::solve(const std::string& expr, std::vector<MPMesh*>& meshes)
+    void MyAlgorithm::solve(const std::string& expr, std::vector<MyMesh*>& meshes)
     {
-        std::vector<MPMesh*> meshList;
-        for (MPMesh* pMesh : meshes)
-            meshList.push_back(new MPMesh(*pMesh));
+        std::vector<MyMesh*> meshList;
+        for (MyMesh* pMesh : meshes)
+            meshList.push_back(new MyMesh(*pMesh));
 
-        CSGTree<MPMesh>* pCsg = new CSGTree<MPMesh>;
+        CSGTree<MyMesh>* pCsg = new CSGTree<MyMesh>;
         pCsg->createCSGTreeFromExpr(expr, meshList.data(), meshList.size());
         pCsg->makePositiveAndLeftHeavy();
 
@@ -24,7 +24,7 @@ namespace CSG
 
         SAFE_DELETE(pCsg);
         SAFE_DELETE(pOctree);
-        for (MPMesh* pMesh : meshList)
+        for (MyMesh* pMesh : meshList)
             delete pMesh;
     }
 }

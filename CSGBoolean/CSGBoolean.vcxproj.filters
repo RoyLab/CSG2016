@@ -65,5 +65,11 @@
     <ClInclude Include="csgdefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MyMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CGALext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

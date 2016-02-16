@@ -137,10 +137,12 @@
   <ItemGroup>
     <ClInclude Include="bool.h" />
     <ClInclude Include="BSP2D.h" />
+    <ClInclude Include="CGALext.h" />
     <ClInclude Include="COctree.h" />
     <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="CMesh.h" />
     <ClInclude Include="csgdefs.h" />
+    <ClInclude Include="MyMesh.h" />
     <ClInclude Include="TriangleMesh.h" />
     <ClInclude Include="isect.h" />
     <ClInclude Include="IsectTriangle.h" />

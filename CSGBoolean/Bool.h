@@ -19,8 +19,8 @@ namespace CSG
     //extern "C" CSG_API void SnapModel(const GS::BaseMesh* mesh);
  //   extern "C" CSG_API void ReleaseMPMesh2(MPMesh2*& ptr);
 
-    class MPMesh;
+    class MyMesh;
 
-    extern "C" CSG_API int loadMesh(std::vector<MPMesh*>& meshes, const std::vector<std::string>& names);
+    extern "C" CSG_API int loadMesh(std::vector<MyMesh*>& meshes, const std::vector<std::string>& names);
 }
 
