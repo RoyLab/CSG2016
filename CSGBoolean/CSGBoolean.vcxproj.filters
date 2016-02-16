@@ -15,44 +15,20 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Bool.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CMesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="COctree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BinaryTree.cpp">
+    <ClCompile Include="MyAlgorithm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MPMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="isect.cpp">
+    <ClCompile Include="bool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IsectTriangle.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Parsingface.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BSP2D.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MyAlgorithm.cpp">
+    <ClCompile Include="COctree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AABB.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Bool.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -71,9 +47,6 @@
     <ClInclude Include="MPMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AABBmp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="IsectTriangle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -83,7 +56,13 @@
     <ClInclude Include="MyAlgorithm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HalfedgeMesh.h">
+    <ClInclude Include="TriangleMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="csgdefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

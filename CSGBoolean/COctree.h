@@ -1,16 +1,13 @@
 #pragma once
+#include "csg.h"
+#include "csgdefs.h"
+#include "MPMesh.h"
 #include <vector>
 #include <map>
-#include "MPMesh.h"
 
 
 namespace CSG
 {
-	struct CSGTree;
-    struct MPMesh;
-
-	//extern const char POINT_INOUT_TEST_STRING[16];
-
     enum NodeType
     {
         NODE_UNKNOWN = 0,
@@ -19,79 +16,59 @@ namespace CSG
         NODE_COMPOUND
     };
 
-    enum Relation
-    {
-        REL_UNKNOWN = 0,
-        REL_INSIDE = 1,
-        REL_OUTSIDE = 2,
-        REL_SAME = 4,
-        REL_OPPOSITE = 8,
-		REL_NOT_AVAILABLE = -1 // (0xffffffff)
-    };
-
     struct DiffMeshInfo
     {
         unsigned ID;
         Relation Rela;
 
         DiffMeshInfo(
-			unsigned i, 
-			Relation rel = REL_UNKNOWN
-			): ID(i), Rela(rel)
-		{}
+            unsigned i, 
+            Relation rel = REL_UNKNOWN
+            ): ID(i), Rela(rel)
+        {}
     };
 
-	//typedef bool SimpleData;
-	//typedef CSGTree ComplexData;
+    typedef std::map<size_t, std::vector<MPMesh::FaceHandle>> TriTableT;
 
-	typedef std::map<unsigned, std::vector<MPMeshKernel::FaceHandle>> TriTableT;
-
-    struct OctreeNode
+    class Octree
     {
-        AABBmp BoundingBox;
-        NodeType Type;
+    public:
+        struct Node
+        {
+            Bbox_3 bbox;
+            NodeType type;
 
-        OctreeNode *Child, *Parent;
+            Node *pChildren, *pParent;
 
-        std::vector<DiffMeshInfo> DiffMeshIndex;
-        TriTableT	TriangleTable;
-        unsigned		TriangleCount;
+            //std::vector<DiffMeshInfo> DiffMeshIndex;
+            TriTableT   triTable;
+            size_t      triCount;
 
-		void *pRelationData;
+            //void *pRelationData;
 
-        OctreeNode();
-		~OctreeNode();
+            Node();
+            ~Node();
+        };
+
+    public:
+        Octree(){}
+        ~Octree(){ release(); }
+
+        void build(const std::vector<MPMesh*>& meshList, std::vector<Node*>* leaves = nullptr);
+        void release();
+
+    private:
+        Node*               mp_root;
+        MPMesh* const*      mp_meshes;
+        unsigned            m_nMesh;
     };
 
 
+    //typedef Octree<MPMesh> MyOctree;
+    //Octree<>* BuildOctree(MPMesh** meshList, unsigned nMesh);
+    //Relation PolyhedralInclusionTest(Vec3d& point, Octree<>* pOctree, unsigned meshId, bool = false);
 
-    //struct CarvedInfo
-    //{
-    //    GS::Surface<double>* Surface;
-    //    GS::ListOfvertices Triangles;
-
-    //    CarvedInfo():Surface(0){}
-    //};
-
-    //typedef std::vector<std::map<unsigned, CarvedInfo>> TriangleRecord; // may be better as a vector
-
-    template <class Mesh = MPMesh>
-    struct Octree
-    {
-        OctreeNode *Root;
-        
-        Mesh**		pMesh;
-        unsigned		nMesh;
-
-		Octree();
-		~Octree();
-    };
-
-    Octree<MPMesh2>* BuildOctree2(MPMesh2** meshList, unsigned nMesh);
-    Octree<>* BuildOctree(MPMesh** meshList, unsigned nMesh);
-    Relation PolyhedralInclusionTest(Vec3d& point, Octree<>* pOctree, unsigned meshId, bool = false);
-
-    inline bool IsLeaf(OctreeNode* node) {return !node->Child;}
+    //inline bool IsLeaf(OctreeNode* node) {return !node->Child;}
 
 }// namespace CSG
 

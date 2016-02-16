@@ -37,7 +37,7 @@ namespace CSG
         AABB mAABB;
         int ID;  // from Zero to N
         GS::BaseMesh* pOrigin;
-		bool bInverse;
+        bool bInverse;
     };
 
     GS::BaseMesh* ConverteToBaseMesh(GS::ListOfvertices &vertex);
