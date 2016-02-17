@@ -1,5 +1,6 @@
 #pragma once
 #include <CGAL\Bbox_3.h>
+#include <CGAL\Iso_cuboid_3.h>
 
 
 namespace myext
@@ -14,4 +15,13 @@ namespace myext
             bbox.zmax() - factor
             );
     }
+
+    template <class _R>
+    bool is_inside_box(const CGAL::Iso_cuboid_3<_R>& boxBig, const CGAL::Iso_cuboid_3<_R>& boxSmall)
+    {
+        return (boxBig.has_on_bounded_side(boxSmall.min()) &&
+            boxBig.has_on_bounded_side(boxSmall.max()));
+    }
+
+
 }

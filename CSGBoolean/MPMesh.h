@@ -47,7 +47,7 @@ namespace CSG
 
         void calcBbox()
         {
-            m_bbox = CGAL::bounding_box(this->points(), vertices_end());
+            m_bbox = CGAL::bounding_box(vertices_begin(), vertices_end());
         }
 
         int  ID;

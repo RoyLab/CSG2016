@@ -34,4 +34,19 @@ namespace myext
         tolower(b, b1);
         return std::strcmp(a1.c_str(), b1.c_str());
     }
+
+#define ADD_SUFFIX_IF_NECESSARY(ch, sf, str)\
+    sz = strlen(sf);\
+    pch = strstr(ch, sf);\
+    if (!pch || !strcmp(pch, sf)) {str = ch; str += sf;}
+
+
+#define ADD_SUFFIX_IF_NECESSARYW(ch, sf, str)\
+    sz = wcslen(sf);\
+    pch = wcsstr(ch, sf);\
+    if (!pch || !wcscmp(pch, sf)) {str = ch; str += sf;}
+
+
+#define UNIMPLEMENTED_METHOD_STR "This is an unimplemented method. "
+
 }

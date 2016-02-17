@@ -131,7 +131,6 @@
   <ItemGroup>
     <ClCompile Include="bool.cpp" />
     <ClCompile Include="COctree.cpp" />
-    <ClCompile Include="MPMesh.cpp" />
     <ClCompile Include="MyAlgorithm.cpp" />
   </ItemGroup>
   <ItemGroup>

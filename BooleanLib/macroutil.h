@@ -70,13 +70,13 @@ mp_##__name__ = _##__name__##_; \
 #ifndef STATIC_PROPERTY
 #define STATIC_PROPERTY(__type__,__name__) \
 private: \
-static __type__ ms_##__name__; \
+static __type__ __name__; \
 public: \
 static __type__ & get_##__name__(){ \
-return ms_##__name__; \
+return __name__; \
 } \
 static void set_##__name__##(const __type__ & _##__name__##_){ \
-ms_##__name__ = _##__name__##_; \
+__name__ = _##__name__##_; \
 }
 #endif
 
@@ -84,27 +84,12 @@ ms_##__name__ = _##__name__##_; \
 #ifndef STATIC_PROPERTY_POINTER
 #define STATIC_PROPERTY_POINTER(__type__,__name__) \
 private: \
-static __type__ * msp_##__name__; \
+static __type__ * __name__; \
 public: \
 static __type__ * get_##__name__(){ \
-return msp_##__name__; \
+return __name__; \
 } \
 static void set_##__name__##(const __type__ * _##__name__##_){ \
-msp_##__name__ = _##__name__##_; \
+__name__ = _##__name__##_; \
 }
 #endif
-
-
-#define ADD_SUFFIX_IF_NECESSARY(ch, sf, str)\
-    sz = strlen(sf);\
-    pch = strstr(ch, sf);\
-    if (!pch || !strcmp(pch, sf)) {str = ch; str += sf;}
-
-
-#define ADD_SUFFIX_IF_NECESSARYW(ch, sf, str)\
-    sz = wcslen(sf);\
-    pch = wcsstr(ch, sf);\
-    if (!pch || !wcscmp(pch, sf)) {str = ch; str += sf;}
-
-
-#define UNIMPLEMENTED_METHOD_STR "This is an unimplemented method. "

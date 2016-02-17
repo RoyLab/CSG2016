@@ -1,9 +1,12 @@
 #pragma once
-#include "macro_util.h"
+#include "macroutil.h"
 #include "csgdefs.h"
 
 #include <CGAL\Polyhedron_3.h>
 #include <CGAL\Triangle_3.h>
+#include <CGAL/HalfedgeDS_vertex_max_base_with_id.h>
+#include <CGAL/HalfedgeDS_halfedge_max_base_with_id.h>
+#include <CGAL/HalfedgeDS_face_max_base_with_id.h>
 
 // for implementation
 #include <CGAL\bounding_box.h>
@@ -13,19 +16,23 @@ namespace CSG
 {
 
     template <class Refs, class Point>
-    struct MyVertex : public CGAL::HalfedgeDS_vertex_base<Refs, CGAL::Tag_true, Point> {
+    struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
 
     };
 
     template <class Refs>
-    struct MyHalfedge : public CGAL::HalfedgeDS_halfedge_base<Refs> {
+    struct MyHalfedge : public CGAL::HalfedgeDS_halfedge_max_base_with_id<Refs, unsigned> {
 
     };
 
     template <class Refs>
-    struct MyFacet : public CGAL::HalfedgeDS_face_base<Refs> {
+    struct MyFacet : public CGAL::HalfedgeDS_face_max_base_with_id<Refs, CGAL::Tag_false, unsigned> {
+
+        typedef Cube_3 TriBbox;
+
         CGAL::Triangle_3<K> triangle;
-        //CGAL::Color color;
+        TriBbox             box;
+        CGAL::Color         color;
     };
 
     struct MyItems {

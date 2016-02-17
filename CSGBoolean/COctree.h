@@ -1,7 +1,7 @@
 #pragma once
 #include "csg.h"
 #include "csgdefs.h"
-#include "macro_util.h"
+#include "macroutil.h"
 #include "MyMesh.h"
 
 #include <vector>
@@ -36,11 +36,12 @@ namespace CSG
         typedef CGAL::Point_3<K> Point;
         typedef CGAL::Vector_3<K> Vector;
         typedef Cube_3 Bbox;
+        typedef std::vector<MyMesh::Face_handle> TriList;
+        typedef std::map<size_t, TriList*> TriTableT;
+
     public:
         struct Node
         {
-            typedef std::map<size_t, std::vector<MyMesh::Face_handle>> TriTableT;
-
             Bbox        bbox;
             NodeType    type;
 
@@ -50,7 +51,11 @@ namespace CSG
             TriTableT   triTable;
             size_t      triCount;
 
-            virtual ~Node() { SAFE_DELETE_ARRAY(pChildren); }
+            virtual ~Node() { 
+                SAFE_DELETE_ARRAY(pChildren); 
+                for (auto pair : triTable)
+                    SAFE_DELETE(pair.second);
+            }
 
             //std::vector<DiffMeshInfo> DiffMeshIndex;
             //void *pRelationData;
@@ -60,20 +65,20 @@ namespace CSG
         Octree(){}
         ~Octree(){ release(); }
 
-        void build(const std::vector<MyMesh*>& meshList, std::vector<Node*>* leaves = nullptr);
-        void release();
+        void build(const std::vector<MyMesh*>& meshList, std::vector<Node*>* isectNodes = nullptr);
+        void release(); // not release meshlist
 
     private:
         Node* createRootNode();
-        void build(Node* root, size_t level);
+        void build(Node* root, size_t level, std::vector<Node*>* isectNodes = nullptr);
 
     private:
         Node*               mp_root;
         MyMesh* const*      mp_meshes;
-        unsigned            m_nMesh;
+        size_t              m_nMesh;
 
-        static int MAX_TRIANGLE_COUNT;
-        static int MAX_LEVEL;
+        STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
+        STATIC_PROPERTY(int, MAX_LEVEL);
     };
 
 

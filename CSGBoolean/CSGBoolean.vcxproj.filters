@@ -18,9 +18,6 @@
     <ClCompile Include="MyAlgorithm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MPMesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="bool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

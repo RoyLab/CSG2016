@@ -18,11 +18,10 @@ namespace CSG
         MyMesh* popResultMesh();
 
     private:
-        void doIntersection();
+        void doIntersection(std::vector<MyMesh*>& meshList, std::vector<Octree::Node*>& intersectLeaves);
         void floodColoring(CSGTree<MyMesh>* pCsg, Octree* pOctree);
 
     private:
-        std::vector<Octree::Node*> octreeLeaves;
         MyMesh* result = nullptr;
     };
 
