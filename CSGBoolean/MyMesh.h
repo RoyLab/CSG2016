@@ -4,9 +4,10 @@
 
 #include <CGAL\Polyhedron_3.h>
 #include <CGAL\Triangle_3.h>
-#include <CGAL/HalfedgeDS_vertex_max_base_with_id.h>
-#include <CGAL/HalfedgeDS_halfedge_max_base_with_id.h>
-#include <CGAL/HalfedgeDS_face_max_base_with_id.h>
+#include <CGAL\HalfedgeDS_vertex_max_base_with_id.h>
+#include <CGAL\HalfedgeDS_halfedge_max_base_with_id.h>
+#include <CGAL\HalfedgeDS_face_max_base_with_id.h>
+#include <list>
 
 // for implementation
 #include <CGAL\bounding_box.h>
@@ -14,15 +15,18 @@
 
 namespace CSG
 {
+    struct SharedEdge;
+    struct IsectTriangleInfo;
 
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
-
+        PointListItrListItr agency = nullptr;
     };
 
     template <class Refs>
     struct MyHalfedge : public CGAL::HalfedgeDS_halfedge_max_base_with_id<Refs, unsigned> {
-
+        SharedEdge* sharedEdge = nullptr;
+        char id012 = -1;
     };
 
     template <class Refs>
@@ -30,9 +34,14 @@ namespace CSG
 
         typedef Cube_3 TriBbox;
 
-        CGAL::Triangle_3<K> triangle;
-        TriBbox             box;
-        CGAL::Color         color;
+        CGAL::Triangle_3<K>         triangle;
+        Halfedge_handle             edges[3];
+
+        CGAL::Vector_3<K>           normal;
+        TriBbox                     box;
+        CGAL::Color                 color;
+
+        IsectTriangleInfo*          isectInfo = nullptr;
     };
 
     struct MyItems {
@@ -77,4 +86,5 @@ namespace CSG
             m_bbox = CGAL::bounding_box(points_begin(), points_end()).bbox();
         }
     };
+
 }

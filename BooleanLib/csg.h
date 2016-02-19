@@ -1,6 +1,6 @@
 #pragma once
 //#include "COctree.h"
-#include "macro_util.h"
+#include "macroutil.h"
 #include <stack>
 #include <map>
 #include <vector>
@@ -12,9 +12,9 @@ namespace CSG
     {
         REL_UNKNOWN =   0x0000,
         REL_INSIDE =    0x0001,
-        REL_OUTSIDE =   0x0010,
-        REL_SAME =      0x0100,
-        REL_OPPOSITE =  0x1000,
+        REL_OUTSIDE =   0x0002,
+        REL_SAME =      0x0004,
+        REL_OPPOSITE =  0x0008,
 
         REL_NOT_AVAILABLE = -1 // (0xffffffff)
     };

@@ -37,7 +37,7 @@ namespace CSG
         typedef CGAL::Vector_3<K> Vector;
         typedef Cube_3 Bbox;
         typedef std::vector<MyMesh::Face_handle> TriList;
-        typedef std::map<size_t, TriList*> TriTableT;
+        typedef std::map<uint32_t, TriList*> TriTableT;
 
     public:
         struct Node

@@ -21,13 +21,16 @@
     <ClInclude Include="linmath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="macro_util.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="stringext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="csg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="macroutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

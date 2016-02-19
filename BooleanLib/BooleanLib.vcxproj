@@ -137,7 +137,8 @@
   <ItemGroup>
     <ClInclude Include="csg.h" />
     <ClInclude Include="linmath.h" />
-    <ClInclude Include="macro_util.h" />
+    <ClInclude Include="macroutil.h" />
+    <ClInclude Include="stdext.h" />
     <ClInclude Include="stringext.h" />
   </ItemGroup>
   <ItemGroup>
