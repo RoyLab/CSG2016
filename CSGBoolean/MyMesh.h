@@ -15,12 +15,13 @@
 
 namespace CSG
 {
+    struct VertexDelegate;
     struct SharedEdge;
     struct IsectTriangleInfo;
 
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
-        PointListItrListItr agency = nullptr;
+        VertexDelegate* shared = nullptr;
     };
 
     template <class Refs>
@@ -87,4 +88,24 @@ namespace CSG
         }
     };
 
+    typedef MyMesh::Vertex_iterator     PointListItr;
+    typedef std::list<PointListItr>     PointListItrList;
+    typedef PointListItrList::iterator  PointListItrListItr;
+
+    struct VertexDelegate
+    {
+        PointListItrListItr    agency;
+        PointListItr           location = nullptr;
+    };
+
+    struct SharedEdge
+    {
+        std::vector<PointListItrListItr>  innerPoints;
+    };
+
+    struct IsectTriangleInfo
+    {
+        std::vector<PointListItrListItr>  innerPoints;
+        std::vector<MyMesh::Face_handle> coplanars;
+    };
 }

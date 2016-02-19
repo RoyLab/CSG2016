@@ -1,9 +1,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <list>
+#include <queue>
 
 #include "MyAlgorithm.h"
-#include "SharedZone.h"
 #include "csg.h"
 #include "COctree.h"
 #include "MyMesh.h"
@@ -49,42 +49,46 @@ namespace
     {
         return &(*a) <= &(*b);
     }
+
+
 }
 
 namespace CSG
 {
     void MyAlgorithm::solve(const std::string& expr, std::vector<MyMesh*>& meshes)
     {
-        std::vector<MyMesh*> meshList;
+        pMeshList = new std::vector<MyMesh*>;
         for (MyMesh* pMesh : meshes)
-            meshList.push_back(new MyMesh(*pMesh));
+            pMeshList->push_back(new MyMesh(*pMesh));
 
         CSGTree<MyMesh>* pCsg = new CSGTree<MyMesh>;
-        pCsg->createCSGTreeFromExpr(expr, meshList.data(), meshList.size());
+        pCsg->createCSGTreeFromExpr(expr, pMeshList->data(), pMeshList->size());
         pCsg->makePositiveAndLeftHeavy();
 
         Octree *pOctree = new Octree;
         std::vector<Octree::Node*> intersectLeaves;
-        pOctree->build(meshList, &intersectLeaves);
+        pOctree->build(*pMeshList, &intersectLeaves);
 
-        doIntersection(meshList, intersectLeaves);
-        floodColoring(pCsg, pOctree);
+        doIntersection(intersectLeaves);
+        floodColoring(pCsg);
 
         SAFE_DELETE(pCsg);
         SAFE_DELETE(pOctree);
-        for (MyMesh* pMesh : meshList)
+        for (MyMesh* pMesh : *pMeshList)
             delete pMesh;
+        SAFE_DELETE(pMeshList);
     }
 
-    void MyAlgorithm::doIntersection(std::vector<MyMesh*>& meshList, std::vector<Octree::Node*>& intersectLeaves)
+    void MyAlgorithm::doIntersection(std::vector<Octree::Node*>& intersectLeaves)
     {
         typedef std::unordered_set<IndexPair> TriIdSet;
         typedef std::unordered_map<IndexPair, TriIdSet*> MeshIdTriIdMap;
 
         MeshIdTriIdMap antiOverlapMap;
         antiOverlapMap.max_load_factor(0.6);
-        //szone = new SharedZone(meshList);
         csgResult = new MyMesh;
+        meshRelTable = new myext::TriangleTable<bool>(pMeshList->size());
+        auto &meshList = *pMeshList;
 
         for (Octree::Node* leaf : intersectLeaves)
         {
@@ -98,7 +102,7 @@ namespace CSG
                     uint32_t meshId[2] = { meshItr[0]->first, meshItr[1]->first };
                     MyMesh* meshes[2] = { meshList[meshId[0]], meshList[meshId[1]] };
 
-                    // 这里假设map的遍历是保序的
+                    // 这里假设map的遍历是保序的，因此meshIdPair自动的分为大小
                     IndexPair meshIdPair;
                     MakeIndex(meshId, meshIdPair);
 
@@ -131,6 +135,8 @@ namespace CSG
                             if (sign == myext::NOT_INTERSECT || sign == myext::INTERSECT_ON_POINT) 
                                 continue;
 
+                            meshRelTable->getValue(meshId[0], meshId[1]) = true;
+
                             setupIsectFacet(fh0);
                             setupIsectFacet(fh1); 
 
@@ -141,9 +147,7 @@ namespace CSG
                                 continue;
                             }
 
-                            // 检查是否是non-manifold的情况，去重
                             checkNonmanifoldEdge(fh0, fh1, &result, antiOverlapSet);
-                             
                             setupPonits(fh0, fh1, result);
                         }
                     }
@@ -152,8 +156,82 @@ namespace CSG
         }
     }
 
-    void MyAlgorithm::floodColoring(CSGTree<MyMesh>* pCsg, Octree* pOctree)
+    MyAlgorithm::AutoIndicator MyAlgorithm::computeFullIndicator(VH fh)
     {
+        AutoIndicator ind;
+        ind.reset(new Indicator[pMeshList->size()]);
 
+        for (size_t meshId : (*fh->shared->agency)->onList)
+            ind[meshId] = myext::BT_ON;
+
+        for (size_t meshId = 0; meshId < pMeshList->size(); meshId++)
+        {
+            if (ind[meshId] == myext::BT_ON) continue;
+            ind[meshId] = pointInPolyhedron(fh->point(), pMeshList[meshId]);
+        }
+
+    }
+
+    void MyAlgorithm::createFirstSeed(SeedInfoWithMeshId& info)
+    {
+        VH seedV = (*pMeshList)[info.meshId]->vertices_begin();
+
+        info.seedFacet = seedV->halfedge()->facet();
+        info.indicator = computeFullIndicator(seedV);
+        info.seedVertex = seedV;
+    }
+
+    void MyAlgorithm::floodColoring(CSGTree<MyMesh>* pCsg)
+    {
+        typedef CSGTree<MyMesh> CSGTree;
+
+        auto &meshList = *pMeshList;
+        size_t nMesh = meshList.size();
+
+        std::queue<SeedInfo, std::list<SeedInfoWithMeshId>> otherMeshSeedQueue;
+        std::queue<SeedInfo, std::list<SeedInfo>> curMeshSeedQueue;
+        size_t curMeshId = -1;
+
+        bool *meshSeedFlag = new bool[nMesh];
+        memset(meshSeedFlag, 0, sizeof(bool));
+
+        for (size_t imesh = 0; imesh < nMesh; imesh++)
+        {
+            if (meshSeedFlag[imesh]) continue;
+            meshSeedFlag[imesh] = true;
+
+            SeedInfoWithMeshId seedInfo;
+            seedInfo.meshId = imesh;
+            createFirstSeed(seedInfo);
+            otherMeshSeedQueue.push(seedInfo);
+
+            while (!otherMeshSeedQueue.empty())
+            {
+                SeedInfoWithMeshId& curSeed = otherMeshSeedQueue.front();
+                SeedInfo sndseed;
+                sndseed.seedFacet = curSeed.seedFacet;
+                sndseed.seedVertex = curSeed.seedVertex;
+                CSGTree* fstTrimTree = genFirstTrimTree(curSeed, pCsg, &sndseed.indicator);
+                curMeshId = curSeed.meshId;
+                curMeshSeedQueue.push(sndseed);
+
+                while (!curMeshSeedQueue.empty())
+                {
+                    SeedInfo& sndInfo = curMeshSeedQueue.front();
+                    AutoIndicator lastIndicator;
+                    CSGTree* sndTrimTree = genSecondTrimTree(sndInfo, fstTrimTree, &lastIndicator);
+
+                    if (!lastIndicator)
+                        floodSimpleGroup(sndTrimTree, sndInfo, curMeshSeedQueue);
+                    else
+                        floodComplexGroup(sndTrimTree, sndInfo, lastIndicator, 
+                        curMeshSeedQueue, otherMeshSeedQueue, meshSeedFlag);
+
+                    curMeshSeedQueue.pop();
+                }
+
+                otherMeshSeedQueue.pop();
+            }
+        }
     }
 }

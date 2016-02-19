@@ -22,6 +22,11 @@ namespace myext
         VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
     };
 
+    enum BoundedTag
+    {
+        BT_UNKOWN = 0, BT_NA = 5, BT_ON = 1, BT_INSIDE = 2, BT_OUSIDE = 3
+    };
+
     inline CGAL::Bbox_3 enlarge(const CGAL::Bbox_3& bbox, double factor)
     {
         return CGAL::Bbox_3(bbox.xmin() - factor, bbox.ymin() - factor,
