@@ -30,7 +30,7 @@
     <ClInclude Include="macroutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdext.h">
+    <ClInclude Include="TriangleTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -17,6 +17,9 @@ namespace CSG
         typedef int8_t                  Indicator;
         typedef boost::shared_ptr<Indicator[]> AutoIndicator;
 
+        template <class T>
+        class Queue : public std::queue < T, std::list<T> > {};
+
         struct SeedInfo
         {
             FH              seedFacet;
@@ -28,6 +31,14 @@ namespace CSG
             public SeedInfo
         {
             size_t          meshId;
+        };
+
+        struct GroupParseInfo
+        {
+            Queue<SeedInfoWithMeshId > otherMeshSeedQueue;
+            Queue<SeedInfo > curMeshSeedQueue;
+            size_t curMeshId = -1;
+            bool *meshSeedFlag = nullptr;
         };
 
     public:
@@ -46,15 +57,18 @@ namespace CSG
         void setupIsectFacet(MyMesh::Face_handle fh);
 
         /*  合并优先级：
-        已经登记为共享点的，按顺序排大小，先到大
+              已经登记为共享点的，按顺序排大小，先到大
         */
         void setupPonits(MyMesh::Face_handle fh0, MyMesh::Face_handle fh1, const myext::TriTriIsectResult<K>& result);
         void copyAutoIndicator(AutoIndicator& target, AutoIndicator& source);
         void createFirstSeed(SeedInfoWithMeshId& info);
-        AutoIndicator computeFullIndicator(VH fh);
+        AutoIndicator computeFullIndicator(VH fh, size_t meshId);
 
+        void floodComplexGroup();
+        void floodSimpleGroup();
 
     private:
+
         MyMesh*                     csgResult = nullptr;
         std::vector<MyMesh*>*       pMeshList = nullptr;
 

@@ -156,12 +156,15 @@ namespace CSG
         }
     }
 
-    MyAlgorithm::AutoIndicator MyAlgorithm::computeFullIndicator(VH fh)
+    MyAlgorithm::AutoIndicator MyAlgorithm::computeFullIndicator(VH fh, size_t meshId)
     {
         AutoIndicator ind;
         ind.reset(new Indicator[pMeshList->size()]);
 
-        for (size_t meshId : (*fh->shared->agency)->onList)
+        ind[meshId] = myext::BT_ON;
+
+        auto &onList = (*fh->shared->agency)->onList;
+        for (size_t meshId : onList)
             ind[meshId] = myext::BT_ON;
 
         for (size_t meshId = 0; meshId < pMeshList->size(); meshId++)
@@ -175,10 +178,10 @@ namespace CSG
     void MyAlgorithm::createFirstSeed(SeedInfoWithMeshId& info)
     {
         VH seedV = (*pMeshList)[info.meshId]->vertices_begin();
+        info.indicator = computeFullIndicator(seedV, info.meshId);
+        info.seedVertex = seedV;
 
         info.seedFacet = seedV->halfedge()->facet();
-        info.indicator = computeFullIndicator(seedV);
-        info.seedVertex = seedV;
     }
 
     void MyAlgorithm::floodColoring(CSGTree<MyMesh>* pCsg)
@@ -188,50 +191,92 @@ namespace CSG
         auto &meshList = *pMeshList;
         size_t nMesh = meshList.size();
 
-        std::queue<SeedInfo, std::list<SeedInfoWithMeshId>> otherMeshSeedQueue;
-        std::queue<SeedInfo, std::list<SeedInfo>> curMeshSeedQueue;
-        size_t curMeshId = -1;
+        GroupParseInfo infos;
 
-        bool *meshSeedFlag = new bool[nMesh];
-        memset(meshSeedFlag, 0, sizeof(bool));
+        // 表示该mesh有没有被处理过
+        infos.meshSeedFlag = new bool[nMesh];
+        memset(infos.meshSeedFlag, 0, sizeof(bool));
 
         for (size_t imesh = 0; imesh < nMesh; imesh++)
         {
-            if (meshSeedFlag[imesh]) continue;
-            meshSeedFlag[imesh] = true;
+            if (infos.meshSeedFlag[imesh]) continue;
+            infos.meshSeedFlag[imesh] = true;
 
             SeedInfoWithMeshId seedInfo;
             seedInfo.meshId = imesh;
             createFirstSeed(seedInfo);
-            otherMeshSeedQueue.push(seedInfo);
+            infos.otherMeshSeedQueue.push(seedInfo);
 
-            while (!otherMeshSeedQueue.empty())
+            while (!infos.otherMeshSeedQueue.empty())
             {
-                SeedInfoWithMeshId& curSeed = otherMeshSeedQueue.front();
+                SeedInfoWithMeshId& curSeed = infos.otherMeshSeedQueue.front();
                 SeedInfo sndseed;
                 sndseed.seedFacet = curSeed.seedFacet;
                 sndseed.seedVertex = curSeed.seedVertex;
                 CSGTree* fstTrimTree = genFirstTrimTree(curSeed, pCsg, &sndseed.indicator);
-                curMeshId = curSeed.meshId;
-                curMeshSeedQueue.push(sndseed);
+                infos.curMeshId = curSeed.meshId;
+                infos.curMeshSeedQueue.push(sndseed);
 
-                while (!curMeshSeedQueue.empty())
+                while (!infos.curMeshSeedQueue.empty())
                 {
-                    SeedInfo& sndInfo = curMeshSeedQueue.front();
-                    AutoIndicator lastIndicator;
-                    CSGTree* sndTrimTree = genSecondTrimTree(sndInfo, fstTrimTree, &lastIndicator);
+                    SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
+                    AutoIndicator ind;
+                    CSGTree* sndTrimTree = genSecondTrimTree(sndInfo, fstTrimTree, &ind);
 
-                    if (!lastIndicator)
-                        floodSimpleGroup(sndTrimTree, sndInfo, curMeshSeedQueue);
-                    else
-                        floodComplexGroup(sndTrimTree, sndInfo, lastIndicator, 
-                        curMeshSeedQueue, otherMeshSeedQueue, meshSeedFlag);
+                    if (!ind) floodSimpleGroup(sndTrimTree, sndInfo, infos);
+                    else floodComplexGroup(sndTrimTree, sndInfo, ind, infos);
 
-                    curMeshSeedQueue.pop();
+                    infos.curMeshSeedQueue.pop();
                 }
 
-                otherMeshSeedQueue.pop();
+                infos.otherMeshSeedQueue.pop();
             }
         }
     }
+
+    void MyAlgorithm::floodSimpleGroup()
+    {
+
+    }
+
+    void MyAlgorithm::floodComplexGroup()
+    {
+        typedef CSGTree<MyMesh> CSGTree;
+        GroupParseInfo infos;
+        SeedInfo seed;
+        CSGTree* trimTree;
+
+        if (seed.seedFacet->mark == VISITED) return;
+
+        size_t nVIP = trimTree->numberOfVIP();
+
+        struct Seed
+        {
+            FH fh;
+            VH vh;
+            Indicator *ind = nullptr;
+        } s;
+
+        Queue<Seed> q;         
+        s.fh = seed.seedFacet;
+        s.vh = seed.seedVertex;
+        s.ind = new Indicator[nVIP];
+
+
+
+        q.push(seed.seedFacet);
+
+        while (!q.empty())
+        {
+            if (q.front()->mark != VISITED)
+            {
+                q.front()->mark = VISITED;
+                createGraph(q.front());
+
+            }
+
+            q.pop();
+        }
+    }
+
 }

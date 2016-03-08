@@ -175,8 +175,6 @@ namespace CSG
         {
             size_t maxLvl = 0;
             pRoot = makePositiveAndLeftHeavy(pRoot, false, 0u, maxLvl);
-            //GetLeafList(result);
-            //return result;
         }
 
         TreeNode* makePositiveAndLeftHeavy(TreeNode* root, bool inverse, size_t lvl, size_t &maxLvl)
@@ -185,7 +183,6 @@ namespace CSG
             {
                 root->bInverse = inverse;
                 maxLvl = (maxLvl < lvl) ? lvl : maxLvl;
-                //root->pMesh->bInverse = root->bInverse;
             }
             else
             {

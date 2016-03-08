@@ -19,9 +19,23 @@ namespace CSG
     struct SharedEdge;
     struct IsectTriangleInfo;
 
+    struct ContextNode
+    {
+        unsigned    meshId;
+        std::vector<MyMesh::Face_handle> facets;
+    };
+
+    typedef std::vector<ContextNode*>  VertexContext;
+
+    enum Mark { UNVISITED, SEEDED, VISITED };
+
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
-        VertexDelegate* shared = nullptr;
+        union 
+        {
+            VertexDelegate* shared = nullptr;
+            VertexContext* ctx = nullptr;
+        };
     };
 
     template <class Refs>
@@ -36,13 +50,17 @@ namespace CSG
         typedef Cube_3 TriBbox;
 
         CGAL::Triangle_3<K>         triangle;
-        Halfedge_handle             edges[3];
-
         CGAL::Vector_3<K>           normal;
-        TriBbox                     box;
-        CGAL::Color                 color;
 
-        IsectTriangleInfo*          isectInfo = nullptr;
+        CGAL::Color                           color;
+        
+        Halfedge_handle                 edges[3];
+        TriBbox                                     box;
+
+        IsectTriangleInfo*              isectInfo = nullptr;
+
+        // for flood filling
+        Mark            mark = UNVISITED;
     };
 
     struct MyItems {
@@ -97,7 +115,7 @@ namespace CSG
         PointListItrListItr    agency;
         PointListItr           location = nullptr;
     };
-
+    
     struct SharedEdge
     {
         std::vector<PointListItrListItr>  innerPoints;
@@ -105,7 +123,7 @@ namespace CSG
 
     struct IsectTriangleInfo
     {
-        std::vector<PointListItrListItr>  innerPoints;
+        std::vector< >  innerPoints;
         std::vector<MyMesh::Face_handle> coplanars;
     };
 }

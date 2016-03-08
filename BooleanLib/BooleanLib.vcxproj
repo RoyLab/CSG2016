@@ -138,8 +138,8 @@
     <ClInclude Include="csg.h" />
     <ClInclude Include="linmath.h" />
     <ClInclude Include="macroutil.h" />
-    <ClInclude Include="stdext.h" />
     <ClInclude Include="stringext.h" />
+    <ClInclude Include="TriangleTable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="csg.cpp" />
