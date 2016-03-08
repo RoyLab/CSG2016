@@ -1,8 +1,10 @@
+#include <string>
+
 #define CSG_EXPORTS
+
 #include "bool.h"
 #include "MyAlgorithm.h"
-#include "MyMesh.h"
-#include <string>
+
 //#include "precompile.h"
 //#include <OpenMesh/Core/IO/MeshIO.hh>
 //#include "MyMesh.h"
@@ -47,10 +49,7 @@ namespace CSG
 
         std::vector<MyMesh*> meshList;
         loadMesh(meshList, names);
-
-        for (auto pMesh : meshList)
-            pMesh->update();
-
+        
         MyAlgorithm *alg = new MyAlgorithm;
         alg->solve(expr, meshList);
 

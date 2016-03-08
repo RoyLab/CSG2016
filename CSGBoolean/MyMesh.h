@@ -3,64 +3,37 @@
 #include "csgdefs.h"
 
 #include <CGAL\Polyhedron_3.h>
-#include <CGAL\Triangle_3.h>
 #include <CGAL\HalfedgeDS_vertex_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_halfedge_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_face_max_base_with_id.h>
-#include <list>
 
-// for implementation
-#include <CGAL\bounding_box.h>
+#include <boost\smart_ptr.hpp>
 
 
 namespace CSG
 {
-    struct VertexDelegate;
-    struct SharedEdge;
-    struct IsectTriangleInfo;
-
-    struct ContextNode
-    {
-        unsigned    meshId;
-        std::vector<MyMesh::Face_handle> facets;
-    };
-
-    typedef std::vector<ContextNode*>  VertexContext;
-
-    enum Mark { UNVISITED, SEEDED, VISITED };
+    struct UserVData;
+    struct UserEData;
+    struct UserFData;
 
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
-        union 
-        {
-            VertexDelegate* shared = nullptr;
-            VertexContext* ctx = nullptr;
-        };
+        boost::scoped_ptr<UserVData> data;
     };
 
     template <class Refs>
     struct MyHalfedge : public CGAL::HalfedgeDS_halfedge_max_base_with_id<Refs, unsigned> {
-        SharedEdge* sharedEdge = nullptr;
-        char id012 = -1;
+        boost::scoped_ptr<UserEData> data;
     };
 
     template <class Refs>
     struct MyFacet : public CGAL::HalfedgeDS_face_max_base_with_id<Refs, CGAL::Tag_false, unsigned> {
+        boost::scoped_ptr<UserFData>    data;
 
-        typedef Cube_3 TriBbox;
-
-        CGAL::Triangle_3<K>         triangle;
-        CGAL::Vector_3<K>           normal;
-
-        CGAL::Color                           color;
-        
         Halfedge_handle                 edges[3];
-        TriBbox                                     box;
-
-        IsectTriangleInfo*              isectInfo = nullptr;
-
-        // for flood filling
-        Mark            mark = UNVISITED;
+        CGAL::Vector_3<K>               normal;
+        CGAL::Color                     color;
+        int                             mark = -1;
     };
 
     struct MyItems {
@@ -88,42 +61,8 @@ namespace CSG
         public CGAL::Polyhedron_3<K, MyItems>
     {
         COMMON_PROPERTY(Bbox_3, bbox);
+
     public:
-        void update()
-        {
-            updateBbox();
-            updateFaceNormal();
-        }
-
-    private:
-
-        void updateFaceNormal();
-        void updateTriangleBbox();
-
-        void updateBbox()
-        {
-            m_bbox = CGAL::bounding_box(points_begin(), points_end()).bbox();
-        }
-    };
-
-    typedef MyMesh::Vertex_iterator     PointListItr;
-    typedef std::list<PointListItr>     PointListItrList;
-    typedef PointListItrList::iterator  PointListItrListItr;
-
-    struct VertexDelegate
-    {
-        PointListItrListItr    agency;
-        PointListItr           location = nullptr;
-    };
-    
-    struct SharedEdge
-    {
-        std::vector<PointListItrListItr>  innerPoints;
-    };
-
-    struct IsectTriangleInfo
-    {
-        std::vector< >  innerPoints;
-        std::vector<MyMesh::Face_handle> coplanars;
+        void calcBbox();
     };
 }

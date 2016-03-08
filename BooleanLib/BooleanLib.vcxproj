@@ -139,7 +139,7 @@
     <ClInclude Include="linmath.h" />
     <ClInclude Include="macroutil.h" />
     <ClInclude Include="stringext.h" />
-    <ClInclude Include="TriangleTable.h" />
+    <ClInclude Include="UndirectedGraph.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="csg.cpp" />

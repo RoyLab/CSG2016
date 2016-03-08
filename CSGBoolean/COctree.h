@@ -1,11 +1,13 @@
 #pragma once
+
+#include <vector>
+#include <map>
+
 #include "csg.h"
 #include "csgdefs.h"
 #include "macroutil.h"
 #include "MyMesh.h"
 
-#include <vector>
-#include <map>
 
 
 namespace CSG

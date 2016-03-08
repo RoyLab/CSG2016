@@ -1,11 +1,7 @@
 #include "COctree.h"
 #include "CGALext.h"
-//#include "precompile.h"
-//#include "MyMesh.h"
-//#include "isect.h"
-//#include "Plane.h"
-//#include "Box3.h"
-//#include "topology.h"
+
+#include "AlgUserData.h"
 
 namespace CSG
 {
@@ -32,7 +28,7 @@ namespace CSG
             for (auto fItr = pcMesh->facets_begin(); fItr != pcMesh->facets_end(); fItr++)
             {
                 root->triCount++;
-                root->triTable[i].push_back(fItr);
+                root->triTable[i]->push_back(fItr);
             }
         }
 
@@ -95,7 +91,7 @@ namespace CSG
             {
                 size_t meshId = triTab.first;
                 MyMesh* pMesh = mp_meshes[meshId];
-                TriList &parentMeshes = triTab.second;
+                TriList &parentMeshes = *triTab.second;
 
                 const size_t tn = parentMeshes.size();
                 for (size_t i = 0; i < tn; i++)
@@ -107,17 +103,17 @@ namespace CSG
                         TriList* triList = nullptr;
                         int isInbox = -1; // -1 no intersection, 1 bbox in box, 0 bbox not in box
 
-                        if (CGAL::do_intersect(child.bbox, fh->bbox))
+                        if (CGAL::do_intersect(child.bbox, fh->data->bbox))
                         {
-                            if (myext::is_inside_box(child.bbox, fh->bbox))
+                            if (myext::is_inside_box(child.bbox, fh->data->bbox))
                                 isInbox = 1;
-                            else if (CGAL::do_intersect(child.bbox.bbox(), fh->triangle))
+                            else if (CGAL::do_intersect(child.bbox.bbox(), fh->data->triangle))
                                 isInbox = 0;
 
                             if (isInbox >= 0)
                             {
                                 if (!triList)
-                                    triList = &child.triTable.emplace(meshId, TriList()).first->second;
+                                    triList = child.triTable.emplace(meshId, new TriList()).first->second;
 
                                 triList->push_back(fh);
                                 child.triCount++;

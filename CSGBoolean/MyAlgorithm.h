@@ -1,12 +1,11 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <boost\shared_ptr.hpp>
+#include <boost\smart_ptr.hpp>
 
 #include "COctree.h"
 #include "CGALext.h"
 #include "MyMesh.h"
-#include "TriangleTable.h"
 
 namespace CSG
 {
@@ -35,10 +34,9 @@ namespace CSG
 
         struct GroupParseInfo
         {
-            Queue<SeedInfoWithMeshId > otherMeshSeedQueue;
-            Queue<SeedInfo > curMeshSeedQueue;
-            size_t curMeshId = -1;
-            bool *meshSeedFlag = nullptr;
+            Queue<SeedInfoWithMeshId> otherMeshSeedQueue;
+            Queue<SeedInfo> curMeshSeedQueue;
+            int32_t curMeshId = -1;
         };
 
     public:
@@ -50,20 +48,10 @@ namespace CSG
         MyMesh* popResultMesh();
 
     private:
-        void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
-        void floodColoring(CSGTree<MyMesh>* pCsg);
-        void checkNonmanifoldEdge(MyMesh::Face_handle, MyMesh::Face_handle, myext::TriTriIsectResult<K>*, void*);
-
-        void setupIsectFacet(MyMesh::Face_handle fh);
-
-        /*  合并优先级：
-              已经登记为共享点的，按顺序排大小，先到大
-        */
-        void setupPonits(MyMesh::Face_handle fh0, MyMesh::Face_handle fh1, const myext::TriTriIsectResult<K>& result);
+        void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
         void copyAutoIndicator(AutoIndicator& target, AutoIndicator& source);
         void createFirstSeed(SeedInfoWithMeshId& info);
         AutoIndicator computeFullIndicator(VH fh, size_t meshId);
-
         void floodComplexGroup();
         void floodSimpleGroup();
 
@@ -71,9 +59,6 @@ namespace CSG
 
         MyMesh*                     csgResult = nullptr;
         std::vector<MyMesh*>*       pMeshList = nullptr;
-
-        myext::TriangleTable<bool>* meshRelTable = nullptr;
-        PointListItrList            pointAgency;
     };
 
 }
