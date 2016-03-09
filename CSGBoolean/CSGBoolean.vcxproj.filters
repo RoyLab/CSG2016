@@ -95,5 +95,8 @@
     <ClInclude Include="LoopletTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TrimCSGTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

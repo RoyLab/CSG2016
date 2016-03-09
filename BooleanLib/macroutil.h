@@ -54,7 +54,7 @@ m_##__name__ = _##__name__##_; \
 #ifndef COMMON_PROPERTY_POINTER
 #define COMMON_PROPERTY_POINTER(__type__,__name__) \
 private: \
-__type__ * mp_##__name__; \
+__type__ * mp_##__name__ = nullptr; \
 public: \
 const __type__ * get_##__name__() const{ \
 return mp_##__name__; \

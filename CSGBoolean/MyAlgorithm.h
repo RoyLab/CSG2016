@@ -6,6 +6,7 @@
 #include "COctree.h"
 #include "CGALext.h"
 #include "MyMesh.h"
+#include "TrimCSGTree.h"
 
 namespace CSG
 {
@@ -13,8 +14,6 @@ namespace CSG
     {
         typedef MyMesh::Face_handle     FH;
         typedef MyMesh::Vertex_handle   VH;
-        typedef int8_t                  Indicator;
-        typedef boost::shared_ptr<Indicator[]> AutoIndicator;
 
         template <class T>
         class Queue : public std::queue < T, std::list<T> > {};
@@ -23,20 +22,19 @@ namespace CSG
         {
             FH              seedFacet;
             VH              seedVertex;
-            AutoIndicator   indicator;
-        };
+            IndicatorVector *indicators;
+            size_t          meshId = -1;
 
-        struct SeedInfoWithMeshId :
-            public SeedInfo
-        {
-            size_t          meshId;
+            ~SeedInfo() { SAFE_DELETE(indicators); }
         };
 
         struct GroupParseInfo
         {
-            Queue<SeedInfoWithMeshId> otherMeshSeedQueue;
+            Queue<SeedInfo> otherMeshSeedQueue;
             Queue<SeedInfo> curMeshSeedQueue;
-            int32_t curMeshId = -1;
+
+            int32_t             curMeshId = -1;
+            boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;
         };
 
     public:
@@ -50,8 +48,8 @@ namespace CSG
     private:
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
         void copyAutoIndicator(AutoIndicator& target, AutoIndicator& source);
-        void createFirstSeed(SeedInfoWithMeshId& info);
-        AutoIndicator computeFullIndicator(VH fh, size_t meshId);
+        void createFirstSeed(SeedInfo& info);
+        IndicatorVector* computeFullIndicator(VH fh, size_t meshId);
         void floodComplexGroup();
         void floodSimpleGroup();
 

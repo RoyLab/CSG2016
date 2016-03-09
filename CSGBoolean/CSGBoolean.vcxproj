@@ -157,6 +157,7 @@
     <ClInclude Include="MPMesh.h" />
     <ClInclude Include="MyAlgorithm.h" />
     <ClInclude Include="precompile.h" />
+    <ClInclude Include="TrimCSGTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BooleanLib\BooleanLib.vcxproj">
