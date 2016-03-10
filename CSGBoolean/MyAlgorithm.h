@@ -18,20 +18,52 @@ namespace CSG
         template <class T>
         class Queue : public std::queue < T, std::list<T> > {};
 
-        struct SeedInfo
+        struct SimpleSeedInfo
         {
-            FH              seedFacet;
-            VH              seedVertex;
-            IndicatorVector *indicators;
-            size_t          meshId = -1;
+            FH  seedFacet;
+            VH  seedVertex;
+        };
 
-            ~SeedInfo() { SAFE_DELETE(indicators); }
+        struct SeedInfo:
+            public SimpleSeedInfo
+        {
+            IndicatorVector *indicators;
+            virtual ~SeedInfo() { SAFE_DELETE(indicators); }
+        };
+
+        struct SeedInfoWithId:
+            public SeedInfo
+        {
+            size_t          meshId = -1;
+        };
+
+        class Hint
+        {
+            COMMON_PROPERTY(uint8_t, source);
+            COMMON_PROPERTY(uint8_t, target);
+        public:
+            Hint() { makeInvalid(); }
+            Hint(uint8_t s, uint8_t t): m_source(s), m_target(t) {}
+            bool isValid() const { return m_source == m_target; }
+            void makeInvalid() { m_source = 0; m_target = 0; }
+        };
+
+        struct SeedInfoWithHint :
+            public SeedInfo
+        {
+            Hint hint;
+        };
+
+        struct SimpleSeedInfoWithHint :
+            public SimpleSeedInfo
+        {
+            Hint hint;
         };
 
         struct GroupParseInfo
         {
-            Queue<SeedInfo> otherMeshSeedQueue;
-            Queue<SeedInfo> curMeshSeedQueue;
+            Queue<SeedInfoWithId> otherMeshSeedQueue;
+            Queue<SeedInfoWithHint> curMeshSeedQueue;
 
             int32_t             curMeshId = -1;
             boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;

@@ -37,11 +37,20 @@ namespace CSG
             return inds[res->second];
         }
 
+        void copy(IndicatorVector& v)
+        {
+            v.codeInvMap = codeInvMap;
+            v.codeMap = codeMap;
+            v.size = size;
+            v.inds.reset(new Indicator[size]);
+            memcpy(v.inds.get(), inds.get(), sizeof(Indicator)*size);
+        }
+
     private:
         boost::shared_array<Indicator> inds;
         int                     size = 0;
-        const IndMap const*     codeMap;
-        const IndInvMap const*  codeInvMap;
+        const IndMap *     codeMap;
+        const IndInvMap *  codeInvMap;
     };
 
     template <class Mesh>

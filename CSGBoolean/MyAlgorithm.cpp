@@ -120,36 +120,36 @@ namespace CSG
             //if (infos.meshSeedFlag[imesh]) continue;
             //infos.meshSeedFlag[imesh] = true;
 
-            SeedInfo seedInfo;
-            seedInfo.meshId = imesh;
-            createFirstSeed(seedInfo);
-            infos.otherMeshSeedQueue.push(seedInfo);
+            SeedInfoWithId idSeed;
+            idSeed.meshId = imesh;
+            createFirstSeed(idSeed);
+            infos.otherMeshSeedQueue.push(idSeed);
 
             while (!infos.otherMeshSeedQueue.empty())
             {
-                SeedInfo& curSeed = infos.otherMeshSeedQueue.front();
+                SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
                 itstPrims.clear();
                 itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
 
                 infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
                 infos.curMeshId = curSeed.meshId;
 
-                seedInfo.seedFacet = curSeed.seedFacet;
-                seedInfo.seedVertex = curSeed.seedVertex;
-                seedInfo.indicators = infos.ttree1->downcast(*curSeed.indicators);
+                SeedInfoWithHint hintSeed;
+                hintSeed.seedFacet = curSeed.seedFacet;
+                hintSeed.seedVertex = curSeed.seedVertex;
+                hintSeed.indicators = infos.ttree1->downcast(*curSeed.indicators);
 
-                infos.curMeshSeedQueue.push(seedInfo);
+                infos.curMeshSeedQueue.push(hintSeed);
 
                 while (!infos.curMeshSeedQueue.empty())
                 {
-                    SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
-                    infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
-
-                    if (!infos.ttree2->isSimple())
-                        floodSimpleGroup(infos);
-                    else 
-                        floodComplexGroup(infos);
-
+                    SeedInfoWithHint& sndInfo = infos.curMeshSeedQueue.front();
+                    if (sndInfo.seedFacet->mark != VISITED)
+                    {
+                        infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
+                        if (!sndInfo.seedFacet->isSimple()) floodSimpleGroup(infos, sndInfo);
+                        else floodComplexGroup(infos, sndInfo);
+                    }
                     infos.curMeshSeedQueue.pop();
                 }
 
@@ -158,16 +158,57 @@ namespace CSG
         }
     }
 
-    void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos)
+    void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s)
     {
+        if (s.seedVertex->isShared())
+            correctSeedIndVec(s);
 
+        Queue<FH> queue;
+        queue.push(s.seedFacet);
+
+        bool isOn = infos.ttree1.eval(s.indicators);
+
+        while (!queue.empty())
+        {
+            if (queue.front()->mark != VISITED)
+            {
+                FH curface = queue.front();
+                curface->mark = VISITED;
+                if (isOn) AddFacet(curface);
+
+                auto itr = curface->facet_begin();
+                for (int i = 0; i < 3; i++)
+                {
+                    if (itr->facet()->mark != UNVISITED)
+                        continue;
+
+                    if (isSameGroup(itr->facet(), curface))
+                        queue.push(itr->facet());
+                    else
+                    {
+                        SeedInfoWithHint seed2;
+                        seed2.indicators = infos.ttree1->createIndicatorVector();
+                        seed2.seedVertex = itr->vertex();
+                        seed2.seedFacet = itr->facet();
+
+                        s.indicators->copy(*seed2.indicators);
+                        correctSeedIndVec(seed2.indicators, seed2.seedVertex);
+
+                        createHint(seed2);
+
+                        infos.curMeshSeedQueue.push(seed2);
+                    }
+
+                    itr->facet()->mark == SEEDED;
+                    itr = itr->next;
+                }
+            }
+            queue.pop();
+        }
     }
 
     void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& seed, int* trimTree)
     {
-        if (seed.seedFacet->mark == VISITED)
-            return;
-
         int nVIP = trimTree->numberOfVIP();
 
         SeedInfo s;
