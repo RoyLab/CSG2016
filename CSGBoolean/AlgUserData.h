@@ -20,23 +20,7 @@ namespace CSG
             eh = nullptr;
         }
 
-        ~Context()
-        {
-            switch (type)
-            {
-            case CT_VERTEX:
-                SAFE_DELETE(vh);
-                break;
-            case CT_EDGE:
-                SAFE_DELETE(eh);
-                break;
-            case CT_FACET:
-                SAFE_DELETE(fh);
-                break;
-            default:
-                break;
-            }
-        }
+        ~Context();
 
         ContextType type;
         int32_t     meshId;
@@ -99,4 +83,23 @@ namespace CSG
 
         ItstTriangle*           itstTri = nullptr;
     };
+
+
+    inline Context::~Context()
+    {
+        switch (type)
+        {
+        case CT_VERTEX:
+            SAFE_DELETE(vh);
+            break;
+        case CT_EDGE:
+            SAFE_DELETE(eh);
+            break;
+        case CT_FACET:
+            SAFE_DELETE(fh);
+            break;
+        default:
+            break;
+        }
+    }
 }

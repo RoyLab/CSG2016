@@ -4,13 +4,13 @@
 
 namespace myext
 {
-    enum GraphType { AdjacencyList, Matrix };
+    enum GraphType { AdjacencyList, AdjacencyMatrix };
 
-    template <class T, GraphType GT = Matrix>
+    template <class T, GraphType GT = AdjacencyMatrix>
     class UndirectedGraph;
 
     template <class T>
-    class UndirectedGraph<T, Matrix>
+    class UndirectedGraph<T, AdjacencyMatrix>
     {
     public:
         UndirectedGraph(size_t n) : m_sz(n)

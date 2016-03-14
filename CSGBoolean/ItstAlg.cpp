@@ -9,13 +9,13 @@ namespace CSG
 
     ItstAlg::ItstAlg(std::vector<MyMesh*>* meshes)
     {
-        pMeshList = meshes;
+        mp_meshList = meshes;
     }
 
 
     ItstAlg::~ItstAlg()
     {
-        SAFE_DELETE(adjGraph);
+        SAFE_DELETE(mp_adjGraph);
     }
 
 
@@ -26,8 +26,8 @@ namespace CSG
 
         MeshIdTriIdMap antiOverlapMap;
         antiOverlapMap.max_load_factor(0.6);
-        adjGraph = new AdjacentGraph(pMeshList->size());
-        auto &meshList = *pMeshList;
+        mp_adjGraph = new AdjacentGraph(mp_meshList->size());
+        auto &meshList = *mp_meshList;
 
         for (Octree::Node* leaf : intersectLeaves)
         {
@@ -69,7 +69,7 @@ namespace CSG
                             antiOverlapSet->insert(triIdPair);
 
                             if (IntersectionTest(fh0, fh1))
-                                adjGraph->setValue(meshId[0], meshId[1], true);
+                                mp_adjGraph->setValue(meshId[0], meshId[1], true);
                         }
                     }
                 }
@@ -77,7 +77,7 @@ namespace CSG
         }
     }
 
-    void()
+    void fuction()
     {
         myext::TriTriIsectResult<K> result;
         myext::Sign sign = myext::tri_tri_intersect(fh0->triangle, fh0->normal,

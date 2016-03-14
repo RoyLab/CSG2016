@@ -53,10 +53,12 @@ namespace CSG
 
         void build(const std::vector<MyMesh*>& meshList, std::vector<Node*>* isectNodes = nullptr);
         void release(); // not release meshlist
+        Node* getRoot() const { return mp_root; }
 
     private:
         Node* createRootNode();
         void build(Node* root, size_t level, std::vector<Node*>* isectNodes = nullptr);
+
 
     private:
         Node*               mp_root;

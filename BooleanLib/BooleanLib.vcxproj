@@ -140,6 +140,7 @@
     <ClInclude Include="macroutil.h" />
     <ClInclude Include="stringext.h" />
     <ClInclude Include="UndirectedGraph.h" />
+    <ClInclude Include="mathext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="csg.cpp" />

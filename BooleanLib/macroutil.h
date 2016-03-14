@@ -93,3 +93,11 @@ static void set_##__name__##(const __type__ * _##__name__##_){ \
 __name__ = _##__name__##_; \
 }
 #endif
+
+
+
+#ifndef ReportError
+#define ReportError()\
+    printf ("Error! %d of file \"%s\".\n",__LINE__, __FILE__);
+
+#endif

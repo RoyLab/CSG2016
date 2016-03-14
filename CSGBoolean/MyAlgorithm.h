@@ -11,6 +11,12 @@
 
 namespace CSG
 {
+    class ItstAlg;
+
+    typedef K::Vector_3 Vec3d;
+    typedef K::Point_3  Point3d;
+    typedef K::Ray_3    Ray;
+
     class MyAlgorithm
     {
         typedef MyMesh::Face_handle     FH;
@@ -80,7 +86,6 @@ namespace CSG
 
     private:
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
-        void copyAutoIndicator(AutoIndicator& target, AutoIndicator& source);
         void createFirstSeed(SeedInfoWithId& info);
         IndicatorVector* computeFullIndicator(VH fh, size_t meshId);
         void floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
@@ -94,7 +99,7 @@ namespace CSG
         Octree *                    pOctree = nullptr;
     };
 
-    Relation pointInPolyhedron(CGAL::Point_3<K>& p, MyMesh* mesh, Octree* pOctree);
+    Relation PolyhedralInclusionTest(Point3d& point, Octree* pOctree, std::vector<MyMesh*>& pMesh, unsigned meshId, bool IsInverse);
 
 }
 

@@ -4,7 +4,7 @@
 
 #include "macroutil.h"
 #include "AlgUserData.h"
-#include "COctree.h"
+#include "Octree.h"
 #include "UndirectedGraph.h"
 
 namespace CSG
@@ -13,6 +13,7 @@ namespace CSG
         public myext::UndirectedGraph<bool>
     {
     public:
+        AdjacentGraph(size_t n) :myext::UndirectedGraph<bool>(n){}
         void getIntersectPrimitives(int meshId, std::vector<int>& prims);
     };
 
@@ -20,7 +21,7 @@ namespace CSG
     class ItstAlg
     {
         COMMON_PROPERTY_POINTER(AdjacentGraph, adjGraph);
-        COMMON_PROPERTY_POINTER(std::vector<MyMesh*>, pMeshList);
+        COMMON_PROPERTY_POINTER(std::vector<MyMesh*>, meshList);
     public:
         ItstAlg(std::vector<MyMesh*>* meshes);
         ~ItstAlg();

@@ -65,6 +65,7 @@ namespace CSG
         COMMON_PROPERTY(Bbox_3, bbox);
 
     public:
+        Cube_3 get_bbox_cube() const { return Cube_3(m_bbox); }
         void calcBbox();
     };
 }

@@ -1,7 +1,10 @@
 #include <CGAL\Plane_3.h>
 #include <CGAL\intersection_3.h>
-#include "csgdefs.h"
+#include <algorithm>
 
+#include "csgdefs.h"
+#include "mathext.h"
+#include "macroutil.h"
 #include "MyAlgorithm.h"
 #include "Octree.h"
 #include "MyMesh.h"
@@ -9,9 +12,6 @@
 
 namespace CSG
 {
-    typedef K::Vector_3 Vec3d;
-    typedef K::Point_3  Point3d;
-
     enum RayTriRelation
     {
         RTR_NONE,
@@ -58,10 +58,9 @@ namespace CSG
 
     struct RayCastInfo
     {
-        K::Ray_3 ray;
+        Ray ray;
         int rayId, meshId;
         int nCross = 0;
-        K::Plane_3 splane;
     };
 
     //static inline bool PointWithPlane(const Vec3d& normal, double distance, const Vec3d& pos)
@@ -137,7 +136,7 @@ namespace CSG
         }
     }
 
-    static RayTriRelation ProcessSubNode(double tx0, double ty0, double tz0, double tx1, double ty1, double tz1,
+    static void ProcessSubNode(double tx0, double ty0, double tz0, double tx1, double ty1, double tz1,
         Octree::Node* pNode, int& a, RayCastInfo* rayInfo)
     {
         if (pNode == nullptr) return;
@@ -200,83 +199,107 @@ namespace CSG
 
     static void RayTraverse(Octree* pOctree, RayCastInfo* rayInfo)
     {
+
         assert(pOctree);
-        AABBmp &RootBBox = pOctree->BoundingBox;
-        static unsigned count = 0; // for every new raytraverse a new Id
-        count++;
+        Cube_3 &RootBBox = pOctree->getRoot()->bbox;
+        K::Vector_3 bboxSize = RootBBox.max() - RootBBox.min();
+
+        double dir[3] = { rayInfo->ray.direction().dx(), rayInfo->ray.direction().dy(), rayInfo->ray.direction().dz() };
+        double source[3] = { rayInfo->ray.source()[0], rayInfo->ray.source()[1], rayInfo->ray.source()[2] };
 
         int a = 0;
-        if (rayInfo->dir[0] < 0.0)
+        if (dir[0] < 0.0)
         {
-            rayInfo->pt[0] = RootBBox.Size()[0] - rayInfo->pt[0];
-            rayInfo->dir[0] = -rayInfo->dir[0];
+            source[0] = bboxSize[0] - rayInfo->ray.source()[0];
+            dir[0] = -rayInfo->ray.direction().dx();
             a |= 4;
         }
-        if (rayInfo->dir[1] < 0.0)
+        if (dir[1] < 0.0)
         {
-            rayInfo->pt[1] = RootBBox.Size()[1] - rayInfo->pt[1];
-            rayInfo->dir[1] = -rayInfo->dir[1];
+            source[1] = bboxSize[1] - rayInfo->ray.source()[1];
+            dir[1] = -rayInfo->ray.direction().dy();
             a |= 2;
         }
-        if (rayInfo->dir[2] < 0.0)
+        if (dir[2] < 0.0)
         {
-            rayInfo->pt[2] = RootBBox.Size()[2] - rayInfo->pt[2];
-            rayInfo->dir[2] = -rayInfo->dir[2];
+            source[2] = bboxSize[2] - rayInfo->ray.source()[2];
+            dir[2] = -rayInfo->ray.direction().dz();
             a |= 1;
         }
-        Vec3d t0 = (RootBBox.Min() - rayInfo->pt) / rayInfo->dir;
-        Vec3d t1 = (RootBBox.Max() - rayInfo->pt) / rayInfo->dir;
-        if (std::max(t0[0], GS::max(t0[1], t0[2])) < GS::min(t1[0], GS::min(t1[1], t1[2])))
-            ProcessSubNode(t0[0], t0[1], t0[2], t1[0], t1[1], t1[2], pOctree->Root, a, pMesh, rayInfo, count);
+        rayInfo->ray = Ray(Point3d(source[0], source[1], source[2]), Vec3d(dir[0], dir[1], dir[2]));
+
+        vec3 t0 = { (RootBBox.xmin() - rayInfo->ray.source()[0]) / rayInfo->ray.direction().dx(),
+            (RootBBox.ymin() - rayInfo->ray.source()[1]) / rayInfo->ray.direction().dy(),
+            (RootBBox.zmin() - rayInfo->ray.source()[2]) / rayInfo->ray.direction().dz() };
+
+        vec3 t1 = { (RootBBox.xmax() - rayInfo->ray.source()[0]) / rayInfo->ray.direction().dx(),
+            (RootBBox.ymax() - rayInfo->ray.source()[1]) / rayInfo->ray.direction().dy(),
+            (RootBBox.zmax() - rayInfo->ray.source()[2]) / rayInfo->ray.direction().dz() };
+
+        if (std::max(t0[0], std::max(t0[1], t0[2])) < std::min(t1[0], std::min(t1[1], t1[2])))
+            ProcessSubNode(t0[0], t0[1], t0[2], t1[0], t1[1], t1[2], pOctree->getRoot(), a, rayInfo);
     }
 
-    Relation PolyhedralInclusionTest(Vec3d& point, Octree* pOctree, unsigned meshId, bool IsInverse)
+    static Ray randRay(Point3d& pt)
     {
-        if (!IsInverse && !pOctree->pMesh[meshId]->BBox.IsInBox(point))
-            return REL_OUTSIDE;
-        else if (IsInverse && !pOctree->pMesh[meshId]->BBox.IsInBox(point))
-            return REL_INSIDE;
+        Vec3d dir(randf(), randf(), randf());
+        return Ray(pt, dir);
+    }
 
-        AABBmp &bbox = pOctree->Root->BoundingBox;
+    Relation PolyhedralInclusionTest(Point3d& point, Octree* pOctree, std::vector<MyMesh*>& pMesh, unsigned meshId, bool IsInverse)
+    {
+        if (pMesh[meshId]->get_bbox_cube().has_on_unbounded_side(point))
+        {
+            if (!IsInverse) return REL_OUTSIDE;
+            else return REL_INSIDE;
+        }
+
+        auto bbox = pOctree->getRoot()->bbox;
+        static int rayId = MARK_BEGIN + 1;
 
         RayCastInfo rayInfo;
         rayInfo.nCross = 0;
-        rayInfo.pt = point;
-        rayInfo.et = bbox.Max() + Vec3d(1, 1, 1);
-        rayInfo.dir = rayInfo.et - point;
-        normalize(rayInfo.dir);
+        rayInfo.meshId = meshId;
 
-        Vec3d edge = rayInfo.et - Vec3d(0.0, bbox.Size()[1] * 0.5, 0.0) - point;
-        Vec3d norm = cross(rayInfo.dir, edge);
-        normalize(norm);
-        GS::double3 tmp1 = Vec3dToDouble3(norm);
-        GS::double3 tmp2 = Vec3dToDouble3(point);
-        rayInfo.splane = GS::Plane<double>(tmp1, tmp2);
-        RayTraverse(pOctree, pOctree->pMesh[meshId], &rayInfo);
-
-        if (IsInverse)
+        bool isValid = false;
+        while (!isValid)
         {
-            switch (rayInfo.nCross)
+            rayInfo.rayId = rayId++;
+            rayInfo.ray = randRay(point);
+            isValid = true;
+            try
             {
-            case -1:    assert(0); return REL_OPPOSITE;
-            case -2:    assert(0); return REL_SAME;
-            case 1:     return REL_OUTSIDE;
-            default:    return REL_INSIDE;
+                RayTraverse(pOctree, &rayInfo);
+            }
+            catch (RayTriRelation result)
+            {
+                switch (result)
+                {
+                case RTR_ERROR:
+                    isValid = false;
+                    break;
+                case RTR_ON:
+                    return REL_SAME;
+                default:
+                    ReportError();
+                    return REL_NOT_AVAILABLE;
+                    break;
+                }
             }
         }
 
-        switch (rayInfo.nCross)
+        if (IsInverse)
         {
-        case -1:    return REL_SAME;
-        case -2:    return REL_OPPOSITE;
-        case 1:     return REL_INSIDE;
-        default:    return REL_OUTSIDE;
+            if (rayInfo.nCross == 1)
+                return REL_OUTSIDE;
+            else return REL_INSIDE;
         }
-    }
-
-    Relation pointInPolyhedron(CGAL::Point_3<K>& p, MyMesh* mesh, Octree* pOctree)
-    {
-
+        else
+        {
+            if (rayInfo.nCross == 1)
+                return REL_INSIDE;
+            else return REL_OUTSIDE;
+        }
     }
 
 }
