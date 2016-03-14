@@ -1,4 +1,4 @@
-#include "COctree.h"
+#include "Octree.h"
 #include "CGALext.h"
 
 #include "AlgUserData.h"

@@ -1,9 +1,10 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <queue>
 #include <boost\smart_ptr.hpp>
 
-#include "COctree.h"
+#include "Octree.h"
 #include "CGALext.h"
 #include "MyMesh.h"
 #include "TrimCSGTree.h"
@@ -16,7 +17,7 @@ namespace CSG
         typedef MyMesh::Vertex_handle   VH;
 
         template <class T>
-        class Queue : public std::queue < T, std::list<T> > {};
+        class Queue: public std::queue<T,std::list<T>> {};
 
         struct SimpleSeedInfo
         {
@@ -80,16 +81,20 @@ namespace CSG
     private:
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
         void copyAutoIndicator(AutoIndicator& target, AutoIndicator& source);
-        void createFirstSeed(SeedInfo& info);
+        void createFirstSeed(SeedInfoWithId& info);
         IndicatorVector* computeFullIndicator(VH fh, size_t meshId);
-        void floodComplexGroup();
-        void floodSimpleGroup();
+        void floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
+        void floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
 
     private:
 
         MyMesh*                     csgResult = nullptr;
         std::vector<MyMesh*>*       pMeshList = nullptr;
+
+        Octree *                    pOctree = nullptr;
     };
+
+    Relation pointInPolyhedron(CGAL::Point_3<K>& p, MyMesh* mesh, Octree* pOctree);
 
 }
 

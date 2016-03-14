@@ -12,7 +12,6 @@ namespace CSG
     template <class Mesh> class TrimCSGTree;
 
     typedef int8_t                  Indicator;
-    typedef  AutoIndicator;
     typedef std::vector<int>        IndMap;
     typedef std::map<int, int>      IndInvMap;
 

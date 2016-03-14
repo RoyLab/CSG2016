@@ -16,6 +16,8 @@ namespace CSG
     struct UserEData;
     struct UserFData;
 
+#define MARK_BEGIN 0xff
+
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
         boost::scoped_ptr<UserVData> data;

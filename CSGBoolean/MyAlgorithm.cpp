@@ -39,7 +39,7 @@ namespace
         return &(*a) <= &(*b);
     }
 
-    enum Mark { UNVISITED, SEEDED, VISITED };
+    enum Mark { SEEDED, VISITED, UNVISITED = MARK_BEGIN };
 }
 
 namespace CSG
@@ -54,7 +54,7 @@ namespace CSG
         pCsg->createCSGTreeFromExpr(expr, pMeshList->data(), pMeshList->size());
         pCsg->makePositiveAndLeftHeavy();
 
-        Octree *pOctree = new Octree;
+        pOctree = new Octree;
         std::vector<Octree::Node*> intersectLeaves;
         pOctree->build(*pMeshList, &intersectLeaves);
 
@@ -88,13 +88,13 @@ namespace CSG
             if (ind[meshId] == myext::BT_ON)
                 continue;
             else
-                ind[meshId] = pointInPolyhedron(vh->point(), pMeshList[meshId]);
+                ind[meshId] = pointInPolyhedron(vh->point(), (*pMeshList)[meshId], pOctree);
         }
         return pind;
 
     }
 
-    void MyAlgorithm::createFirstSeed(SeedInfo& info)
+    void MyAlgorithm::createFirstSeed(SeedInfoWithId& info)
     {
         VH seedV = (*pMeshList)[info.meshId]->vertices_begin();
 
@@ -111,15 +111,8 @@ namespace CSG
         GroupParseInfo infos;
         std::vector<int> itstPrims;
 
-        // 表示该mesh有没有被处理过
-        //infos.meshSeedFlag = new bool[nMesh];
-        //memset(infos.meshSeedFlag, 0, sizeof(bool));
-
         for (size_t imesh = 0; imesh < nMesh; imesh++)
         {
-            //if (infos.meshSeedFlag[imesh]) continue;
-            //infos.meshSeedFlag[imesh] = true;
-
             SeedInfoWithId idSeed;
             idSeed.meshId = imesh;
             createFirstSeed(idSeed);
@@ -161,7 +154,7 @@ namespace CSG
     void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s)
     {
         if (s.seedVertex->isShared())
-            correctSeedIndVec(s);
+            excludeOnCase(s);
 
         Queue<FH> queue;
         queue.push(s.seedFacet);
@@ -179,7 +172,7 @@ namespace CSG
                 auto itr = curface->facet_begin();
                 for (int i = 0; i < 3; i++)
                 {
-                    if (itr->facet()->mark != UNVISITED)
+                    if (itr->facet()->mark < UNVISITED) // 跟ray-tracing有关
                         continue;
 
                     if (isSameGroup(itr->facet(), curface))
@@ -192,8 +185,7 @@ namespace CSG
                         seed2.seedFacet = itr->facet();
 
                         s.indicators->copy(*seed2.indicators);
-                        correctSeedIndVec(seed2.indicators, seed2.seedVertex);
-
+                        includeOnCase(seed2);
                         createHint(seed2);
 
                         infos.curMeshSeedQueue.push(seed2);
@@ -207,60 +199,60 @@ namespace CSG
         }
     }
 
-    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& seed, int* trimTree)
+    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s)
     {
-        int nVIP = trimTree->numberOfVIP();
+    //    int nVIP = trimTree->numberOfVIP();
 
-        SeedInfo s;
+    //    SeedInfo s;
 
-        Queue<SeedInfo> q;
-        s.fh = seed.seedFacet;
-        s.vh = seed.seedVertex;
-        s.ind = new Indicator[nVIP];
-        q.push(s);
+    //    Queue<SeedInfo> q;
+    //    s.fh = seed.seedFacet;
+    //    s.vh = seed.seedVertex;
+    //    s.ind = new Indicator[nVIP];
+    //    q.push(s);
 
-        bool first = true;
-        std::vector<Loop> loops;
+    //    bool first = true;
+    //    std::vector<Loop> loops;
 
-        while (!q.empty())
-        {
-            if (q.front().fh->mark != VISITED)
-            {
-                FH fh = q.front().fh;
-                fh->mark = VISITED;
+    //    while (!q.empty())
+    //    {
+    //        if (q.front().fh->mark != VISITED)
+    //        {
+    //            FH fh = q.front().fh;
+    //            fh->mark = VISITED;
 
-                ItstGraph* ig = new ItstGraph;
-                ig->createGraph(q.front());
-                ig->propInd();
+    //            ItstGraph* ig = new ItstGraph;
+    //            ig->createGraph(q.front());
+    //            ig->propInd();
 
-                loops.clear();
-                fh->data->iTri->looplets->getAllCircles(loops);
+    //            loops.clear();
+    //            fh->data->iTri->looplets->getAllCircles(loops);
 
-                for (auto& loop : loops)
-                {
-                    if (ig->classify(loop))
-                        addFacet(loop);
-                }
+    //            for (auto& loop : loops)
+    //            {
+    //                if (ig->classify(loop))
+    //                    addFacet(loop);
+    //            }
 
-                for (size_t i = 0; i < 3; i++)
-                {
-                    ig->getCornerInds(&s, i);
-                    s.fh = ? ;
-                    s.fh->mark = SEEDED;
+    //            for (size_t i = 0; i < 3; i++)
+    //            {
+    //                ig->getCornerInds(&s, i);
+    //                s.fh = ? ;
+    //                s.fh->mark = SEEDED;
 
-                    if (IsSameGroup(s.fh, fh))
-                        q.push(s);
-                    else
-                    {
-                        
-                    }
-                }
+    //                if (IsSameGroup(s.fh, fh))
+    //                    q.push(s);
+    //                else
+    //                {
+    //                    
+    //                }
+    //            }
 
-                delete ig;
-            }
+    //            delete ig;
+    //        }
 
-            q.pop();
-        }
-    }
+    //        q.pop();
+    //    }
+    //}
 
 }

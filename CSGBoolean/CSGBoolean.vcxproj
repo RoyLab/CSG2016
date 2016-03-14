@@ -130,31 +130,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="bool.cpp" />
-    <ClCompile Include="COctree.cpp" />
+    <ClCompile Include="Octree.cpp" />
     <ClCompile Include="ItstAlg.cpp" />
     <ClCompile Include="ItstGraph.cpp" />
     <ClCompile Include="LoopletTable.cpp" />
     <ClCompile Include="MyAlgorithm.cpp" />
     <ClCompile Include="MyMesh.cpp" />
+    <ClCompile Include="PointInMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlgUserData.h" />
     <ClInclude Include="bool.h" />
-    <ClInclude Include="BSP2D.h" />
     <ClInclude Include="CGALext.h" />
-    <ClInclude Include="COctree.h" />
-    <ClInclude Include="BinaryTree.h" />
-    <ClInclude Include="CMesh.h" />
+    <ClInclude Include="Octree.h" />
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="ItstAlg.h" />
     <ClInclude Include="ItstGraph.h" />
     <ClInclude Include="LoopletTable.h" />
     <ClInclude Include="MyMesh.h" />
-    <ClInclude Include="MyMesh2.h" />
-    <ClInclude Include="TriangleMesh.h" />
-    <ClInclude Include="isect.h" />
-    <ClInclude Include="IsectTriangle.h" />
-    <ClInclude Include="MPMesh.h" />
     <ClInclude Include="MyAlgorithm.h" />
     <ClInclude Include="precompile.h" />
     <ClInclude Include="TrimCSGTree.h" />

@@ -21,9 +21,6 @@
     <ClCompile Include="bool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="COctree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MyMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -36,36 +33,18 @@
     <ClCompile Include="LoopletTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Octree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PointInMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CMesh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="COctree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BinaryTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="precompile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="isect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MPMesh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IsectTriangle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BSP2D.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MyAlgorithm.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TriangleMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bool.h">
@@ -75,9 +54,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CGALext.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MyMesh2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MyMesh.h">
@@ -96,6 +72,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TrimCSGTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

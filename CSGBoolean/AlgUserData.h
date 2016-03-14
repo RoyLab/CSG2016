@@ -97,6 +97,6 @@ namespace CSG
         CGAL::Triangle_3<K>     triangle;
         TriBbox                 bbox;
 
-        ItstTriangle*           iTri = nullptr;
+        ItstTriangle*           itstTri = nullptr;
     };
 }

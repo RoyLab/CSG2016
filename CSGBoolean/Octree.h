@@ -20,19 +20,6 @@ namespace CSG
         NODE_COMPOUND
     };
 
-    //struct DiffMeshInfo
-    //{
-    //    unsigned ID;
-    //    Relation Rela;
-
-    //    DiffMeshInfo(
-    //        unsigned i, 
-    //        Relation rel = REL_UNKNOWN
-    //        ): ID(i), Rela(rel)
-    //    {}
-    //};
-
-
     class Octree
     {
         typedef CGAL::Point_3<K> Point;
@@ -58,9 +45,6 @@ namespace CSG
                 for (auto pair : triTable)
                     SAFE_DELETE(pair.second);
             }
-
-            //std::vector<DiffMeshInfo> DiffMeshIndex;
-            //void *pRelationData;
         };
 
     public:
@@ -82,13 +66,6 @@ namespace CSG
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
         STATIC_PROPERTY(int, MAX_LEVEL);
     };
-
-
-    //typedef Octree<MyMesh> MyOctree;
-    //Octree<>* BuildOctree(MyMesh** meshList, unsigned nMesh);
-    //Relation PolyhedralInclusionTest(Vec3d& point, Octree<>* pOctree, unsigned meshId, bool = false);
-
-    //inline bool IsLeaf(OctreeNode* node) {return !node->Child;}
 
 }// namespace CSG
 

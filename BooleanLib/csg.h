@@ -7,7 +7,6 @@
 
 namespace CSG
 {
-
     enum Relation
     {
         REL_UNKNOWN =   0x0000,
