@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "macroutil.h"
@@ -22,11 +24,16 @@ namespace CSG
     {
         COMMON_PROPERTY_POINTER(AdjacentGraph, adjGraph);
         COMMON_PROPERTY_POINTER(std::vector<MyMesh*>, meshList);
+
+        typedef MyMesh::Face_handle FH;
+        typedef std::unordered_set<IndexPair> TriIdSet;
+        typedef std::unordered_map<IndexPair, TriIdSet*> MeshIdTriIdMap;
     public:
         ItstAlg(std::vector<MyMesh*>* meshes);
         ~ItstAlg();
 
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
+        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps);
 
     private:
 

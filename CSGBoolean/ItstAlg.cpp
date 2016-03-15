@@ -1,8 +1,6 @@
-#include <unordered_map>
-#include <unordered_set>
-
 #include "csgdefs.h"
 #include "ItstAlg.h"
+#include "plane_reps.h"
 
 namespace CSG
 {
@@ -21,8 +19,7 @@ namespace CSG
 
     void ItstAlg::doIntersection(std::vector<Octree::Node*>& intersectLeaves)
     {
-        typedef std::unordered_set<IndexPair> TriIdSet;
-        typedef std::unordered_map<IndexPair, TriIdSet*> MeshIdTriIdMap;
+
 
         MeshIdTriIdMap antiOverlapMap;
         antiOverlapMap.max_load_factor(0.6);
@@ -68,7 +65,7 @@ namespace CSG
 
                             antiOverlapSet->insert(triIdPair);
 
-                            if (IntersectionTest(fh0, fh1))
+                            if (IntersectionTest(fh0, fh1, antiOverlapSet))
                                 mp_adjGraph->setValue(meshId[0], meshId[1], true);
                         }
                     }
@@ -77,35 +74,28 @@ namespace CSG
         }
     }
 
-    void fuction()
+    enum Sign
     {
-        myext::TriTriIsectResult<K> result;
-        myext::Sign sign = myext::tri_tri_intersect(fh0->triangle, fh0->normal,
-            fh1->triangle, fh1->normal, &result);
+        UNKOWN = 0,
+        INTERSECT_ON_LINE,
+        INTERSECT_ON_POINT,
+        COPLANAR,
+        NOT_INTERSECT
+    };
 
-        if (sign == myext::NOT_INTERSECT || sign == myext::INTERSECT_ON_POINT)
-            continue;
+    enum PosTag
+    {
+        NONE = -1, INNER = 0x00,
+        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
+        VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
+    };
 
-        meshRelTable->getValue(meshId[0], meshId[1]) = true;
-
-        setupIsectFacet(fh0);
-        setupIsectFacet(fh1);
-
-        if (sign == myext::COPLANAR)
-        {
-            fh0->isectInfo->coplanars.emplace_back(fh1);
-            fh1->isectInfo->coplanars.emplace_back(fh0);
-            continue;
-        }
-
-        checkNonmanifoldEdge(fh0, fh1, &result, antiOverlapSet);
-        setupPonits(fh0, fh1, result);
-    }
 
     template <class _R>
     struct TriTriIsectResult
     {
         PosTag taga[2], tagb[2];
+
     };
 
     //template <class _R>
@@ -281,6 +271,42 @@ namespace CSG
 
         return 1;
     }
+
+
+    void checkManifoldEdge()
+    {
+
+    }
+
+
+    bool ItstAlg::IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps)
+    {
+        K::Triangle_3& t0 = fh0->data->triangle;
+        K::Triangle_3& t1 = fh1->data->triangle;
+
+        // 这里不需要归一化
+        K::Vector_3 n0 = CGAL::normal(t0.vertex(0), t0.vertex(1), t0.vertex(2));
+        K::Vector_3 n1 = CGAL::normal(t0.vertex(0), t0.vertex(1), t0.vertex(2));
+
+        assert(std::abs(n0.squared_length() - 1) > 1e-6);
+        assert(std::abs(n1.squared_length() - 1) > 1e-6);
+
+        TriTriIsectResult<K> result;
+        Sign sign = tri_tri_intersect(t0, n0, t1, n1, &result);
+
+        if (sign == NOT_INTERSECT || sign == INTERSECT_ON_POINT || sign == COPLANAR)
+            return false;
+
+        ItstTriangle*& it0 = fh0->data->itstTri;
+        ItstTriangle*& it1 = fh1->data->itstTri;
+
+        if (!it0) it0 = new ItstTriangle;
+        if (!it1) it1 = new ItstTriangle;
+
+        checkManifoldEdge(fh0, fh1, &result, antiOverlapSet);
+        setupPonits(fh0, fh1, result);
+    }
+
 
     //int TriTriIntersectTest(const Vec3d& v0, const Vec3d& v1, const Vec3d& v2, const Vec3d& nv,
     //    const Vec3d& u0, const Vec3d& u1, const Vec3d& u2, const Vec3d& nu,

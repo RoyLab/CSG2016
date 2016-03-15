@@ -63,32 +63,6 @@ namespace CSG
         int nCross = 0;
     };
 
-    //static inline bool PointWithPlane(const Vec3d& normal, double distance, const Vec3d& pos)
-    //{
-    //    double dist = pos * normal + distance;
-    //    if (dist > 0)
-    //        return true;
-    //    return false;
-    //}
-
-    //inline bool PointWithPlane(const Vec3d& normal, const Vec3d& v0, const Vec3d& pos)
-    //{
-    //    double dist = normal * (pos - v0);
-    //    if (dist > 0)
-    //        return true;
-    //    return false;
-    //}
-
-    //static inline bool SignDeterminant(const Point3d& v0, const Point3d& v1, const Point3d& v2, const Point3d& v3)
-    //{
-    //    return CGAL::orientation(v0, v1, v2, v3);
-    //}
-
-    //static inline void normalize(Vec3d& vec)
-    //{
-    //    vec = vec / sqrt(vec.squared_length());
-    //}
-
     static RayTriRelation RayFaceTest(K::Ray_3 &ray, K::Triangle_3& triangle)
     {
         if (triangle.has_on(ray.source()))
@@ -202,7 +176,7 @@ namespace CSG
 
         assert(pOctree);
         Cube_3 &RootBBox = pOctree->getRoot()->bbox;
-        K::Vector_3 bboxSize = RootBBox.max() - RootBBox.min();
+        Vec3d  bboxSize = RootBBox.max() - RootBBox.min();
 
         double dir[3] = { rayInfo->ray.direction().dx(), rayInfo->ray.direction().dy(), rayInfo->ray.direction().dz() };
         double source[3] = { rayInfo->ray.source()[0], rayInfo->ray.source()[1], rayInfo->ray.source()[2] };

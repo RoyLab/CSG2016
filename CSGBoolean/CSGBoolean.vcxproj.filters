@@ -77,5 +77,8 @@
     <ClInclude Include="Octree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="plane_reps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

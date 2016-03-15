@@ -6,22 +6,6 @@
 
 namespace myext
 {
-    enum Sign
-    {
-        UNKOWN = 0,
-        INTERSECT_ON_LINE,
-        INTERSECT_ON_POINT,
-        COPLANAR,
-        NOT_INTERSECT
-    };
-
-    enum PosTag
-    {
-        NONE = -1, INNER = 0x00,
-        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
-        VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
-    };
-
     enum BoundedTag
     {
         BT_UNKOWN = 0, BT_NA = 5, BT_ON = 1, BT_INSIDE = 2, BT_OUSIDE = 3
@@ -68,4 +52,12 @@ namespace myext
 
         return index;
     }
+
+#define DECLARE_CGAL_KERNEL_CLASS\
+    typedef typename _R::Plane_3 Plane;\
+    typedef typename _R::Point_3 Point;\
+    typedef typename _R::Vector_3 Vector;\
+    typedef typename _R::Triangle_3 Triangle;\
+    typedef typename _R::Direction_3 Direction;
+
 }
