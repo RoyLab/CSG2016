@@ -1,14 +1,39 @@
 #pragma once
 #include "CGALext.h"
 #include "macroutil.h"
+#include "adaptive.h"
 #include <CGAL\intersections.h>
 
 namespace CSG
 {
     template <class _R>
+    class Plane_ext :
+        CGAL::Plane_3 < _R >
+    {
+    public:
+        Plane_ext(const CGAL::Plane_3& p)
+        {
+            memset(this, &p, sizeof(Plane_ext));
+        }
+
+        _R::FT operator[](int i) const
+        {
+            assert(i < 4 && i >= 0);
+            switch (i)
+            {
+            case 0: return a();
+            case 1: return b();
+            case 2: return c();
+            case 3: return d();
+            }
+        }
+    };
+
+    template <class _R>
     class PBPoint
     {
         DECLARE_CGAL_KERNEL_CLASS
+        typedef Plane_ext<_R> PlaneExt;
     public:
         PBPoint(const Plane& p, const Plane& q, const Plane& r)
         {
@@ -22,8 +47,26 @@ namespace CSG
             return CGAL::intersection(planes[0], planes[1], planes[2]);
         }
 
+        bool operator==(const PBPoint& p) const
+        {
+            double4x4 mat;
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 4; j++)
+                    mat[i][j] = bps[i][j];
+
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                    mat[3][j] = p.bps[i][j];
+
+                if (GS::adaptiveDet4x4Sign(mat) != 0)
+                    return false;
+            }
+            return true;
+        }
+
     private:
-        Plane planes[3];
+        PlaneExt planes[3];
     };
 
     template <class _R>
@@ -42,8 +85,9 @@ namespace CSG
             // TO-DO
         }
 
+
+
     private:
-        COMMON_PROPERTY(Direction, normal);
         COMMON_PROPERTY(Plane, sp);
         Plane m_bps[3];
     };

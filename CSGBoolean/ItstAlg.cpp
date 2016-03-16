@@ -2,6 +2,79 @@
 #include "ItstAlg.h"
 #include "plane_reps.h"
 
+namespace
+{
+    enum Sign
+    {
+        UNKOWN = 0,
+        INTERSECT_ON_LINE,
+        INTERSECT_ON_POINT,
+        COPLANAR,
+        NOT_INTERSECT
+    };
+
+    enum PosTag
+    {
+        NONE = -1, INNER = 0x00,
+        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
+        VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
+    };
+
+    inline bool is_edge(PosTag tag)
+    {
+        return tag >= EDGE_0 && tag <= EDGE_2;
+    }
+
+    inline bool is_vertex(PosTag tag)
+    {
+        return tag >= VER_0 && tag <= VER_2;
+    }
+
+    inline int edge_idx(PosTag tag)
+    {
+        switch (tag)
+        {
+        case EDGE_0:
+            return 0;
+        case EDGE_1:
+            return 1;
+        case EDGE_2:
+            return 2;
+        default:
+            {
+                char _errline[20];
+                throw std::exception(ReportErrorString.c_str());
+            }
+        }
+    }
+
+    inline int vertex_idx(PosTag tag)
+    {
+        switch (tag)
+        {
+        case VER_0:
+            return 0;
+        case VER_1:
+            return 1;
+        case VER_2:
+            return 2;
+        default:
+        {
+            char _errline[20];
+            throw std::exception(ReportErrorString.c_str());
+        }
+        }
+    }
+
+    template <class _R>
+    struct TriTriIsectResult
+    {
+        PosTag tagA[2], tagB[2];
+        CSG::PBPoint A, B;
+    };
+}
+
+
 namespace CSG
 {
 
@@ -73,30 +146,6 @@ namespace CSG
             }
         }
     }
-
-    enum Sign
-    {
-        UNKOWN = 0,
-        INTERSECT_ON_LINE,
-        INTERSECT_ON_POINT,
-        COPLANAR,
-        NOT_INTERSECT
-    };
-
-    enum PosTag
-    {
-        NONE = -1, INNER = 0x00,
-        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
-        VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
-    };
-
-
-    template <class _R>
-    struct TriTriIsectResult
-    {
-        PosTag taga[2], tagb[2];
-
-    };
 
     //template <class _R>
 #include "csgdefs.h"
@@ -273,9 +322,39 @@ namespace CSG
     }
 
 
-    void checkManifoldEdge()
+    bool ItstAlg::checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, bool res[])
     {
+        K::Point_3 vthiz, vthat;
+        K::Plane_3 plane;
+        FH fh[2] = { fh0, fh1 };
+        res[0] = false; res[1] = false;
+        bool detected = false;
+        
+        for (int i = 0; i < 2; i++)
+        {
+            if (result.tagA[i] == result.tagB[i] && is_edge(result.tagA[i]))
+            {
+                detected = true;
+                int idx = edge_idx(result.tagA[i]);
+                vthiz = fh[i]->data->triangle.vertex(idx);
+                MyMesh::Halfedge_handle oppoHE = fh[i]->edges[idx]->opposite();
+                vthat = oppoHE->facet()->data->triangle.vertex(oppoHE->id);
+                plane = fh[(i+1)%2]->data->itstTri->planeRep->get_sp();
 
+                uint32_t triId[2];
+                triId[i] = oppoHE->facet()->id();
+                triId[(i + 1) % 2] = fh[(i + 1) % 2]->id();
+                IndexPair triIdPair;
+                MakeIndex(triId, triIdPair);
+                overlaps->insert(triIdPair);
+
+                if ((plane.has_on_positive_side(vthiz) && plane.has_on_positive_side(vthat)) ||
+                    (plane.has_on_negative_side(vthiz) && plane.has_on_negative_side(vthat)))
+                    res[(i+1)%2] = true;
+            }
+        }
+
+        return detected;
     }
 
 
@@ -300,17 +379,15 @@ namespace CSG
         ItstTriangle*& it0 = fh0->data->itstTri;
         ItstTriangle*& it1 = fh1->data->itstTri;
 
-        if (!it0) it0 = new ItstTriangle;
-        if (!it1) it1 = new ItstTriangle;
+        if (!it0) it0 = new ItstTriangle(fh0);
+        if (!it1) it1 = new ItstTriangle(fh1);
 
-        checkManifoldEdge(fh0, fh1, &result, antiOverlapSet);
-        setupPonits(fh0, fh1, result);
+        bool manifold[2];
+        checkManifoldEdge(fh0, fh1, overlaps, result, manifold);
+
+        if (!manifold[0])
+        {
+            fh0->data->itstTri-> ? ?
+        }
     }
-
-
-    //int TriTriIntersectTest(const Vec3d& v0, const Vec3d& v1, const Vec3d& v2, const Vec3d& nv,
-    //    const Vec3d& u0, const Vec3d& u1, const Vec3d& u2, const Vec3d& nu,
-    //    int& startType, int& endType, Vec3d& start, Vec3d& end);
-
-
 }

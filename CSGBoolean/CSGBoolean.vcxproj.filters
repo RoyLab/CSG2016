@@ -39,6 +39,9 @@
     <ClCompile Include="PointInMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="adaptive.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompile.h">
@@ -78,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="plane_reps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="adaptive.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

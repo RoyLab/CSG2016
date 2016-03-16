@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="adaptive.cpp" />
     <ClCompile Include="bool.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="ItstAlg.cpp" />
@@ -139,6 +140,7 @@
     <ClCompile Include="PointInMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="adaptive.h" />
     <ClInclude Include="AlgUserData.h" />
     <ClInclude Include="bool.h" />
     <ClInclude Include="CGALext.h" />

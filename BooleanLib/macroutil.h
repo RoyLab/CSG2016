@@ -1,6 +1,7 @@
 #pragma once
 #include <assert.h>
 #include <string.h>
+#include <string>
 
 
 #ifdef NOT
@@ -94,7 +95,11 @@ __name__ = _##__name__##_; \
 }
 #endif
 
+#ifndef ReportErrorString
+#define ReportErrorString\
+    (std::string("Error! ") + itoa(__LINE__, _errline, 20) + "of file \"" + __FILE__ + "\".\n")
 
+#endif
 
 #ifndef ReportError
 #define ReportError()\

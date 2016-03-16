@@ -1,4 +1,5 @@
 #pragma once
+#include "linmath.h"
 
 #include <CGAL\Exact_predicates_inexact_constructions_kernel.h>
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -23,3 +24,11 @@ static inline void GetIDFromIndex(uint32_t ID[], const IndexPair& indexPair)
     ID[0] = indexPair & 0xffffffff;
     ID[1] = indexPair >> 32;
 }
+
+typedef double double2[2];
+typedef double double3[3];
+typedef double double4[4];
+
+typedef double2 double2x2[2];
+typedef double3 double3x3[3];
+typedef double3 double4x4[4];

@@ -34,6 +34,7 @@ namespace CSG
 
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
         bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps);
+        bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, bool res[]);
 
     private:
 

@@ -26,6 +26,7 @@ namespace CSG
     template <class Refs>
     struct MyHalfedge : public CGAL::HalfedgeDS_halfedge_max_base_with_id<Refs, unsigned> {
         boost::scoped_ptr<UserEData> data;
+        int id = -1;
     };
 
     template <class Refs>

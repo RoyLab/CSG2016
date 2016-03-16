@@ -2,6 +2,7 @@
 #include <list>
 #include "macroutil.h"
 #include "csgdefs.h"
+#include "plane_reps.h"
 #include "MyMesh.h"
 
 namespace CSG
@@ -73,6 +74,7 @@ namespace CSG
     struct ItstTriangle
     {
         LoopletTable*           looplets = nullptr;
+        PBTriangle<K>*          planeRep = nullptr;
         std::vector<VProxyItr>  inVertices;
     };
 
