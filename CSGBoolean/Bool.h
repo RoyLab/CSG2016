@@ -12,6 +12,7 @@ namespace CSG
 {
     class MyMesh;
 
+    extern "C" CSG_API void test();
     extern "C" CSG_API int loadMesh(std::vector<MyMesh*>& meshes, const std::vector<std::string>& names);
 }
 

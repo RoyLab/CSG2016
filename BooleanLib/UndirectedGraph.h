@@ -43,7 +43,7 @@ namespace myext
         {
             if (i > j) std::swap(i, j);
             size_t d = j - i;
-            return (2 * n + 1 - i) * i / 2 + d;
+            return (2 * m_sz + 1 - i) * i / 2 + d;
         }
 
         T *m_data = nullptr;

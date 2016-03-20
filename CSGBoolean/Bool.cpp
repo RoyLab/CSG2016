@@ -13,7 +13,7 @@ namespace CSG
     }
 
 
-    void test()
+    extern "C" CSG_API void test()
     {
         std::vector<std::string> names;
         std::string expr;
@@ -24,7 +24,6 @@ namespace CSG
         MyAlgorithm *alg = new MyAlgorithm;
         alg->solve(expr, meshList);
 
-        MyMesh* res = alg->popResultMesh();
         SAFE_DELETE(alg);
     }
 }

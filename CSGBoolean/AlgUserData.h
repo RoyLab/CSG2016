@@ -7,13 +7,14 @@
 
 namespace CSG
 {
-    struct UserEData;
-    //struct LoopletTable;
-
     enum ContextType { CT_NONE, CT_VERTEX = 1, CT_EDGE, CT_FACET };
 
+    template <class Refs>
     struct Context
     {
+        typedef typename Refs::Face_handle FH;
+        typedef typename Refs::Vertex_handle VH;
+
         Context()
         {
             type = CT_NONE;
@@ -21,7 +22,23 @@ namespace CSG
             eh = nullptr;
         }
 
-        ~Context();
+        ~Context()
+        {
+            switch (type)
+            {
+            case CT_VERTEX:
+                SAFE_DELETE(vh);
+                break;
+            case CT_EDGE:
+                SAFE_DELETE(eh);
+                break;
+            case CT_FACET:
+                SAFE_DELETE(fh);
+                break;
+            default:
+                break;
+            }
+        }
 
         ContextType type;
         int32_t     meshId;
@@ -29,14 +46,14 @@ namespace CSG
         union
         {
             UserEData* eh;
-            MyMesh::Face_handle* fh;
-            MyMesh::Vertex_handle* vh;
+            FH* fh;
+            VH* vh;
         };
     };
 
     struct VEntity
     {
-        std::vector<Context> ctx;
+        std::vector<Context<MyMesh>> ctx;
     };
 
     struct VPointer
@@ -46,74 +63,15 @@ namespace CSG
     };
 
     typedef VPointer ItstLine[2];
-
-    typedef std::list<VEntity*>     VEntities;
-    typedef VEntities::iterator     VProxy;
-    typedef std::list<VProxy>       VProxies;
-    typedef std::list<ItstLine>     ItstLineList;
-
-    class VProxyItr :
-        public std::list<VProxy>::iterator
-    {
-    public:
-
-        VEntity* pointer()
-        {
-            return ***this;
-        }
-
-        const VEntity* pointer() const
-        {
-            return ***this;
-        }
-    };
-
-    typedef Cube_3 TriBbox;
-
-    struct UserVData
-    {
-        VProxyItr* proxy = nullptr;
-    };
-
-    struct UserEData
-    {
-        std::vector<VProxyItr>  vertices;
-    };
+    typedef std::list<ItstLine> ItstLineList;
 
     struct ItstTriangle
     {
-        //LoopletTable*           looplets = nullptr;
         ItstLineList            isectLines;
         PBTriangle<K>*          planeRep = nullptr;
         std::vector<VProxyItr>  inVertices;
 
-        ItstTriangle(MyMesh::Face_handle fh) :planeRep(new PBTriangle<K>(fh->)){}
+        ItstTriangle(MyMesh::Face_handle fh){}
     };
 
-    struct UserFData
-    {
-        CGAL::Triangle_3<K>     triangle;
-        TriBbox                 bbox;
-
-        ItstTriangle*           itstTri = nullptr;
-    };
-
-
-    inline Context::~Context()
-    {
-        switch (type)
-        {
-        case CT_VERTEX:
-            SAFE_DELETE(vh);
-            break;
-        case CT_EDGE:
-            SAFE_DELETE(eh);
-            break;
-        case CT_FACET:
-            SAFE_DELETE(fh);
-            break;
-        default:
-            break;
-        }
-    }
 }

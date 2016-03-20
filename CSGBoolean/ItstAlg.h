@@ -50,7 +50,7 @@ namespace CSG
         ~ItstAlg();
 
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
-        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps);
+        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps){ return true; }
         bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, bool res[]);
 
     private:
