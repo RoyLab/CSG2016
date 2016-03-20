@@ -8,7 +8,7 @@ namespace CSG
 {
     template <class _R>
     class Plane_ext :
-        CGAL::Plane_3 < _R >
+        CGAL::Plane_3 <_R>
     {
     public:
         Plane_ext(const CGAL::Plane_3& p)
@@ -16,7 +16,7 @@ namespace CSG
             memset(this, &p, sizeof(Plane_ext));
         }
 
-        _R::FT operator[](int i) const
+        typename _R::FT operator[](int i) const
         {
             assert(i < 4 && i >= 0);
             switch (i)

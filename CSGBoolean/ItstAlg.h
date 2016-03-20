@@ -7,10 +7,27 @@
 #include "macroutil.h"
 #include "AlgUserData.h"
 #include "Octree.h"
+#include "plane_reps.h"
 #include "UndirectedGraph.h"
 
 namespace CSG
 {
+    enum Sign
+    {
+        UNKOWN = 0,
+        INTERSECT_ON_LINE,
+        INTERSECT_ON_POINT,
+        COPLANAR,
+        NOT_INTERSECT
+    };
+
+    template <class _R>
+    struct TriTriIsectResult
+    {
+        PosTag tagA[2], tagB[2];
+        PBPoint A, B;
+    };
+
     class AdjacentGraph :
         public myext::UndirectedGraph<bool>
     {

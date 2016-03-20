@@ -32,3 +32,15 @@ typedef double double4[4];
 typedef double2 double2x2[2];
 typedef double3 double3x3[3];
 typedef double3 double4x4[4];
+
+namespace CSG
+{
+    enum PosTag
+    {
+        NONE = -1, INNER = 0x00,
+        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
+        VER_0 = 0x10, VER_1 = 0x20, VER_2 = 0x40,
+
+        VER_MASK = 0xf0, EDGE_MASK = 0x0f
+    };
+}

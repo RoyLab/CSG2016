@@ -4,21 +4,7 @@
 
 namespace
 {
-    enum Sign
-    {
-        UNKOWN = 0,
-        INTERSECT_ON_LINE,
-        INTERSECT_ON_POINT,
-        COPLANAR,
-        NOT_INTERSECT
-    };
-
-    enum PosTag
-    {
-        NONE = -1, INNER = 0x00,
-        EDGE_0 = 0x01, EDGE_1 = 0x02, EDGE_2 = 0x04,
-        VER_0 = 0x08, VER_1 = 0x10, VER_2 = 0x20
-    };
+    using namespace CSG;
 
     inline bool is_edge(PosTag tag)
     {
@@ -28,6 +14,44 @@ namespace
     inline bool is_vertex(PosTag tag)
     {
         return tag >= VER_0 && tag <= VER_2;
+    }
+
+    inline bool is_same_edge(PosTag tag0, PosTag tag1, int& eId)
+    {
+        if (tag0 == tag1)
+            if (is_edge(tag0))
+            {
+                eId = edge_idx(tag0);
+                return true;
+            }
+
+        if (is_edge(tag0) && is_vertex(tag1))
+        {
+            if (edge_idx(tag0) != vertex_idx(tag1))
+            {
+                eId = edge_idx(tag0);
+                return true;
+            }
+            else return false;
+        }
+        else if (is_edge(tag1) && is_vertex(tag0))
+        {
+            if (edge_idx(tag1) != vertex_idx(tag0))
+            {
+                eId = edge_idx(tag1);
+                return true;
+            }
+            else return false;
+        }
+        else if (is_vertex(tag0) && is_vertex(tag1))
+        {
+            eId = (std::max(vertex_idx(tag0), vertex_idx(tag1)) + 1) % 3;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     inline int edge_idx(PosTag tag)
@@ -66,12 +90,6 @@ namespace
         }
     }
 
-    template <class _R>
-    struct TriTriIsectResult
-    {
-        PosTag tagA[2], tagB[2];
-        CSG::PBPoint A, B;
-    };
 }
 
 
@@ -321,7 +339,7 @@ namespace CSG
         return 1;
     }
 
-
+    
     bool ItstAlg::checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, bool res[])
     {
         K::Point_3 vthiz, vthat;
@@ -332,10 +350,12 @@ namespace CSG
         
         for (int i = 0; i < 2; i++)
         {
-            if (result.tagA[i] == result.tagB[i] && is_edge(result.tagA[i]))
+            // 首先检查存不存在交点都在同一个边界上的情况
+            int edgeId = -1;
+            if (is_same_edge(result.tagA[i], result.tagB[i], edgeId))
             {
                 detected = true;
-                int idx = edge_idx(result.tagA[i]);
+                int idx = edgeId;
                 vthiz = fh[i]->data->triangle.vertex(idx);
                 MyMesh::Halfedge_handle oppoHE = fh[i]->edges[idx]->opposite();
                 vthat = oppoHE->facet()->data->triangle.vertex(oppoHE->id);
@@ -385,9 +405,9 @@ namespace CSG
         bool manifold[2];
         checkManifoldEdge(fh0, fh1, overlaps, result, manifold);
 
-        if (!manifold[0])
+        if (!manifold[0]) //在第一个三角形中加入相交线 
         {
-            fh0->data->itstTri-> ? ?
+            fh0->data->itstTri->
         }
     }
 }
