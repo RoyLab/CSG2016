@@ -8,13 +8,17 @@ namespace CSG
 {
     template <class _R>
     class Plane_ext :
-        CGAL::Plane_3 <_R>
+        public CGAL::Plane_3<_R>
     {
+        DECLARE_CGAL_KERNEL_CLASS
     public:
-        Plane_ext(const CGAL::Plane_3& p)
-        {
-            memset(this, &p, sizeof(Plane_ext));
-        }
+        Plane_ext(){}
+        Plane_ext(const CGAL::Plane_3<_R>& p)
+        { memcpy(this, &p, sizeof(Plane_ext)); }
+
+        Plane_ext(const Point& p, const Point& q, const Point& r):
+            CGAL::Plane_3<_R>(p, CGAL::cross_product(q - p, r - p))
+        {}
 
         typename _R::FT operator[](int i) const
         {
@@ -26,6 +30,8 @@ namespace CSG
             case 2: return c();
             case 3: return d();
             }
+            ReportError();
+            return 0;
         }
     };
 
@@ -35,11 +41,22 @@ namespace CSG
         DECLARE_CGAL_KERNEL_CLASS
         typedef Plane_ext<_R> PlaneExt;
     public:
-        PBPoint(const Plane& p, const Plane& q, const Plane& r)
+        PBPoint(){}
+        PBPoint(const Plane& p, const Plane& q, const Plane& r, bool keepPositive = true)
         {
-            bps[0] = p;
-            bps[1] = q;
-            bps[2] = r;
+            planes[0] = p;
+            planes[1] = q;
+            planes[2] = r;
+
+            if (keepPositive)
+            {
+                if (CGAL::determinant(p.orthogonal_vector(),
+                    q.orthogonal_vector(), r.orthogonal_vector()) < 0.f)
+                    planes[2] = r.opposite();
+            }
+
+            assert(CGAL::determinant(p.orthogonal_vector(),
+                q.orthogonal_vector(), r.orthogonal_vector()) > 0.f);
         }
 
         Point estimate_coords() const
@@ -52,12 +69,12 @@ namespace CSG
             double4x4 mat;
             for (int i = 0; i < 3; i++)
                 for (int j = 0; j < 4; j++)
-                    mat[i][j] = bps[i][j];
+                    mat[i][j] = p.planes[i][j];
 
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 4; j++)
-                    mat[3][j] = p.bps[i][j];
+                    mat[3][j] = p.planes[i][j];
 
                 if (GS::adaptiveDet4x4Sign(mat) != 0)
                     return false;
@@ -69,26 +86,43 @@ namespace CSG
         PlaneExt planes[3];
     };
 
+    //typedef K _R;
     template <class _R>
     class PBTriangle
     {
         DECLARE_CGAL_KERNEL_CLASS
+        typedef Plane_ext<_R> PlaneExt;
     public:
-        PBTriangle(const Point& p, const Point& q, const Point& r)
+        PBTriangle(){}
+
+        PBTriangle(const Triangle& t)
         {
-            Vector e1 = q - p;
-            Vector e2 = r - p;
-
-            m_normal = CGAL::cross_product(e1, e2);
-            sp = Plane(p, normal);
-
-            // TO-DO
+            new(this)PBTriangle(t.vertex(0), t.vertex(1), t.vertex(2));
         }
 
+        PBTriangle(const Point& p, const Point& q, const Point& r)
+        {
+            m_sp = PlaneExt(p, q, r);
 
+            Vector normal = m_sp.orthogonal_vector();
+            normal = normal / sqrt(normal.squared_length());
+
+            m_bps[0] = PlaneExt(q, r, q + normal);
+            m_bps[1] = PlaneExt(r, p, r + normal);
+            m_bps[2] = PlaneExt(p, q, p + normal);
+        }
 
     private:
-        COMMON_PROPERTY(Plane, sp);
-        Plane m_bps[3];
+        COMMON_PROPERTY(PlaneExt, sp);
+        PlaneExt m_bps[3];
     };
+
+    template <class Plane>
+    int orientation(const Plane& p, const Plane& q, const Plane& r, const Plane& s)
+    {
+        return int(CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
+            q.a(), q.b(), q.c(), q.d(),
+            r.a(), r.b(), r.c(), r.d(),
+            s.a(), s.b(), s.c(), s.d()));
+    }
 }

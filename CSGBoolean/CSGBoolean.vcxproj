@@ -152,7 +152,6 @@
     <ClInclude Include="LoopletTable.h" />
     <ClInclude Include="MyMesh.h" />
     <ClInclude Include="MyAlgorithm.h" />
-    <ClInclude Include="precompile.h" />
     <ClInclude Include="TrimCSGTree.h" />
   </ItemGroup>
   <ItemGroup>

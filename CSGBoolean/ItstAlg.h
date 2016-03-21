@@ -25,7 +25,7 @@ namespace CSG
     struct TriTriIsectResult
     {
         PosTag tagA[2], tagB[2];
-        PBPoint A, B;
+        PBPoint<_R> A, B;
     };
 
     class AdjacentGraph :
@@ -50,15 +50,19 @@ namespace CSG
         ~ItstAlg();
 
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
-        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps){ return true; }
-        bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, bool res[]);
+        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps);
+        bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[]);
 
     private:
 
         /*  合并优先级：
         已经登记为共享点的，按顺序排大小，先到大
         */
-        void mergeProxy(VProxies::iterator a, VProxies::iterator b);
+        void mergeProxy(VProxyItr a, VProxyItr b);
+        int checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr outcome);
+        int checkDuplicatedPoints(std::vector<VProxyItr>& plist, PBPoint<K> point, VProxyItr& proxy);
+        void getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], int oId[2], VProxyItr outproxy[2]);
+        int addPoint(FH fh, PosTag tags, VProxyItr proxy);
 
         VProxies                vProxy;
         VEntities               vEnt;

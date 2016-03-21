@@ -1,7 +1,4 @@
 #pragma once
-#include "macroutil.h"
-#include "csgdefs.h"
-
 #include <CGAL\Polyhedron_3.h>
 #include <CGAL\HalfedgeDS_vertex_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_halfedge_max_base_with_id.h>
@@ -9,6 +6,9 @@
 
 #include <boost\shared_ptr.hpp>
 
+#include "macroutil.h"
+#include "csgdefs.h"
+#include "plane_reps.h"
 
 namespace CSG
 {
@@ -23,6 +23,9 @@ namespace CSG
         public std::list<VProxy>::iterator
     {
     public:
+        VProxyItr(){}
+        VProxyItr(std::list<VProxy>::iterator itr):
+            std::list<VProxy>::iterator(itr){}
 
         VEntity* pointer()
         {
@@ -38,6 +41,8 @@ namespace CSG
 
     struct UserVData
     {
+        UserVData(VProxyItr* p):proxy(p){}
+
         VProxyItr* proxy = nullptr;
         ~UserVData(){ SAFE_DELETE(proxy);}
     };
@@ -47,10 +52,20 @@ namespace CSG
         std::vector<VProxyItr>  vertices;
     };
 
-    typedef Cube_3 TriBbox;
     struct UserFData
     {
+        typedef Cube_3 TriBbox;
+
+        UserFData(K::Point_3 pts[]) :
+            triangle(pts[0], pts[1], pts[2])
+        { 
+            bbox = triangle.bbox();
+            sp = Plane_ext<K>(pts[0], pts[1], pts[2]);
+        }
+
         CGAL::Triangle_3<K>     triangle;
+        Plane_ext<K>            sp;
+        PBTriangle<K>*          planeRep = nullptr;
         TriBbox                 bbox;
 
         ItstTriangle*           itstTri = nullptr;
@@ -60,6 +75,8 @@ namespace CSG
 
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
+        MyVertex(){}
+        MyVertex(const Point& p):CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned>(p){}
         boost::shared_ptr<UserVData> data;
     };
 
@@ -74,6 +91,7 @@ namespace CSG
         boost::shared_ptr<UserFData>    data;
 
         Halfedge_handle                 edges[3];
+        Vertex_handle                   vertices[3];
         CGAL::Vector_3<K>               normal;
         CGAL::Color                     color;
         int                             mark = -1;
@@ -107,6 +125,11 @@ namespace CSG
 
     public:
         Cube_3 get_bbox_cube() const { return Cube_3(m_bbox); }
+        void init();
+
+    private:
+        void calcTriangles();
         void calcBbox();
+        void initEdgeIds();
     };
 }

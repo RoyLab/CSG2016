@@ -18,7 +18,7 @@ namespace CSG
     Octree::Node* Octree::createRootNode()
     {
         Node* root = new Node;
-        CGAL::Bbox_3 tmpBox;
+        CGAL::Bbox_3 tmpBox = mp_meshes[0]->get_bbox();
 
         for (size_t i = 0; i < m_nMesh; i++)
         {
@@ -28,7 +28,11 @@ namespace CSG
             for (auto fItr = pcMesh->facets_begin(); fItr != pcMesh->facets_end(); fItr++)
             {
                 root->triCount++;
-                root->triTable[i]->push_back(fItr);
+                auto &pTable = root->triTable[i];
+                if (!pTable)
+                    pTable = new TriList;
+
+                pTable->push_back(fItr);
             }
         }
 
@@ -128,7 +132,7 @@ namespace CSG
 
             root->triTable.clear();
             for (size_t i = 0; i < 8; i++)
-                build(root->pChildren + i, level + 1);
+                build(root->pChildren + i, level + 1, isectNodes);
 
         }
     }

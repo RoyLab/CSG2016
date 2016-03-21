@@ -78,6 +78,8 @@ namespace CSG
                 TreeNode::type = op;
                 TreeNode::pLeft = left;
                 TreeNode::pRight = right;
+                left->Parent = this;
+                right->Parent = this;
             }
         };
 

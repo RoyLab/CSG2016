@@ -14,6 +14,7 @@ namespace CSG
     {
         typedef typename Refs::Face_handle FH;
         typedef typename Refs::Vertex_handle VH;
+        typedef typename Refs::Halfedge_handle HEH;
 
         Context()
         {
@@ -22,7 +23,9 @@ namespace CSG
             eh = nullptr;
         }
 
-        ~Context()
+        ~Context(){ release(); }
+
+        void release()
         {
             switch (type)
             {
@@ -45,7 +48,7 @@ namespace CSG
 
         union
         {
-            UserEData* eh;
+            HEH* eh;
             FH* fh;
             VH* vh;
         };
@@ -53,22 +56,77 @@ namespace CSG
 
     struct VEntity
     {
+        VEntity()
+        {
+            static int count = 0;
+            id = count++;
+        }
+
+        PBPoint<K> pos;
         std::vector<Context<MyMesh>> ctx;
+
+        void addContext(MyMesh::Face_handle fh, PosTag tag)
+        {
+            Context<MyMesh> context;
+            switch (tag)
+            {
+            case CSG::INNER:
+                context.type = CT_FACET;
+                context.fh = new MyMesh::Face_handle(fh);
+                break;
+            case CSG::EDGE_0:
+                context.type = CT_EDGE;
+                context.eh = new MyMesh::Halfedge_handle(fh->edges[0]);
+                break;
+            case CSG::EDGE_1:
+                context.type = CT_EDGE;
+                context.eh = new MyMesh::Halfedge_handle(fh->edges[1]);
+                break;
+            case CSG::EDGE_2:
+                context.type = CT_EDGE;
+                context.eh = new MyMesh::Halfedge_handle(fh->edges[2]);
+                break;
+            case CSG::VER_0:
+                context.type = CT_VERTEX;
+                context.vh = new MyMesh::Vertex_handle(fh->vertices[0]);
+                break;
+            case CSG::VER_1:
+                context.type = CT_VERTEX;
+                context.vh = new MyMesh::Vertex_handle(fh->vertices[1]);
+                break;
+            case CSG::VER_2:
+                context.type = CT_VERTEX;
+                context.vh = new MyMesh::Vertex_handle(fh->vertices[2]);
+                break;
+            default:
+                ReportError();
+                break;
+            }
+        }
+        
+        bool operator<(const VEntity& other)
+        {
+            return id < other.id;
+        }
+
+    private:
+        int id;
     };
 
-    struct VPointer
+    struct ItstLine
     {
-        PosTag tag = NONE;
-        int idx = -1;
+        struct
+        {
+            PosTag tag = NONE;
+            int idx = -1;
+        } pts[2];
     };
 
-    typedef VPointer ItstLine[2];
     typedef std::list<ItstLine> ItstLineList;
 
     struct ItstTriangle
     {
         ItstLineList            isectLines;
-        PBTriangle<K>*          planeRep = nullptr;
         std::vector<VProxyItr>  inVertices;
 
         ItstTriangle(MyMesh::Face_handle fh){}

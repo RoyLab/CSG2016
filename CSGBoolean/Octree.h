@@ -32,13 +32,13 @@ namespace CSG
         struct Node
         {
             Bbox        bbox;
-            NodeType    type;
+            NodeType    type = NODE_UNKNOWN;
 
             Node        *pChildren = nullptr,
                         *pParent = nullptr;
 
             TriTableT   triTable;
-            size_t      triCount;
+            size_t      triCount = 0;
 
             virtual ~Node() { 
                 SAFE_DELETE_ARRAY(pChildren); 

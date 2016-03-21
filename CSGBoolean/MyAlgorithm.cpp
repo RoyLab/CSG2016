@@ -46,9 +46,7 @@ namespace CSG
 {
     void MyAlgorithm::solve(const std::string& expr, std::vector<MyMesh*>& meshes)
     {
-        pMeshList = new std::vector<MyMesh*>;
-        for (MyMesh* pMesh : meshes)
-            pMeshList->push_back(new MyMesh(*pMesh));
+        pMeshList = &meshes;
 
         CSGTree<MyMesh>* pCsg = new CSGTree<MyMesh>;
         pCsg->createCSGTreeFromExpr(expr, pMeshList->data(), pMeshList->size());
@@ -59,15 +57,12 @@ namespace CSG
         pOctree->build(*pMeshList, &intersectLeaves);
 
         ItstAlg* itst = new ItstAlg(pMeshList);
-        //itst->doIntersection(intersectLeaves);
+        itst->doIntersection(intersectLeaves);
         //floodColoring(pCsg, itst);
 
         SAFE_DELETE(itst);
         SAFE_DELETE(pCsg);
         SAFE_DELETE(pOctree);
-        for (MyMesh* pMesh : *pMeshList)
-            delete pMesh;
-        SAFE_DELETE(pMeshList);
     }
 
     //IndicatorVector* MyAlgorithm::computeFullIndicator(VH vh, size_t meshId)

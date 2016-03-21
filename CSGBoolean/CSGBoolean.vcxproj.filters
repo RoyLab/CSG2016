@@ -44,9 +44,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="precompile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MyAlgorithm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
