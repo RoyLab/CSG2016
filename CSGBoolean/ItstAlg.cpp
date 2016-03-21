@@ -119,78 +119,10 @@ namespace
 
 namespace CSG
 {
-
-    ItstAlg::ItstAlg(std::vector<MyMesh*>* meshes)
-    {
-        mp_meshList = meshes;
-    }
-
-
-    ItstAlg::~ItstAlg()
-    {
-        SAFE_DELETE(mp_adjGraph);
-    }
-
-
-    void ItstAlg::doIntersection(std::vector<Octree::Node*>& intersectLeaves)
-    {
-        MeshIdTriIdMap antiOverlapMap;
-        antiOverlapMap.max_load_factor(0.6f);
-        mp_adjGraph = new AdjacentGraph(mp_meshList->size());
-        auto &meshList = *mp_meshList;
-
-        for (Octree::Node* leaf : intersectLeaves)
-        {
-            auto iEnd = leaf->triTable.cend();
-            decltype(leaf->triTable.begin()) meshItr[2];
-            for (meshItr[0] = leaf->triTable.begin(); meshItr[0] != iEnd; ++meshItr[0])
-            {
-                meshItr[1] = meshItr[0]; ++meshItr[1];
-                for (; meshItr[1] != iEnd; ++meshItr[1])
-                {
-                    uint32_t meshId[2] = { meshItr[0]->first, meshItr[1]->first };
-                    MyMesh* meshes[2] = { meshList[meshId[0]], meshList[meshId[1]] };
-
-                    // 这里假设map的遍历是保序的，因此meshIdPair自动的分为大小
-                    IndexPair meshIdPair;
-                    MakeIndex(meshId, meshIdPair);
-
-                    TriIdSet* antiOverlapSet = nullptr;
-                    auto searchRes = antiOverlapMap.find(meshIdPair);
-                    if (searchRes == antiOverlapMap.end())
-                    {
-                        antiOverlapSet = new TriIdSet;
-                        antiOverlapSet->max_load_factor(0.6f);
-                        antiOverlapMap.emplace(meshIdPair, antiOverlapSet);
-                    }
-                    else antiOverlapSet = searchRes->second;
-
-                    for (MyMesh::Face_handle fh0 : *meshItr[0]->second)
-                    {
-                        for (MyMesh::Face_handle fh1 : *meshItr[1]->second)
-                        {
-                            uint32_t triId[2] = { fh0->id(), fh1->id() };
-                            IndexPair triIdPair;
-                            MakeIndex(triId, triIdPair);
-
-                            if (antiOverlapSet->find(triIdPair) != antiOverlapSet->end())
-                                continue;
-
-                            antiOverlapSet->insert(triIdPair);
-
-                            if (IntersectionTest(fh0, fh1, antiOverlapSet))
-                                mp_adjGraph->setValue(meshId[0], meshId[1], true);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     typedef K _R;
 
     /* A, B 的方向跟cross(ref, triangle)的方向一致*/
-    static Sign compute_intervals_isectline(CGAL::Oriented_side d[3], 
+    static Sign compute_intervals_isectline(CGAL::Oriented_side d[3],
         const CGAL::Triangle_3<_R>& triangle, PBTriangle<_R> &pr, const Plane_ext<_R>& ref,
         PosTag& tagA, PosTag& tagB, Plane_ext<_R>& posA, Plane_ext<_R>& posB)
     {
@@ -293,7 +225,7 @@ namespace CSG
 
         Oriented_side db[3];
         for (size_t i = 0; i < 3; i++)
-            db[0] = p[0].oriented_side(t[1].vertex(i));
+            db[i] = p[0].oriented_side(t[1].vertex(i));
 
         if ((db[0] == db[1]) && (db[1] == db[2]))
         {
@@ -303,7 +235,7 @@ namespace CSG
 
         Oriented_side da[3];
         for (size_t i = 0; i < 3; i++)
-            da[0] = p[1].oriented_side(t[0].vertex(i));
+            da[i] = p[1].oriented_side(t[0].vertex(i));
 
         if ((da[0] == da[1]) && (da[1] == da[2]))
         {
@@ -343,31 +275,110 @@ namespace CSG
         assert(orientation(p[0], p[1], posB[0], posA[0]) > 0);
         assert(orientation(p[0], p[1], posB[1], posA[1]) > 0);
 
-        int cmpA0B1 = orientation(p[0], p[1], posB[1], posA[0]);
-        if (cmpA0B1 < 0) return NOT_INTERSECT;
-        if (cmpA0B1 == 0) return INTERSECT_ON_POINT;
+        double cmpA0B1 = orientation(p[0], p[1], posB[1], posA[0]);
+        if (cmpA0B1 < 0.) return NOT_INTERSECT;
+        if (cmpA0B1 == 0.) return INTERSECT_ON_POINT;
 
-        int cmpA1B0 = orientation(p[0], p[1], posB[0], posA[1]);
-        if (cmpA1B0 < 0) return NOT_INTERSECT;
-        if (cmpA1B0 == 0) return INTERSECT_ON_POINT;
+        double cmpA1B0 = orientation(p[0], p[1], posB[0], posA[1]);
+        if (cmpA1B0 < 0.) return NOT_INTERSECT;
+        if (cmpA1B0 == 0.) return INTERSECT_ON_POINT;
 
-        int Acmp = orientation(p[0], p[1], posA[0], posA[1]);
-        int Bcmp = orientation(p[0], p[1], posB[0], posB[1]);
+        double Acmp = orientation(p[0], p[1], posA[0], posA[1]);
+        double Bcmp = orientation(p[0], p[1], posB[0], posB[1]);
+
+        static int count = 0;
+        std::cout << count++ << std::endl;
+        std::cout << t[0] << std::endl;
+        std::cout << t[1] << std::endl;
 
         // if (Acmp > 0): A0在A1右边，取A0
-        result->tagA[0] = Acmp >= 0? tagA[0]:INNER;
-        result->tagA[1] = Acmp <= 0? tagA[1]:INNER;
-        result->A = PBPoint<_R>(p[0], p[1], (Acmp >= 0 ? posA[0] : posA[1]));
-        
+        result->tagA[0] = Acmp >= 0.0 ? tagA[0] : INNER;
+        result->tagA[1] = Acmp <= 0.0 ? tagA[1] : INNER;
+        result->A = PBPoint<_R>(p[0], p[1], (Acmp >= 0.0 ? posA[0] : posA[1]));
+
         // if (Bcmp > 0): B0在B1右边，取B1
-        result->tagB[0] = Bcmp >= 0 ? tagB[1] : INNER;
-        result->tagB[1] = Bcmp <= 0 ? tagB[0] : INNER;
-        result->B = PBPoint<_R>(p[0], p[1], (Bcmp >= 0 ? posB[1] : posB[0]));
+        result->tagB[0] = Bcmp <= 0.0 ? tagB[0] : INNER;
+        result->tagB[1] = Bcmp >= 0.0 ? tagB[1] : INNER;
+        result->B = PBPoint<_R>(p[0], p[1], (Bcmp >= 0.0 ? posB[1] : posB[0]));
+
+        result->A.computeCoord();
+        result->B.computeCoord();
+        std::cout << result->A.coord[0] << " " << result->A.coord[1] << " " << result->A.coord[2] << " " << std::endl;
+        std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
+
+        assert(result->tagA[0] != result->tagB[0]);
+        assert(result->tagA[1] != result->tagB[1]);
 
         return INTERSECT_ON_LINE;
     }
 
-    
+    ItstAlg::ItstAlg(std::vector<MyMesh*>* meshes)
+    {
+        mp_meshList = meshes;
+    }
+
+
+    ItstAlg::~ItstAlg()
+    {
+        SAFE_DELETE(mp_adjGraph);
+    }
+
+
+    void ItstAlg::doIntersection(std::vector<Octree::Node*>& intersectLeaves)
+    {
+        MeshIdTriIdMap antiOverlapMap;
+        antiOverlapMap.max_load_factor(0.6f);
+        mp_adjGraph = new AdjacentGraph(mp_meshList->size());
+        auto &meshList = *mp_meshList;
+
+        for (Octree::Node* leaf : intersectLeaves)
+        {
+            auto iEnd = leaf->triTable.cend();
+            decltype(leaf->triTable.begin()) meshItr[2];
+            for (meshItr[0] = leaf->triTable.begin(); meshItr[0] != iEnd; ++meshItr[0])
+            {
+                meshItr[1] = meshItr[0]; ++meshItr[1];
+                for (; meshItr[1] != iEnd; ++meshItr[1])
+                {
+                    uint32_t meshId[2] = { meshItr[0]->first, meshItr[1]->first };
+                    MyMesh* meshes[2] = { meshList[meshId[0]], meshList[meshId[1]] };
+
+                    // 这里假设map的遍历是保序的，因此meshIdPair自动的分为大小
+                    IndexPair meshIdPair;
+                    MakeIndex(meshId, meshIdPair);
+
+                    TriIdSet* antiOverlapSet = nullptr;
+                    auto searchRes = antiOverlapMap.find(meshIdPair);
+                    if (searchRes == antiOverlapMap.end())
+                    {
+                        antiOverlapSet = new TriIdSet;
+                        antiOverlapSet->max_load_factor(0.6f);
+                        antiOverlapMap.emplace(meshIdPair, antiOverlapSet);
+                    }
+                    else antiOverlapSet = searchRes->second;
+
+                    for (MyMesh::Face_handle fh0 : *meshItr[0]->second)
+                    {
+                        for (MyMesh::Face_handle fh1 : *meshItr[1]->second)
+                        {
+                            uint32_t triId[2] = { fh0->id(), fh1->id() };
+                            IndexPair triIdPair;
+                            MakeIndex(triId, triIdPair);
+
+                            if (antiOverlapSet->find(triIdPair) != antiOverlapSet->end())
+                                continue;
+
+                            antiOverlapSet->insert(triIdPair);
+
+                            if (IntersectionTest(fh0, fh1, antiOverlapSet, meshId))
+                                mp_adjGraph->setValue(meshId[0], meshId[1], true);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     bool ItstAlg::checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[])
     {
         K::Point_3 vthiz, vthat;
@@ -421,7 +432,7 @@ namespace CSG
         return -1;
     }
 
-    int ItstAlg::checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr outcome)
+    int ItstAlg::checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr& outcome)
     {
         int oId = -1;
         switch (tags)
@@ -438,8 +449,16 @@ namespace CSG
         case EDGE_0:
         case EDGE_1:
         case EDGE_2:
-            oId = checkDuplicatedPoints(fhs->edges[edge_idx(tags)]->data->vertices, point, outcome);
+        {
+            auto &pEdge = fhs->edges[edge_idx(tags)]->data;
+            if (!pEdge)
+            {
+                pEdge.reset(new UserEData);
+                fhs->edges[edge_idx(tags)]->opposite()->data = pEdge;
+            }
+            else oId = checkDuplicatedPoints(pEdge->vertices, point, outcome);
             break;
+        }
         default:
             ReportError();
             break;
@@ -471,7 +490,8 @@ namespace CSG
         }
     }
 
-    void ItstAlg::getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], int oId[2], VProxyItr outproxy[2])
+    void ItstAlg::getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], 
+        int oId[2], VProxyItr outproxy[2], uint32_t meshId[2])
     {
         VProxyItr proxy;
 
@@ -483,13 +503,13 @@ namespace CSG
 
         if (oId[0] == -1 && oId[1] == -1)
         {
-            vEnt.emplace_back();
+            vEnt.emplace_back(new VEntity);
             auto &entity = vEnt.back();
             entity->pos = point;
             for (int i = 0; i < 2; i++)
             {
                 if (addwhat[i] > 0)
-                    entity->addContext(fhs[i], tags[i]);
+                    entity->addContext(meshId[i], fhs[i], tags[i]);
             }
 
             auto veItr = vEnt.end(); veItr--;
@@ -497,9 +517,9 @@ namespace CSG
             proxy = vProxy.end(); proxy--;
             outproxy[0] = outproxy[1] = proxy;
         }
-        else if (oId[0] > -1 && oId[0] > -1)
+        else if (oId[0] > -1 && oId[1] > -1)
         {
-            if (*outproxy[0].pointer() < *outproxy[0].pointer())
+            if (*outproxy[0].pointer() < *outproxy[1].pointer())
                 mergeProxy(outproxy[0], outproxy[1]);
             else
                 mergeProxy(outproxy[1], outproxy[0]);
@@ -510,7 +530,7 @@ namespace CSG
             outproxy[1] = outproxy[0];
     }
 
-    bool ItstAlg::IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps)
+    bool ItstAlg::IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2])
     {
         K::Triangle_3 t[2] = { fh0->data->triangle, fh1->data->triangle };
         Plane_ext<K> sp[2] = { fh0->data->sp, fh1->data->sp };
@@ -537,8 +557,8 @@ namespace CSG
         int oIdA[2] = { -1, -1 }, oIdB[2] = { -1, -1 };
         VProxyItr proxyA[2], proxyB[2];
 
-        getVProxy(result.A, addwhat, fhs, result.tagA, oIdA, proxyA);
-        getVProxy(result.B, addwhat, fhs, result.tagB, oIdB, proxyB);
+        getVProxy(result.A, addwhat, fhs, result.tagA, oIdA, proxyA, meshId);
+        getVProxy(result.B, addwhat, fhs, result.tagB, oIdB, proxyB, meshId);
         
         for (int i = 0; i < 2; i++)
         {
@@ -573,6 +593,8 @@ namespace CSG
 
     void ItstAlg::mergeProxy(VProxyItr a, VProxyItr b)
     {
+        if (a.pointer() == b.pointer()) return;
+
         a.pointer()->ctx.insert(a.pointer()->ctx.end(), 
             b.pointer()->ctx.begin(), b.pointer()->ctx.end());
         *b = *a;

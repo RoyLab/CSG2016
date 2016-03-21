@@ -92,7 +92,6 @@ namespace CSG
 
         Halfedge_handle                 edges[3];
         Vertex_handle                   vertices[3];
-        CGAL::Vector_3<K>               normal;
         CGAL::Color                     color;
         int                             mark = -1;
     };
@@ -131,5 +130,6 @@ namespace CSG
         void calcTriangles();
         void calcBbox();
         void initEdgeIds();
+        void initIds();
     };
 }

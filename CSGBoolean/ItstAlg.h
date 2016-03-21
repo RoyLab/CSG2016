@@ -50,8 +50,15 @@ namespace CSG
         ~ItstAlg();
 
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
-        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps);
+        bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2]);
         bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[]);
+        void computeDebugInfo()
+        {
+            for (auto &ent : vEnt)
+            {
+                ent->pos.computeCoord();
+            }
+        }
 
     private:
 
@@ -59,9 +66,9 @@ namespace CSG
         已经登记为共享点的，按顺序排大小，先到大
         */
         void mergeProxy(VProxyItr a, VProxyItr b);
-        int checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr outcome);
+        int checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr& outcome);
         int checkDuplicatedPoints(std::vector<VProxyItr>& plist, PBPoint<K> point, VProxyItr& proxy);
-        void getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], int oId[2], VProxyItr outproxy[2]);
+        void getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], int oId[2], VProxyItr outproxy[2], uint32_t meshId[2]);
         int addPoint(FH fh, PosTag tags, VProxyItr proxy);
 
         VProxies                vProxy;

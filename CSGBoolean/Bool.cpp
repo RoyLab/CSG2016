@@ -7,6 +7,7 @@
 #include "bool.h"
 #include "MyAlgorithm.h"
 #include "MyMesh.h"
+#include "adaptive.h"
 
 namespace CSG
 {
@@ -29,9 +30,10 @@ namespace CSG
 
     extern "C" CSG_API void test()
     {
+        GS::exactinit();
         std::vector<std::string> names;
-        names.push_back("../../models/ball1.off");
-        names.push_back("../../models/ball2.off");
+        names.push_back("../../models/box1.off");
+        names.push_back("../../models/box2.off");
 
         std::string expr("0+1");
 

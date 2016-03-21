@@ -23,6 +23,27 @@ namespace CSG
             eh = nullptr;
         }
 
+        Context(const Context& other)
+        {
+            type = other.type;
+            meshId = other.meshId;
+            switch (type)
+            {
+            case CT_VERTEX:
+                vh = new VH(*other.vh);
+                break;
+            case CT_EDGE:
+                eh = new HEH(*other.eh);
+                break;
+            case CT_FACET:
+                fh = new FH(*other.fh);
+                break;
+            default:
+                eh = nullptr;
+                break;
+            }
+        }
+
         ~Context(){ release(); }
 
         void release()
@@ -65,9 +86,10 @@ namespace CSG
         PBPoint<K> pos;
         std::vector<Context<MyMesh>> ctx;
 
-        void addContext(MyMesh::Face_handle fh, PosTag tag)
+        void addContext(int meshId, MyMesh::Face_handle fh, PosTag tag)
         {
             Context<MyMesh> context;
+            context.meshId = meshId;
             switch (tag)
             {
             case CSG::INNER:
@@ -102,6 +124,7 @@ namespace CSG
                 ReportError();
                 break;
             }
+            ctx.push_back(context);
         }
         
         bool operator<(const VEntity& other)

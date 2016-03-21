@@ -31,7 +31,7 @@ typedef double double4[4];
 
 typedef double2 double2x2[2];
 typedef double3 double3x3[3];
-typedef double3 double4x4[4];
+typedef double4 double4x4[4];
 
 namespace CSG
 {

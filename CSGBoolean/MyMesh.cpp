@@ -22,8 +22,8 @@ namespace CSG
                 itr->vertices[i] = loop->vertex();
                 loop = loop->next();
             }
-            itr->normal = CGAL::normal(pts[0], pts[1], pts[2]);
             itr->data.reset(new UserFData(pts));
+            itr->data->sp = Plane_ext<K>(pts[0], pts[1], pts[2]);
         }
     }
 
@@ -34,9 +34,25 @@ namespace CSG
             auto loop = itr->halfedge();
             for (size_t i = 0; i < 3; i++)
             {
-                itr->edges[(i+2)%3] = loop;
+                itr->edges[(i+1)%3] = loop;
                 loop = loop->next();
             }
+
+            for (size_t i = 0; i < 3; i++)
+            {
+                assert(itr->edges[i]->vertex() != itr->vertices[i]);
+                assert(itr->edges[i]->opposite()->vertex() != itr->vertices[i]);
+                loop = loop->next();
+            }
+        }
+    }
+    void MyMesh::initIds()
+    {
+        int count = 0;
+        for (auto itr = facets_begin(); itr != facets_end(); itr++)
+        {
+            itr->id() = count;
+            count++;
         }
     }
 
@@ -45,6 +61,7 @@ namespace CSG
         calcBbox();
         calcTriangles();
         initEdgeIds();
+        initIds();
     }
 
 }

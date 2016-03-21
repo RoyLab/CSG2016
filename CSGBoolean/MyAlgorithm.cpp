@@ -58,6 +58,8 @@ namespace CSG
 
         ItstAlg* itst = new ItstAlg(pMeshList);
         itst->doIntersection(intersectLeaves);
+        itst->computeDebugInfo();
+
         //floodColoring(pCsg, itst);
 
         SAFE_DELETE(itst);

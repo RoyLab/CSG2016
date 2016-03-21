@@ -84,6 +84,17 @@ namespace CSG
 
     private:
         PlaneExt planes[3];
+#ifdef _DEBUG
+    public:
+        void computeCoord()
+        {
+            auto result = CGAL::intersection(planes[0], planes[1], planes[2]);
+            const Point* p = boost::get<Point>(&*result);
+            memcpy(&coord, p, sizeof(double3));
+        }
+
+        double3 coord;
+#endif
     };
 
     //typedef K _R;
@@ -118,11 +129,11 @@ namespace CSG
     };
 
     template <class Plane>
-    int orientation(const Plane& p, const Plane& q, const Plane& r, const Plane& s)
+    double orientation(const Plane& p, const Plane& q, const Plane& r, const Plane& s)
     {
-        return int(CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
+        return CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
-            s.a(), s.b(), s.c(), s.d()));
+            s.a(), s.b(), s.c(), s.d());
     }
 }
