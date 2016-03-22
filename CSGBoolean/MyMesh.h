@@ -94,6 +94,11 @@ namespace CSG
         Vertex_handle                   vertices[3];
         CGAL::Color                     color;
         int                             mark = -1;
+
+        bool isSimple() const
+        {
+            return !data->itstTri || data->itstTri->isectLines.empty();
+        }
     };
 
     struct MyItems {

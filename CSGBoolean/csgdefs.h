@@ -55,6 +55,18 @@ namespace CSG
         REL_NOT_AVAILABLE = -1 // (0xffffffff)
     };
 
+    inline void inverseRelation(Relation& rel)
+    {
+        switch (rel)
+        {
+        case CSG::REL_INSIDE: rel = REL_OUTSIDE;
+        case CSG::REL_OUTSIDE: rel = REL_INSIDE;
+        case CSG::REL_SAME: rel = REL_OPPOSITE;
+        case CSG::REL_OPPOSITE: rel = REL_SAME;
+        }
+    }
+
+
     enum CSGNodeOp
     {
         TYPE_UNKNOWN = 0,

@@ -78,10 +78,10 @@ namespace CSG
 
         CGAL::Side_of_triangle_mesh<Polyhedron, K> inside(poly);
         double size = max_coordinate(poly);
-        unsigned int nb_points = 1000;
+        unsigned int nb_points = 100000;
         std::vector<Point> points;
         points.reserve(nb_points);
-        CGAL::Random_points_in_cube_3<Point> gen(size);
+        CGAL::Random_points_in_cube_3<Point> gen(size/2);
         for (unsigned int i = 0; i < nb_points; ++i)
             points.push_back(*gen++);
         std::cout << "Test " << nb_points << " random points in cube "
@@ -100,7 +100,7 @@ namespace CSG
         int code[5] = { 0, 1, -1, 0, 0 };
         for (std::size_t i = 0; i < nb_points; ++i)
         {
-            if ((i % 100) == 0)
+            if ((i % 1000) == 0)
             {
                 BOOST_LOG_TRIVIAL(info) << "checking " << i << std::endl;
             }
@@ -126,26 +126,26 @@ namespace CSG
 
     extern "C" CSG_API void test()
     {
-        main1("../../models/horse.off");
-        //GS::exactinit();
-        //std::vector<std::string> names;
-        //names.push_back("../../models/box1.off");
-        //names.push_back("../../models/box2.off");
+        //main1("../../models/horse.off");
+        GS::exactinit();
+        std::vector<std::string> names;
+        names.push_back("../../models/box1.off");
+        names.push_back("../../models/box2.off");
 
-        //std::string expr("0+1");
+        std::string expr("0+1");
 
-        //std::vector<MyMesh*> meshList;
-        //loadMesh(meshList, names);
+        std::vector<MyMesh*> meshList;
+        loadMesh(meshList, names);
 
-        //MyAlgorithm *alg = new MyAlgorithm;
-        //alg->solve(expr, meshList);
+        MyAlgorithm *alg = new MyAlgorithm;
+        alg->solve(expr, meshList);
 
-        //for (auto mesh : meshList)
-        //{
-        //    //std::cout << mesh->size_of_facets() << std::endl;
-        //    SAFE_DELETE(mesh);
-        //}
+        for (auto mesh : meshList)
+        {
+            //std::cout << mesh->size_of_facets() << std::endl;
+            SAFE_DELETE(mesh);
+        }
 
-        //SAFE_DELETE(alg);
+        SAFE_DELETE(alg);
     }
 }

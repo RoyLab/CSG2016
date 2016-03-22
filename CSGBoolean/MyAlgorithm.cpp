@@ -73,18 +73,18 @@ namespace CSG
     {
         IIndicatorVector *pind = new FullIndicatorVector(pMeshList->size());
         IIndicatorVector &ind = *pind;
-        ind[meshId] = myext::BT_ON;
+        ind[meshId] = REL_SAME;
 
         if (vh->data && vh->data->proxy)
         {
             const auto& ctx = (*vh->data->proxy).pointer()->ctx;
             for (auto &c : ctx)
-                ind[c.meshId] = myext::BT_ON;
+                ind[c.meshId] = REL_SAME;
         }
 
         for (size_t meshId = 0; meshId < pMeshList->size(); meshId++)
         {
-            if (ind[meshId] == myext::BT_ON)
+            if (ind[meshId] == REL_SAME)
                 continue;
             else
                 ind[meshId] = PolyhedralInclusionTest(vh->point(), pOctree, *pMeshList, meshId, false);
@@ -100,6 +100,7 @@ namespace CSG
         info.indicators.reset(computeFullIndicator(seedV, info.meshId));
         info.seedVertex = seedV;
         info.seedFacet = seedV->halfedge()->facet();
+        assert(seedV->halfedge()->vertex() == seedV);
     }
 
     void MyAlgorithm::floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg)
@@ -117,48 +118,123 @@ namespace CSG
             createFirstSeed(idSeed);
             infos.otherMeshSeedQueue.push(idSeed);
 
-            infos.otherMeshSeedQueue = Queue<SeedInfoWithId>();
-
-            //while (!infos.otherMeshSeedQueue.empty())
-            //{
-            //    SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
-            //    itstPrims.clear();
-            //    //itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
+            while (!infos.otherMeshSeedQueue.empty())
+            {
+                SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
+                itstPrims.clear();
+                itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);// unimplemented
 
             //    //infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
-            //    infos.curMeshId = curSeed.meshId;
+                infos.curMeshId = curSeed.meshId;
 
-            //    SeedInfoWithHint hintSeed;
-            //    hintSeed.seedFacet = curSeed.seedFacet;
-            //    hintSeed.seedVertex = curSeed.seedVertex;
             //    hintSeed.indicators = infos.ttree1->downcast(*curSeed.indicators);
+                infos.curMeshSeedQueue.push(curSeed);
 
-            //    infos.curMeshSeedQueue.push(hintSeed);
+                while (!infos.curMeshSeedQueue.empty())
+                {
+                    SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
+                    if (sndInfo.seedFacet->mark != VISITED)
+                    {
+                        //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
+                        if (!sndInfo.seedFacet->isSimple()) 
+                            floodSimpleGroup(infos, sndInfo);
+                        else 
+                            floodComplexGroup(infos, sndInfo);
 
-            //    while (!infos.curMeshSeedQueue.empty())
-            //    {
-            //        SeedInfoWithHint& sndInfo = infos.curMeshSeedQueue.front();
-            //        if (sndInfo.seedFacet->mark != VISITED)
-            //        {
-            //            //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
-            //            //if (!sndInfo.seedFacet->isSimple()) floodSimpleGroup(infos, sndInfo);
-            //            //else floodComplexGroup(infos, sndInfo);
-            //        }
-            //        infos.curMeshSeedQueue.pop();
-            //    }
+                        sndInfo.seedFacet->mark = VISITED;
+                        std::cout << 1;
+                    }
+                    infos.curMeshSeedQueue.pop();
+                }
 
-            //    infos.otherMeshSeedQueue.pop();
-            //}
+                infos.otherMeshSeedQueue.pop();
+            }
         }
     }
 
-    void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s)
+    Relation MyAlgorithm::relationOfContext(FH coins, VH vh)
     {
-    //    if (s.seedVertex->isShared())
-    //        excludeOnCase(s);
+        return REL_NOT_AVAILABLE;
+    }
 
-    //    Queue<FH> queue;
-    //    queue.push(s.seedFacet);
+    Relation MyAlgorithm::relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins)
+    {
+        CGAL::Oriented_side side;
+        switch (ctx.type)
+        {
+        case CT_VERTEX:
+            // TODO
+        case CT_EDGE:
+            // TODO
+        case CT_FACET:
+            side = (*ctx.fh)->data->sp.oriented_side(vh->point());
+            switch (side)
+            {
+            case CGAL::ON_NEGATIVE_SIDE:
+                return REL_INSIDE;
+            case CGAL::ON_POSITIVE_SIDE:
+                return REL_OUTSIDE;
+            case CGAL::ON_ORIENTED_BOUNDARY:
+                coins = *ctx.fh;
+                return REL_SAME;
+            default:
+                ReportError();
+                break;
+            }
+            break;
+        default:
+            ReportError();
+            break;
+        }
+        return REL_NOT_AVAILABLE;
+    }
+
+    void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds)
+    {
+        auto &context = p->data->proxy->pointer()->ctx;
+        FH coincident;
+        assert(!CGAL::collinear(p->point(), q->point(), r->point()));
+
+        for (auto &ctx : context)
+        {
+            if (ctx.meshId == meshId) continue;
+            Relation rel = relationOfContext(ctx, q, coincident);
+            switch (rel)
+            {
+            case CSG::REL_INSIDE:
+            case CSG::REL_OUTSIDE:
+                break;
+            case CSG::REL_SAME:
+                rel = relationOfContext(coincident, r);
+                break;
+            default:
+                ReportError();
+                break;
+            }
+
+            if (pMeshList->at(ctx.meshId)->bInverse)
+                inverseRelation(rel);
+
+            (*inds)[ctx.meshId] = rel;
+        }
+    }
+
+    void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId)
+    {
+        VH pt2 = s.seedVertex->halfedge()->next()->vertex();
+        VH pt3 = pt2->halfedge()->next()->vertex();
+
+        figureOutFaceInds(s.seedVertex, pt2, pt3, meshId, s.indicators.get());
+    }
+
+    void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s)
+    {
+        // 找到这一群的共同indicators
+        if (s.seedVertex->data && s.seedVertex->data->proxy->pointer()->ctx.size() > 1)
+            figureOutFaceInds(s, infos.curMeshId);
+
+        Queue<FH> queue;
+        queue.push(s.seedFacet);
 
     //    bool isOn = infos.ttree1.eval(s.indicators);
 
@@ -200,7 +276,7 @@ namespace CSG
     //    }
     }
 
-    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s)
+    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& s)
     {
         //    int nVIP = trimTree->numberOfVIP();
 

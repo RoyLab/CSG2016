@@ -7,6 +7,7 @@
 #include "Octree.h"
 #include "CGALext.h"
 #include "MyMesh.h"
+#include "AlgUserData.h"
 
 namespace CSG
 {
@@ -69,7 +70,7 @@ namespace CSG
         struct GroupParseInfo
         {
             Queue<SeedInfoWithId> otherMeshSeedQueue;
-            Queue<SeedInfoWithHint> curMeshSeedQueue;
+            Queue<SeedInfo> curMeshSeedQueue;
 
             int32_t             curMeshId = -1;
             //boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;
@@ -87,8 +88,12 @@ namespace CSG
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
         void createFirstSeed(SeedInfoWithId& info);
         IIndicatorVector* computeFullIndicator(VH fh, size_t meshId);
-        void floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
-        void floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
+        void floodComplexGroup(GroupParseInfo& infos, SeedInfo& s);
+        void floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s);
+        void figureOutFaceInds(SeedInfo& s, int meshId);
+        void figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds);
+        Relation relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins);
+        Relation relationOfContext(FH coins, VH vh);
 
     private:
 

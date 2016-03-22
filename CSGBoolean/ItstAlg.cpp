@@ -114,14 +114,10 @@ namespace
             return false;
         }
     }
-}
 
-
-namespace CSG
-{
-    typedef K _R;
 
     /* A, B 的方向跟cross(ref, triangle)的方向一致*/
+    template <class _R>
     static Sign compute_intervals_isectline(CGAL::Oriented_side d[3],
         const CGAL::Triangle_3<_R>& triangle, PBTriangle<_R> &pr, const Plane_ext<_R>& ref,
         PosTag& tagA, PosTag& tagB, Plane_ext<_R>& posA, Plane_ext<_R>& posB)
@@ -209,6 +205,7 @@ namespace CSG
         }
     }
 
+    template <class _R>
     void makePositive(const CGAL::Plane_3<_R>& p, const CGAL::Plane_3<_R>& q, CGAL::Plane_3<_R>& input)
     {
         if (CGAL::determinant(p.orthogonal_vector(),
@@ -216,30 +213,30 @@ namespace CSG
             input = input.opposite();
     }
 
+    template <class _R>
     Sign tri_tri_intersect(const CGAL::Triangle_3<_R> t[2], const Plane_ext<_R> p[2],
         TriTriIsectResult<_R>* result, MyMesh::Face_handle fhs[2])
     {
-        using namespace CGAL;
         typedef _R::FT FT;
         typedef _R::Vector_3 Vec3d;
 
-        Oriented_side db[3];
+        CGAL::Oriented_side db[3];
         for (size_t i = 0; i < 3; i++)
             db[i] = p[0].oriented_side(t[1].vertex(i));
 
         if ((db[0] == db[1]) && (db[1] == db[2]))
         {
-            if (db[0] == ON_ORIENTED_BOUNDARY) return COPLANAR;
+            if (db[0] == CGAL::ON_ORIENTED_BOUNDARY) return COPLANAR;
             else return NOT_INTERSECT;
         }
 
-        Oriented_side da[3];
+        CGAL::Oriented_side da[3];
         for (size_t i = 0; i < 3; i++)
             da[i] = p[1].oriented_side(t[0].vertex(i));
 
         if ((da[0] == da[1]) && (da[1] == da[2]))
         {
-            if (da[0] == ON_ORIENTED_BOUNDARY) return COPLANAR;
+            if (da[0] == CGAL::ON_ORIENTED_BOUNDARY) return COPLANAR;
             else return NOT_INTERSECT;
         }
 
@@ -310,6 +307,15 @@ namespace CSG
         assert(result->tagA[1] != result->tagB[1]);
 
         return INTERSECT_ON_LINE;
+    }
+}
+
+
+namespace CSG
+{
+    void AdjacentGraph::getIntersectPrimitives(int meshId, std::vector<int>& prims)
+    {
+        return;
     }
 
     ItstAlg::ItstAlg(std::vector<MyMesh*>* meshes)
