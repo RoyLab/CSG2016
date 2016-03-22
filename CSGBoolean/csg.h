@@ -7,6 +7,7 @@
 
 #include "macroutil.h"
 #include "BinaryTree.h"
+#include "MyMesh.h"
 
 namespace CSG
 {
@@ -20,7 +21,7 @@ namespace CSG
 
     typedef int8_t Indicator;
 
-    class IndicatorVector
+    class IIndicatorVector
     {
     public:
         virtual Indicator& operator[](size_t meshId) = 0;
@@ -209,7 +210,7 @@ namespace CSG
             return root;
         }
 
-        Relation eval(int meshId, IndicatorVector& inds)
+        Relation eval(int meshId, IIndicatorVector& inds)
         {
             assert(oldTree);
 

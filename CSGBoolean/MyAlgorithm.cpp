@@ -119,9 +119,9 @@ namespace CSG
             {
                 SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
                 itstPrims.clear();
-                itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
+                //itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
 
-                infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
+                //infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
                 infos.curMeshId = curSeed.meshId;
 
                 SeedInfoWithHint hintSeed;
@@ -136,7 +136,7 @@ namespace CSG
                     SeedInfoWithHint& sndInfo = infos.curMeshSeedQueue.front();
                     if (sndInfo.seedFacet->mark != VISITED)
                     {
-                        infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
+                        //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
                         //if (!sndInfo.seedFacet->isSimple()) floodSimpleGroup(infos, sndInfo);
                         //else floodComplexGroup(infos, sndInfo);
                     }

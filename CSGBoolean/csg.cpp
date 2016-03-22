@@ -66,11 +66,11 @@ namespace CSG
 
     int test()
     {
-        std::string str;
-        int **a = nullptr;
+        //std::string str;
+        //int **a = nullptr;
 
-        CSGTree<int> tree;
-        tree.createCSGTreeFromExpr(str, a, 3);
+        //CSGTree<int> tree;
+        //tree.createCSGTreeFromExpr(str, a, 3);
         return 0;
     }
     //unsigned long long mark;
