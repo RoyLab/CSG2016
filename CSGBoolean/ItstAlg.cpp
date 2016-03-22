@@ -286,10 +286,10 @@ namespace CSG
         double Acmp = orientation(p[0], p[1], posA[0], posA[1]);
         double Bcmp = orientation(p[0], p[1], posB[0], posB[1]);
 
-        static int count = 0;
-        std::cout << count++ << std::endl;
-        std::cout << t[0] << std::endl;
-        std::cout << t[1] << std::endl;
+        //static int count = 0;
+        //std::cout << count++ << std::endl;
+        //std::cout << t[0] << std::endl;
+        //std::cout << t[1] << std::endl;
 
         // if (Acmp > 0): A0ÔÚA1ÓÒ±ß£¬È¡A0
         result->tagA[0] = Acmp >= 0.0 ? tagA[0] : INNER;
@@ -301,10 +301,10 @@ namespace CSG
         result->tagB[1] = Bcmp >= 0.0 ? tagB[1] : INNER;
         result->B = PBPoint<_R>(p[0], p[1], (Bcmp >= 0.0 ? posB[1] : posB[0]));
 
-        result->A.computeCoord();
-        result->B.computeCoord();
-        std::cout << result->A.coord[0] << " " << result->A.coord[1] << " " << result->A.coord[2] << " " << std::endl;
-        std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
+        //result->A.computeCoord();
+        //result->B.computeCoord();
+        //std::cout << result->A.coord[0] << " " << result->A.coord[1] << " " << result->A.coord[2] << " " << std::endl;
+        //std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
 
         assert(result->tagA[0] != result->tagB[0]);
         assert(result->tagA[1] != result->tagB[1]);

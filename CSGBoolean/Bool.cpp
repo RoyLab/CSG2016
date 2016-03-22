@@ -21,6 +21,7 @@ namespace CSG
             auto newPoly = new MyMesh;
             file >> *newPoly;
             newPoly->init();
+            newPoly->Id = i;
             meshes.push_back(newPoly);
         }
 

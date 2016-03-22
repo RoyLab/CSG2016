@@ -126,6 +126,9 @@ namespace CSG
         Cube_3 get_bbox_cube() const { return Cube_3(m_bbox); }
         void init();
 
+        bool bInverse = false;
+        int Id = -1;
+
     private:
         void calcTriangles();
         void calcBbox();

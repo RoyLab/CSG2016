@@ -43,4 +43,22 @@ namespace CSG
 
         VER_MASK = 0xf0, EDGE_MASK = 0x0f
     };
+
+    enum Relation
+    {
+        REL_UNKNOWN = 0x0000,
+        REL_INSIDE = 0x0001,
+        REL_OUTSIDE = 0x0002,
+        REL_SAME = 0x0004,
+        REL_OPPOSITE = 0x0008,
+
+        REL_NOT_AVAILABLE = -1 // (0xffffffff)
+    };
+
+    enum CSGNodeOp
+    {
+        TYPE_UNKNOWN = 0,
+        TYPE_UNION, TYPE_INTERSECT, TYPE_DIFF, TYPE_LEAF
+    };
+
 }

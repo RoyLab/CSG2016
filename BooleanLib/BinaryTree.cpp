@@ -31,6 +31,57 @@ namespace CSG
         SAFE_DELETE(pRoot);
 	}
 
+
+    static void ConvertCSGTreeNode(CSGTree<MPMesh>* input, CSGTreeNode** pRoot)
+    {
+        if (!input) return;
+
+        CSGTreeNode*& root = *pRoot;
+        root = new CSGTreeNode;
+
+        GS::BaseMesh* pBaseMesh = input->GetMesh();
+        if (pBaseMesh)
+        {
+            root->pMesh = ConvertToMPMesh(pBaseMesh);
+            root->pMesh->ID = meshList.size();
+			root->Type = TYPE_LEAF;
+            meshList.emplace_back(root->pMesh);
+			return;
+        }
+        
+        switch (input->BoolOperation())
+        {
+        case GS::CSGUnion:
+            root->Type = TYPE_UNION;
+            break;
+        case GS::CSGIntersect:
+            root->Type = TYPE_INTERSECT;
+            break;
+        case GS::CSGDiff:
+            root->Type = TYPE_DIFF;
+            break;
+        default:
+            root->Type = TYPE_UNKNOWN;
+            break;
+        }
+
+        ConvertCSGTreeNode(input->LeftNode(), &root->pLeft, meshList);
+        ConvertCSGTreeNode(input->RightNode(), &root->pRight, meshList);
+
+		if (root->pLeft) root->pLeft->Parent = root;
+		if (root->pRight) root->pRight->Parent = root;
+    }
+
+    CSGTreeOld* ConvertCSGTree(CSGTree<MPMesh>* input)// convert nodes
+    {
+        if (!input) return NULL;
+
+        CSGTreeOld* pRes = new CSGTreeOld;
+        pRes->pRoot = NULL;
+        ConvertCSGTreeNode(input->getRoot(), &pRes->pRoot);
+        return pRes;
+    }
+
 	static CSGTreeNode* ConvertToPositiveTree(const CSGTreeNode* root, bool inverse, unsigned level, unsigned& maxLvl)
 	{
 		CSGTreeNode* res = new CSGTreeNode;
@@ -79,7 +130,7 @@ namespace CSG
     {
 		if (root->Type == TYPE_LEAF)
 		{
-			list.push_back(root->pMesh->Id);
+			list.push_back(root->pMesh->ID);
 		}
 		else
 		{
@@ -92,7 +143,7 @@ namespace CSG
 	{
 		if (root->Type == TYPE_LEAF)
 		{
-			leaves[root->pMesh->Id] = root;
+			leaves[root->pMesh->ID] = root;
 		}
 		else
 		{
@@ -147,7 +198,7 @@ namespace CSG
 
 		CSGTreeNode* pRes = new CSGTreeNode(*thiz);
 
-        if (thiz->pMesh) leafList[thiz->pMesh->Id] = pRes;
+        if (thiz->pMesh) leafList[thiz->pMesh->ID] = pRes;
 
         pRes->pLeft = copy2(thiz->pLeft, leafList);
 		pRes->pRight = copy2(thiz->pRight, leafList);
@@ -351,8 +402,8 @@ namespace CSG
 			else break;
 		}
 		curPtr->relation = REL_SAME;
-		SAFE_DELETE(curPtr->pLeft);
-        SAFE_DELETE(curPtr->pRight);
+		SAFE_RELEASE(curPtr->pLeft);
+		SAFE_RELEASE(curPtr->pRight);
 		GetLeafList(tree);
 		return REL_NOT_AVAILABLE;
 	}
@@ -391,8 +442,8 @@ namespace CSG
 			else break;
 		}
 		curPtr->relation = REL_OPPOSITE;
-        SAFE_DELETE(curPtr->pLeft);
-        SAFE_DELETE(curPtr->pRight);
+		SAFE_RELEASE(curPtr->pLeft);
+		SAFE_RELEASE(curPtr->pRight);
 		GetLeafList(tree);
 		return REL_NOT_AVAILABLE;
 	}
@@ -549,7 +600,7 @@ namespace CSG
 			    leaves[i]->relation = tab[i];
         }
 
-		CSGTreeNode *seed = leaves[pMesh->Id], *comp;
+		CSGTreeNode *seed = leaves[pMesh->ID], *comp;
 		int checkRel;
 		bool pass = true;
 		bool simple = true;
@@ -588,7 +639,7 @@ namespace CSG
             }
 			else
 			{
-                SAFE_DELETE(comp);
+                SAFE_RELEASE(comp);
                 if (!(checkRel & resRel))
                 {
 				    pass = false;
@@ -599,7 +650,7 @@ namespace CSG
 			seed = seed->Parent;
 		}
 
-        SAFE_DELETE(curTree);
+        SAFE_RELEASE(curTree);
 		if (pass) 
         {
             if (!simple) return REL_NOT_AVAILABLE;

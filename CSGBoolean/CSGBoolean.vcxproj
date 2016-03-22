@@ -131,7 +131,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="adaptive.cpp" />
+    <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="bool.cpp" />
+    <ClCompile Include="csg.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="ItstAlg.cpp" />
     <ClCompile Include="ItstGraph.cpp" />
@@ -143,8 +145,13 @@
   <ItemGroup>
     <ClInclude Include="adaptive.h" />
     <ClInclude Include="AlgUserData.h" />
+    <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="bool.h" />
     <ClInclude Include="CGALext.h" />
+    <ClInclude Include="csg.h" />
+    <ClInclude Include="linmath.h" />
+    <ClInclude Include="macroutil.h" />
+    <ClInclude Include="mathext.h" />
     <ClInclude Include="plane_reps.h" />
     <ClInclude Include="Octree.h" />
     <ClInclude Include="csgdefs.h" />
@@ -153,12 +160,9 @@
     <ClInclude Include="LoopletTable.h" />
     <ClInclude Include="MyMesh.h" />
     <ClInclude Include="MyAlgorithm.h" />
+    <ClInclude Include="stringext.h" />
     <ClInclude Include="TrimCSGTree.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BooleanLib\BooleanLib.vcxproj">
-      <Project>{be202b5e-dcef-41a5-a720-555dc00e8138}</Project>
-    </ProjectReference>
+    <ClInclude Include="UndirectedGraph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

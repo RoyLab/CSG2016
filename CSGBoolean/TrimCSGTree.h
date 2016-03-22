@@ -12,17 +12,18 @@ namespace CSG
     template <class Mesh> class TrimCSGTree;
 
     typedef int8_t                  Indicator;
-    typedef std::vector<int>        IndMap;
-    typedef std::map<int, int>      IndInvMap;
+    //typedef std::vector<int>        IndMap;
+    //typedef std::map<int, int>      IndInvMap;
+
 
 
     // free for copy
-    class IndicatorVector
+    class IndicatorVector2
     {
     public:
-        IndicatorVector(size_t sz) :codeMap(nullptr), size(sz) { inds.reset(new Indicator[size]); }
-        IndicatorVector(IndMap* cm) :codeMap(cm), size(cm->size()) { inds.reset(new Indicator[size]); }
-        ~IndicatorVector(){}
+        IndicatorVector2(size_t sz) :codeMap(nullptr), size(sz) { inds.reset(new Indicator[size]); }
+        IndicatorVector2(IndMap* cm) :codeMap(cm), size(cm->size()) { inds.reset(new Indicator[size]); }
+        ~IndicatorVector2(){}
 
         Indicator& operator[](size_t meshId) {
             if (!codeInvMap)
@@ -46,10 +47,11 @@ namespace CSG
         }
 
     private:
-        boost::shared_array<Indicator> inds;
-        int                     size = 0;
-        const IndMap *     codeMap;
-        const IndInvMap *  codeInvMap;
+
+        //boost::shared_array<Indicator> inds;
+        //int                     size = 0;
+        //const IndMap *     codeMap; // from meshId to index
+        //const IndInvMap *  codeInvMap; // inverse of IndMap 
     };
 
     template <class Mesh>
@@ -61,7 +63,7 @@ namespace CSG
         TrimCSGTree(TrimCSGTree<Mesh>& csg, IndicatorVector& indvec, FH fh);
         ~TrimCSGTree();
 
-        IndicatorVector* createIndicatorVector() { return new IndicatorVector(&codeMap, &codeInvMap); }
+        IndicatorVector* createIndicatorVector() const { return new IndicatorVector(&codeMap, &codeInvMap); }
         IndicatorVector* downcast(IndicatorVector& full) const
         {
             IndicatorVector* inds = createIndicatorVector();

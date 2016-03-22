@@ -10,25 +10,6 @@
 
 namespace CSG
 {
-    enum Relation
-    {
-        REL_UNKNOWN =   0x0000,
-        REL_INSIDE =    0x0001,
-        REL_OUTSIDE =   0x0002,
-        REL_SAME =      0x0004,
-        REL_OPPOSITE =  0x0008,
-
-        REL_NOT_AVAILABLE = -1 // (0xffffffff)
-    };
-
-    enum CSGNodeOp
-    {
-        TYPE_UNKNOWN = 0,
-        TYPE_UNION, TYPE_INTERSECT, TYPE_DIFF, TYPE_LEAF
-    };
-
-
-
     static inline bool IsOperator(char c)
     {
         if ((c == '(') || (c == ')') || (c == '+')
@@ -65,9 +46,8 @@ namespace CSG
             virtual ~NodeBase(){}
         };
 
-        typedef NodeBase<Mesh> TreeNode;
-
     public:
+        typedef NodeBase<Mesh> TreeNode;
 
         struct LeafNode:
             public TreeNode
@@ -311,8 +291,46 @@ namespace CSG
         TreeNode* pRoot = nullptr;
         CSGTreeOld* oldTree = nullptr;
         std::vector<TreeNode*> nodeList, meshNodeList;
+    public:
+        void auxiliary()
+        {
+            SAFE_DELETE(oldTree);
+            oldTree = ConvertCSGTree(this);
+        }
+
+    private:
+        void ConvertCSGTreeNode(CSGTree<MPMesh>::TreeNode* input, CSGTreeNode** pRoot)
+        {
+            if (!input) return;
+
+            CSGTreeNode*& root = *pRoot;
+            root = new CSGTreeNode;
+
+            root->Type = input->type;
+            if (input->type == TYPE_LEAF)
+            {
+                root->pMesh = input->pMesh;
+                root->bInverse = input->bInverse;
+                return;
+            }
+
+            ConvertCSGTreeNode(input->pLeft, &root->pLeft);
+            ConvertCSGTreeNode(input->pRight, &root->pRight);
+
+            if (root->pLeft) root->pLeft->Parent = root;
+            if (root->pRight) root->pRight->Parent = root;
+        }
+
+        CSGTreeOld* ConvertCSGTree(CSGTree<MPMesh>* input)// convert nodes
+        {
+            if (!input) return NULL;
+
+            CSGTreeOld* pRes = new CSGTreeOld;
+            pRes->pRoot = NULL;
+            ConvertCSGTreeNode(input->getRoot(), &pRes->pRoot);
+            return pRes;
+        }
+
     };
-
-
 } // namespace CSG
 
