@@ -2,12 +2,11 @@
 #include <string>
 #include <vector>
 #include <queue>
-#include <boost\smart_ptr.hpp>
+#include <boost\shared_ptr.hpp>
 
 #include "Octree.h"
 #include "CGALext.h"
 #include "MyMesh.h"
-#include "TrimCSGTree.h"
 
 namespace CSG
 {
@@ -34,8 +33,8 @@ namespace CSG
         struct SeedInfo:
             public SimpleSeedInfo
         {
-            IndicatorVector *indicators;
-            virtual ~SeedInfo() { SAFE_DELETE(indicators); }
+            boost::shared_ptr<IIndicatorVector> indicators;
+            virtual ~SeedInfo() {}
         };
 
         struct SeedInfoWithId:
@@ -73,7 +72,7 @@ namespace CSG
             Queue<SeedInfoWithHint> curMeshSeedQueue;
 
             int32_t             curMeshId = -1;
-            boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;
+            //boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;
         };
 
     public:
@@ -87,7 +86,7 @@ namespace CSG
     private:
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
         void createFirstSeed(SeedInfoWithId& info);
-        IndicatorVector* computeFullIndicator(VH fh, size_t meshId);
+        IIndicatorVector* computeFullIndicator(VH fh, size_t meshId);
         void floodComplexGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
         void floodSimpleGroup(GroupParseInfo& infos, SeedInfoWithHint& s);
 

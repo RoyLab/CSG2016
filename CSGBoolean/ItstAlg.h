@@ -52,6 +52,7 @@ namespace CSG
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
         bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2]);
         bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[]);
+#ifdef _DEBUG
         void computeDebugInfo()
         {
             for (auto &ent : vEnt)
@@ -59,6 +60,7 @@ namespace CSG
                 ent->pos.computeCoord();
             }
         }
+#endif
 
     private:
 

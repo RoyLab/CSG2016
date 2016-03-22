@@ -58,8 +58,10 @@ namespace CSG
 
         ItstAlg* itst = new ItstAlg(pMeshList);
         itst->doIntersection(intersectLeaves);
-        itst->computeDebugInfo();
 
+#ifdef _DEBUG
+        itst->computeDebugInfo();
+#endif
         floodColoring(pCsg, itst);
 
         SAFE_DELETE(itst);
@@ -67,10 +69,10 @@ namespace CSG
         SAFE_DELETE(pOctree);
     }
 
-    IndicatorVector* MyAlgorithm::computeFullIndicator(VH vh, size_t meshId)
+    IIndicatorVector* MyAlgorithm::computeFullIndicator(VH vh, size_t meshId)
     {
-        IndicatorVector *pind = new IndicatorVector(pMeshList->size());
-        IndicatorVector &ind = *pind;
+        IIndicatorVector *pind = new FullIndicatorVector(pMeshList->size());
+        IIndicatorVector &ind = *pind;
         ind[meshId] = myext::BT_ON;
 
         if (vh->data && vh->data->proxy)
@@ -95,7 +97,7 @@ namespace CSG
     {
         VH seedV = (*pMeshList)[info.meshId]->vertices_begin();
 
-        info.indicators = computeFullIndicator(seedV, info.meshId);
+        info.indicators.reset(computeFullIndicator(seedV, info.meshId));
         info.seedVertex = seedV;
         info.seedFacet = seedV->halfedge()->facet();
     }
@@ -115,36 +117,38 @@ namespace CSG
             createFirstSeed(idSeed);
             infos.otherMeshSeedQueue.push(idSeed);
 
-            while (!infos.otherMeshSeedQueue.empty())
-            {
-                SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
-                itstPrims.clear();
-                //itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
+            infos.otherMeshSeedQueue = Queue<SeedInfoWithId>();
 
-                //infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
-                infos.curMeshId = curSeed.meshId;
+            //while (!infos.otherMeshSeedQueue.empty())
+            //{
+            //    SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
+            //    itstPrims.clear();
+            //    //itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
 
-                SeedInfoWithHint hintSeed;
-                hintSeed.seedFacet = curSeed.seedFacet;
-                hintSeed.seedVertex = curSeed.seedVertex;
-                hintSeed.indicators = infos.ttree1->downcast(*curSeed.indicators);
+            //    //infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
+            //    infos.curMeshId = curSeed.meshId;
 
-                infos.curMeshSeedQueue.push(hintSeed);
+            //    SeedInfoWithHint hintSeed;
+            //    hintSeed.seedFacet = curSeed.seedFacet;
+            //    hintSeed.seedVertex = curSeed.seedVertex;
+            //    hintSeed.indicators = infos.ttree1->downcast(*curSeed.indicators);
 
-                while (!infos.curMeshSeedQueue.empty())
-                {
-                    SeedInfoWithHint& sndInfo = infos.curMeshSeedQueue.front();
-                    if (sndInfo.seedFacet->mark != VISITED)
-                    {
-                        //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
-                        //if (!sndInfo.seedFacet->isSimple()) floodSimpleGroup(infos, sndInfo);
-                        //else floodComplexGroup(infos, sndInfo);
-                    }
-                    infos.curMeshSeedQueue.pop();
-                }
+            //    infos.curMeshSeedQueue.push(hintSeed);
 
-                infos.otherMeshSeedQueue.pop();
-            }
+            //    while (!infos.curMeshSeedQueue.empty())
+            //    {
+            //        SeedInfoWithHint& sndInfo = infos.curMeshSeedQueue.front();
+            //        if (sndInfo.seedFacet->mark != VISITED)
+            //        {
+            //            //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
+            //            //if (!sndInfo.seedFacet->isSimple()) floodSimpleGroup(infos, sndInfo);
+            //            //else floodComplexGroup(infos, sndInfo);
+            //        }
+            //        infos.curMeshSeedQueue.pop();
+            //    }
+
+            //    infos.otherMeshSeedQueue.pop();
+            //}
         }
     }
 

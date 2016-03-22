@@ -8,6 +8,7 @@
 #include "macroutil.h"
 #include "BinaryTree.h"
 #include "MyMesh.h"
+#include "csgdefs.h"
 
 namespace CSG
 {
@@ -26,8 +27,26 @@ namespace CSG
     public:
         virtual Indicator& operator[](size_t meshId) = 0;
         virtual const Indicator& operator[](size_t meshId) const = 0;
+
+        virtual ~IIndicatorVector(){}
     };
 
+    class FullIndicatorVector :
+        public IIndicatorVector
+    {
+    public:
+        FullIndicatorVector(size_t t)
+        {
+            data.resize(t); 
+            for (size_t i = 0; i < data.size(); i++)
+                data[i] = REL_UNKNOWN;
+        }
+        virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
+        virtual const Indicator& operator[](size_t meshId) const { return data[meshId]; }
+
+    private:
+        std::vector<Indicator> data;
+    };
 
     std::string InfixToPostfix(const std::string& infix);
 
