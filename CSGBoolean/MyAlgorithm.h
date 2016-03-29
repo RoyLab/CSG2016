@@ -8,6 +8,7 @@
 #include "CGALext.h"
 #include "MyMesh.h"
 #include "AlgUserData.h"
+#include "csg.h"
 
 namespace CSG
 {
@@ -73,7 +74,7 @@ namespace CSG
             Queue<SeedInfo> curMeshSeedQueue;
 
             int32_t             curMeshId = -1;
-            //boost::scoped_ptr<TrimCSGTree<MyMesh>> ttree1, ttree2;
+            boost::shared_ptr<CSGTreeNode> ttree1, ttree2;
         };
 
     public:

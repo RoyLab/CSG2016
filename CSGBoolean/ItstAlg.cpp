@@ -315,6 +315,11 @@ namespace CSG
 {
     void AdjacentGraph::getIntersectPrimitives(int meshId, std::vector<int>& prims)
     {
+        for (size_t i = 0; i < m_sz; i++)
+        {
+            if (getValue(meshId, i))
+                prims.push_back(i);
+        }
         return;
     }
 
@@ -591,6 +596,7 @@ namespace CSG
                 line.pts[1].idx = oIdB[i];
 
                 fhs[i]->data->itstTri->isectLines.push_back(line);
+                fhs[i]->data->itstTri->meshIds.insert(meshId[(i + 1) % 2]);
             }
         }
         return true;

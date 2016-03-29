@@ -48,6 +48,9 @@
     <ClCompile Include="csg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BSPTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyAlgorithm.h">
@@ -108,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BinaryTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BSPTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

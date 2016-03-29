@@ -61,9 +61,9 @@ namespace CSG
 
 
     private:
-        Node*               mp_root;
-        MyMesh* const*      mp_meshes;
-        size_t              m_nMesh;
+        Node*               mp_root = nullptr;
+        MyMesh* const*      mp_meshes = nullptr;
+        size_t              m_nMesh = 0;
 
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
         STATIC_PROPERTY(int, MAX_LEVEL);

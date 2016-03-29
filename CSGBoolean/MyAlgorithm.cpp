@@ -12,6 +12,8 @@
 #include "Octree.h"
 #include "MyMesh.h"
 #include "CGALext.h"
+#include "BinaryTree.h"
+#include "BSPTree.h"
 
 namespace
 {
@@ -40,6 +42,7 @@ namespace
     }
 
     enum Mark { SEEDED, VISITED, UNVISITED = MARK_BEGIN };
+
 }
 
 namespace CSG
@@ -111,6 +114,9 @@ namespace CSG
         GroupParseInfo infos;
         std::vector<int> itstPrims;
 
+        auto tree = pCsg->auxiliary();
+        CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
+
         for (size_t imesh = 0; imesh < nMesh; imesh++)
         {
             SeedInfoWithId idSeed;
@@ -122,12 +128,10 @@ namespace CSG
             {
                 SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
                 itstPrims.clear();
-                itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);// unimplemented
+                itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
 
-            //    //infos.ttree1.reset(new TrimCSGTree<MyMesh>(*pCsg, *curSeed.indicators, itstPrims));
+                infos.ttree1.reset(copy2(tree->pRoot, curTreeLeaves));
                 infos.curMeshId = curSeed.meshId;
-
-            //    hintSeed.indicators = infos.ttree1->downcast(*curSeed.indicators);
                 infos.curMeshSeedQueue.push(curSeed);
 
                 while (!infos.curMeshSeedQueue.empty())
@@ -135,21 +139,19 @@ namespace CSG
                     SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
                     if (sndInfo.seedFacet->mark != VISITED)
                     {
-                        //infos.ttree2.reset(new TrimCSGTree<MyMesh>(*infos.ttree1, *sndInfo.indicators, sndInfo.seedFacet));
                         if (!sndInfo.seedFacet->isSimple()) 
                             floodSimpleGroup(infos, sndInfo);
                         else 
                             floodComplexGroup(infos, sndInfo);
 
                         sndInfo.seedFacet->mark = VISITED;
-                        std::cout << 1;
                     }
                     infos.curMeshSeedQueue.pop();
                 }
-
                 infos.otherMeshSeedQueue.pop();
             }
         }
+        SAFE_DELETE_ARRAY(curTreeLeaves);
     }
 
     Relation MyAlgorithm::relationOfContext(FH coins, VH vh)
@@ -157,39 +159,94 @@ namespace CSG
         return REL_NOT_AVAILABLE;
     }
 
+    Relation convert(CGAL::Oriented_side side)
+    {
+        switch (side)
+        {
+        case CGAL::ON_NEGATIVE_SIDE:
+            return REL_INSIDE;
+        case CGAL::ON_POSITIVE_SIDE:
+            return REL_OUTSIDE;
+        case CGAL::ON_ORIENTED_BOUNDARY:
+            return REL_SAME;
+        default:
+            ReportError();
+            break;
+        }
+    }
+
+    Relation determineEdgeBSP(MyMesh::Halfedge_handle eh, MyMesh::Vertex_handle vh)
+    {
+        auto f0 = eh->facet();
+        auto f1 = eh->opposite()->facet();
+        
+        auto r0 = f0->data->sp.oriented_side(vh->point());
+        auto r1 = f1->data->sp.oriented_side(vh->point());
+        
+        if (r0 == r1) return convert(r0);
+        
+        if (r0 == REL_SAME)
+        {
+            auto opvh = eh->next()->vertex();
+            auto r01 = f1->data->sp.oriented_side(opvh->point());
+            if (r01 == r1)
+                return convert(r0);
+            else
+                return convert(r1);
+        }
+        else
+        {
+            auto opvh = eh->opposite()->next()->vertex();
+            auto r10 = f0->data->sp.oriented_side(opvh->point());
+            if (r10 == r0)
+                return convert(r1);
+            else
+                return convert(r0);
+        }
+    }
+
+    Relation determineVertexBSP(MyMesh::Vertex_handle ctx, MyMesh::Vertex_handle vh)
+    {
+        typedef MyMesh::Face_handle FH;
+        std::vector<FH> facets;
+        auto end = ctx->halfedge();
+        auto cur = end;
+        do
+        {
+            facets.push_back(cur->facet());
+            cur = cur->next()->opposite();
+        } while (cur != end);
+
+        BSPTree* pTree = new BSPTree(facets);
+        SAFE_DELETE(pTree);
+
+        return REL_NOT_AVAILABLE;
+    }
+
     Relation MyAlgorithm::relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins)
     {
-        CGAL::Oriented_side side;
+        CGAL::Oriented_side side, side1;
+        Relation result = REL_NOT_AVAILABLE;
         switch (ctx.type)
         {
         case CT_VERTEX:
-            // TODO
+            result = determineVertexBSP(*ctx.vh, vh);
         case CT_EDGE:
-            // TODO
+            result = determineEdgeBSP(*ctx.eh, vh);
+            break;
         case CT_FACET:
             side = (*ctx.fh)->data->sp.oriented_side(vh->point());
-            switch (side)
-            {
-            case CGAL::ON_NEGATIVE_SIDE:
-                return REL_INSIDE;
-            case CGAL::ON_POSITIVE_SIDE:
-                return REL_OUTSIDE;
-            case CGAL::ON_ORIENTED_BOUNDARY:
-                coins = *ctx.fh;
-                return REL_SAME;
-            default:
-                ReportError();
-                break;
-            }
+            result =  convert(side);
+            if (result == REL_SAME) coins = (*ctx.fh);
             break;
         default:
             ReportError();
             break;
         }
-        return REL_NOT_AVAILABLE;
+        return result;
     }
 
-    void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds)
+    void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* pinds)
     {
         auto &context = p->data->proxy->pointer()->ctx;
         FH coincident;
@@ -215,7 +272,7 @@ namespace CSG
             if (pMeshList->at(ctx.meshId)->bInverse)
                 inverseRelation(rel);
 
-            (*inds)[ctx.meshId] = rel;
+            (*pinds)[ctx.meshId] = rel;
         }
     }
 
@@ -227,6 +284,11 @@ namespace CSG
         figureOutFaceInds(s.seedVertex, pt2, pt3, meshId, s.indicators.get());
     }
 
+    bool evaluate(CSGTreeNode* root, )
+    {
+
+    }
+
     void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s)
     {
         // 找到这一群的共同indicators
@@ -236,44 +298,44 @@ namespace CSG
         Queue<FH> queue;
         queue.push(s.seedFacet);
 
-    //    bool isOn = infos.ttree1.eval(s.indicators);
+        bool needAdd = evaluate(infos.ttree1.get(), s.indicators.get());
 
-    //    while (!queue.empty())
-    //    {
-    //        if (queue.front()->mark != VISITED)
-    //        {
-    //            FH curface = queue.front();
-    //            curface->mark = VISITED;
-    //            if (isOn) AddFacet(curface);
+        while (!queue.empty())
+        {
+            if (queue.front()->mark != VISITED)
+            {
+                FH curface = queue.front();
+                curface->mark = VISITED;
+                if (isOn) AddFacet(curface);
 
-    //            auto itr = curface->facet_begin();
-    //            for (int i = 0; i < 3; i++)
-    //            {
-    //                if (itr->facet()->mark < UNVISITED) // 跟ray-tracing有关
-    //                    continue;
+                auto itr = curface->facet_begin();
+                for (int i = 0; i < 3; i++)
+                {
+                    if (itr->facet()->mark < UNVISITED) // 跟ray-tracing有关
+                        continue;
 
-    //                if (isSameGroup(itr->facet(), curface))
-    //                    queue.push(itr->facet());
-    //                else
-    //                {
-    //                    SeedInfoWithHint seed2;
-    //                    seed2.indicators = infos.ttree1->createIndicatorVector();
-    //                    seed2.seedVertex = itr->vertex();
-    //                    seed2.seedFacet = itr->facet();
+                    if (isSameGroup(itr->facet(), curface))
+                        queue.push(itr->facet());
+                    else
+                    {
+                        SeedInfoWithHint seed2;
+                        seed2.indicators = infos.ttree1->createIndicatorVector();
+                        seed2.seedVertex = itr->vertex();
+                        seed2.seedFacet = itr->facet();
 
-    //                    s.indicators->copy(*seed2.indicators);
-    //                    includeOnCase(seed2);
-    //                    createHint(seed2);
+                        s.indicators->copy(*seed2.indicators);
+                        includeOnCase(seed2);
+                        createHint(seed2);
 
-    //                    infos.curMeshSeedQueue.push(seed2);
-    //                }
+                        infos.curMeshSeedQueue.push(seed2);
+                    }
 
-    //                itr->facet()->mark == SEEDED;
-    //                itr = itr->next;
-    //            }
-    //        }
-    //        queue.pop();
-    //    }
+                    itr->facet()->mark == SEEDED;
+                    itr = itr->next;
+                }
+            }
+            queue.pop();
+        }
     }
 
     void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& s)

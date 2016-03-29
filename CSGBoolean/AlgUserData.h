@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <set>
 #include "macroutil.h"
 #include "csgdefs.h"
 #include "plane_reps.h"
@@ -151,6 +152,7 @@ namespace CSG
     {
         ItstLineList            isectLines;
         std::vector<VProxyItr>  inVertices;
+        std::set<int>           meshIds;
 
         ItstTriangle(MyMesh::Face_handle fh){}
     };

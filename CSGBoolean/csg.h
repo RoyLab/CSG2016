@@ -312,10 +312,11 @@ namespace CSG
         CSGTreeOld* oldTree = nullptr;
         std::vector<TreeNode*> nodeList, meshNodeList;
     public:
-        void auxiliary()
+        CSGTreeOld* auxiliary()
         {
             SAFE_DELETE(oldTree);
             oldTree = ConvertCSGTree(this);
+            return oldTree;
         }
 
     private:

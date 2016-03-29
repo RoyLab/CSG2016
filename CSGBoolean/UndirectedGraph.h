@@ -37,7 +37,7 @@ namespace myext
             return getValue(i, j);
         }
 
-    private:
+    protected:
 
         size_t idx(size_t i, size_t j) const
         {

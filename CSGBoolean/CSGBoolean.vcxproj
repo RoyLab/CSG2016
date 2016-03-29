@@ -133,6 +133,7 @@
     <ClCompile Include="adaptive.cpp" />
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="bool.cpp" />
+    <ClCompile Include="BSPTree.cpp" />
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="ItstAlg.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="AlgUserData.h" />
     <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="bool.h" />
+    <ClInclude Include="BSPTree.h" />
     <ClInclude Include="CGALext.h" />
     <ClInclude Include="csg.h" />
     <ClInclude Include="linmath.h" />

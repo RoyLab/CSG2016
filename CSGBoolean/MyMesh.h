@@ -97,7 +97,7 @@ namespace CSG
 
         bool isSimple() const
         {
-            return !data->itstTri || data->itstTri->isectLines.empty();
+            return !data->itstTri || data->itstTri->meshIds.empty();
         }
     };
 
