@@ -1,6 +1,5 @@
 #pragma once
 #include <list>
-#include <set>
 #include "macroutil.h"
 #include "csgdefs.h"
 #include "plane_reps.h"
@@ -86,6 +85,7 @@ namespace CSG
 
         PBPoint<K> pos;
         std::vector<Context<MyMesh>> ctx;
+        int idx = -1;
 
         void addContext(int meshId, MyMesh::Face_handle fh, PosTag tag)
         {
@@ -135,26 +135,6 @@ namespace CSG
 
     private:
         int id;
-    };
-
-    struct ItstLine
-    {
-        struct
-        {
-            PosTag tag = NONE;
-            int idx = -1;
-        } pts[2];
-    };
-
-    typedef std::list<ItstLine> ItstLineList;
-
-    struct ItstTriangle
-    {
-        ItstLineList            isectLines;
-        std::vector<VProxyItr>  inVertices;
-        std::set<int>           meshIds;
-
-        ItstTriangle(MyMesh::Face_handle fh){}
     };
 
 }

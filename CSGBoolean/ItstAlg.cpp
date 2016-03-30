@@ -303,8 +303,8 @@ namespace
         //std::cout << result->A.coord[0] << " " << result->A.coord[1] << " " << result->A.coord[2] << " " << std::endl;
         //std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
 
-        assert(result->tagA[0] != result->tagB[0]);
-        assert(result->tagA[1] != result->tagB[1]);
+        assert(result->tagA[0] == INNER && result->tagB[0] == INNER || result->tagA[0] != result->tagB[0]);
+        assert(result->tagA[1] == INNER && result->tagB[1] == INNER || result->tagA[1] != result->tagB[1]);
 
         return INTERSECT_ON_LINE;
     }

@@ -18,10 +18,13 @@ namespace CSG
     typedef K::Point_3  Point3d;
     typedef K::Ray_3    Ray;
 
+    template <class HDS> class Delegate;
+
     class MyAlgorithm
     {
         typedef MyMesh::Face_handle     FH;
         typedef MyMesh::Vertex_handle   VH;
+        typedef MyMesh::HalfedgeDS  HalfedgeDS;
 
         template <class T>
         class Queue: public std::queue<T,std::list<T>> {};
@@ -75,6 +78,7 @@ namespace CSG
 
             int32_t             curMeshId = -1;
             boost::shared_ptr<CSGTreeNode> ttree1, ttree2;
+            CSGTreeNode** curTreeLeaves = nullptr;
         };
 
     public:
@@ -82,8 +86,7 @@ namespace CSG
         ~MyAlgorithm(){}
 
         void solve(const std::string& expr, std::vector<MyMesh*>& meshList);
-        MyMesh* getResultMesh();
-        MyMesh* popResultMesh();
+        boost::shared_ptr<MyMesh> getResultMesh() { return csgResult; }
 
     private:
         void floodColoring(CSGTree<MyMesh>* pCsg, ItstAlg* itstAlg);
@@ -96,15 +99,67 @@ namespace CSG
         Relation relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins);
         Relation relationOfContext(FH coins, VH vh);
 
+        void AddFacet(FH fh);
+        bool isSameGroup(FH fh0, FH fh1) const;
+        void genVertexInds(IIndicatorVector* target, VH vh) const;
+
     private:
-
-        MyMesh*                     csgResult = nullptr;
-        std::vector<MyMesh*>*       pMeshList = nullptr;
-
-        Octree *                    pOctree = nullptr;
+        boost::shared_ptr<MyMesh>   csgResult;
+        std::vector<MyMesh*>        *pMeshList = nullptr;
+        Delegate<HalfedgeDS>        *pConstruct = nullptr;
+        Octree                      *pOctree = nullptr;
     };
 
     Relation PolyhedralInclusionTest(Point3d& point, Octree* pOctree, std::vector<MyMesh*>& pMesh, unsigned meshId, bool IsInverse);
 
+    template <class HDS>
+    class Delegate : public CGAL::Modifier_base<HDS> {
+        
+        struct Tripple
+        { 
+            Tripple(int i, int j, int k){ idx[0] = i; idx[1] = j; idx[2] = k; }
+            int idx[3]; 
+        };
+
+    public:
+        typedef typename HDS::Vertex   Vertex;
+        typedef typename Vertex::Point Point;
+
+        Delegate() {}
+
+        void operator()(HDS& hds) {
+
+            CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
+            B.begin_surface(points.size(), indices.size() / 3);
+
+            for (size_t i = 0; i < points.size(); i++)
+                B.add_vertex(points[i]);
+
+            for (size_t i = 0; i < indices.size(); i++)
+            {
+                B.begin_facet();
+                for (int j = 0; j < 3; j++)
+                    B.add_vertex_to_facet(indices[i].idx[j]);
+                B.end_facet();
+            }
+
+            B.end_surface();
+        }
+
+        int add_vertex(const Point& pts)
+        {
+            points.push_back(pts);
+            return points.size() - 1;
+        }
+
+        void addFacets(int i, int j, int k)
+        {
+            indices.emplace_back(i, j, k);
+        }
+
+    private:
+        std::deque<Point> points;
+        std::deque<Tripple> indices;
+    };
 }
 

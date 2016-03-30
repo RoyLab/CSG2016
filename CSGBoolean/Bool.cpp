@@ -129,8 +129,8 @@ namespace CSG
         //main1("../../models/horse.off");
         GS::exactinit();
         std::vector<std::string> names;
-        names.push_back("../../models/box1.off");
-        names.push_back("../../models/box2.off");
+        names.push_back("../../models/ball1.off");
+        names.push_back("../../models/ball2.off");
 
         std::string expr("0+1");
 
@@ -139,6 +139,11 @@ namespace CSG
 
         MyAlgorithm *alg = new MyAlgorithm;
         alg->solve(expr, meshList);
+
+        auto res = alg->getResultMesh();
+        std::ofstream output("../../models/ball-res.off");
+        output << *res.get();
+        output.close();
 
         for (auto mesh : meshList)
         {

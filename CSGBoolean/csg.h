@@ -41,6 +41,7 @@ namespace CSG
             for (size_t i = 0; i < data.size(); i++)
                 data[i] = REL_UNKNOWN;
         }
+
         virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
         virtual const Indicator& operator[](size_t meshId) const { return data[meshId]; }
 

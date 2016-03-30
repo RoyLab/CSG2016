@@ -3,6 +3,7 @@
 #include <CGAL\HalfedgeDS_vertex_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_halfedge_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_face_max_base_with_id.h>
+#include <set>
 
 #include <boost\shared_ptr.hpp>
 
@@ -78,6 +79,7 @@ namespace CSG
         MyVertex(){}
         MyVertex(const Point& p):CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned>(p){}
         boost::shared_ptr<UserVData> data;
+        int idx = -1;
     };
 
     template <class Refs>
@@ -93,12 +95,9 @@ namespace CSG
         Halfedge_handle                 edges[3];
         Vertex_handle                   vertices[3];
         CGAL::Color                     color;
-        int                             mark = -1;
+        int                             mark = MARK_BEGIN;
 
-        bool isSimple() const
-        {
-            return !data->itstTri || data->itstTri->meshIds.empty();
-        }
+        bool isSimple() const;
     };
 
     struct MyItems {
@@ -108,7 +107,6 @@ namespace CSG
             typedef typename Traits::Point_3 Point;
             typedef MyVertex<Refs, Point> Vertex;
         };
-
 
         template < class Refs, class Traits>
         struct Halfedge_wrapper {
@@ -140,4 +138,36 @@ namespace CSG
         void initEdgeIds();
         void initIds();
     };
+
+#define DEFINE_HANDLES\
+    typedef MyMesh::Vertex_handle VH;\
+    typedef MyMesh::Halfedge_handle EH;\
+    typedef MyMesh::Face_handle FH
+
+
+    struct ItstLine
+    {
+        struct
+        {
+            PosTag tag = NONE;
+            int idx = -1;
+        } pts[2];
+    };
+
+    typedef std::list<ItstLine> ItstLineList;
+
+    struct ItstTriangle
+    {
+        ItstLineList            isectLines;
+        std::vector<VProxyItr>  inVertices;
+        std::set<int>           meshIds;
+
+        ItstTriangle(MyMesh::Face_handle fh){}
+    };
+
+    template <class Refs>
+    bool MyFacet<Refs>::isSimple() const
+    {
+        return !data->itstTri || data->itstTri->meshIds.empty();
+    }
 }

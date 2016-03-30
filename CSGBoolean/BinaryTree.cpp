@@ -141,6 +141,7 @@ namespace CSG
 		return pCopy;
 	}
 
+    // 跟copy的区别在于，不是针对CSGTreeOld
     CSGTreeNode* copy2(const CSGTreeNode* thiz, CSGTreeNode** leafList)
 	{
 		if (!thiz) return nullptr;
