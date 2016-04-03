@@ -42,7 +42,7 @@ namespace CSG
 
     struct UserVData
     {
-        UserVData(VProxyItr* p):proxy(p){}
+        UserVData(VProxyItr p) :proxy(new VProxyItr(p)){}
 
         VProxyItr* proxy = nullptr;
         ~UserVData(){ SAFE_DELETE(proxy);}
@@ -147,9 +147,11 @@ namespace CSG
 
     struct ItstLine
     {
+        // tag 和 idx 共同确定了独一无二的面内点坐标
         struct
         {
             PosTag tag = NONE;
+            int gIdx = -1;
             int idx = -1;
         } pts[2];
     };

@@ -80,7 +80,7 @@ namespace CSG
         VEntity()
         {
             static int count = 0;
-            id = count++;
+            idx = count++;
         }
 
         PBPoint<K> pos;
@@ -130,11 +130,8 @@ namespace CSG
         
         bool operator<(const VEntity& other)
         {
-            return id < other.id;
+            return idx < other.idx;
         }
-
-    private:
-        int id;
     };
 
 }

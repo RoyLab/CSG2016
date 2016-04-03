@@ -84,11 +84,11 @@ namespace CSG
     };
 
     template <class _R>
-    class PBPoint
+    struct PBPoint
     {
         DECLARE_CGAL_KERNEL_CLASS
         typedef Plane_ext<_R> PlaneExt;
-    public:
+
         PBPoint(){}
         PBPoint(const Plane& p, const Plane& q, const Plane& r, bool keepPositive = true)
         {
@@ -130,10 +130,9 @@ namespace CSG
             return true;
         }
 
-    private:
         PlaneExt planes[3];
+
 #ifdef _DEBUG
-    public:
         void computeCoord()
         {
             auto result = CGAL::intersection(planes[0], planes[1], planes[2]);
@@ -171,6 +170,11 @@ namespace CSG
             m_bps[0] = PlaneExt(q, r, q + normal);
             m_bps[1] = PlaneExt(r, p, r + normal);
             m_bps[2] = PlaneExt(p, q, p + normal);
+        }
+
+        PBPoint<_R> point(int idx)
+        {
+            return PBPoint<_R>(m_bps[(idx + 1) % 3], m_bps[(idx + 2) % 3], m_sp);
         }
     };
 

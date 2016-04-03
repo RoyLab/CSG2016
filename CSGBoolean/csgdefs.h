@@ -1,5 +1,6 @@
 #pragma once
 #include "linmath.h"
+#include "macroutil.h"
 
 #include <CGAL\Exact_predicates_inexact_constructions_kernel.h>
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
@@ -25,6 +26,7 @@ static inline void GetIDFromIndex(uint32_t ID[], const IndexPair& indexPair)
     ID[1] = indexPair >> 32;
 }
 
+
 typedef double double2[2];
 typedef double double3[3];
 typedef double double4[4];
@@ -43,6 +45,74 @@ namespace CSG
 
         VER_MASK = 0xf0, EDGE_MASK = 0x0f
     };
+
+    inline int edge_idx(PosTag tag)
+    {
+        switch (tag)
+        {
+        case EDGE_0:
+            return 0;
+        case EDGE_1:
+            return 1;
+        case EDGE_2:
+            return 2;
+        default:
+        {
+            char _errline[20];
+            throw std::exception(ReportErrorString.c_str());
+        }
+        }
+    }
+
+    inline int vertex_idx(PosTag tag)
+    {
+        switch (tag)
+        {
+        case VER_0:
+            return 0;
+        case VER_1:
+            return 1;
+        case VER_2:
+            return 2;
+        default:
+        {
+            char _errline[20];
+            throw std::exception(ReportErrorString.c_str());
+        }
+        }
+    }
+
+    inline PosTag edge_tag(int idx)
+    {
+        switch (idx)
+        {
+        case 0: return EDGE_0;
+        case 1: return EDGE_1;
+        case 2: return EDGE_2;
+        default: return NONE;
+        }
+    }
+
+    inline PosTag vertex_tag(int idx)
+    {
+        switch (idx)
+        {
+        case 0: return VER_0;
+        case 1: return VER_1;
+        case 2: return VER_2;
+        default: return NONE;
+        }
+    }
+
+    inline bool is_edge(PosTag tag)
+    {
+        return tag >= EDGE_0 && tag <= EDGE_2;
+    }
+
+    inline bool is_vertex(PosTag tag)
+    {
+        return tag >= VER_0 && tag <= VER_2;
+    }
 
     enum Relation
     {

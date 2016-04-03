@@ -61,7 +61,7 @@ namespace CSG
         std::vector<Octree::Node*> intersectLeaves;
         pOctree->build(*pMeshList, &intersectLeaves);
 
-        ItstAlg* itst = new ItstAlg(pMeshList);
+        itst = new ItstAlg(pMeshList);
         itst->doIntersection(intersectLeaves);
 
 #ifdef _DEBUG
@@ -102,7 +102,7 @@ namespace CSG
     {
         VH seedV = (*pMeshList)[info.meshId]->vertices_begin();
 
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 2; i++)
             seedV++;
 
         info.indicators.reset(computeFullIndicator(seedV, info.meshId));
@@ -412,8 +412,11 @@ namespace CSG
                 FH curFace = q.front().seedFacet;
                 curFace->mark = VISITED;
 
-                //ItstGraph* ig = new ItstGraph(q.front());
-            //    ig->createGraph(q.front());
+                ItstGraph* ig = new ItstGraph(q.front().seedFacet, itst, infos.curMeshId);
+
+                assert(ig->get_bValid());
+                SAFE_DELETE(ig);
+
             //    ig->propInd();
 
             //    loops.clear();

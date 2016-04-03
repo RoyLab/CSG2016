@@ -9,74 +9,6 @@ namespace
 {
     using namespace CSG;
 
-    inline int edge_idx(PosTag tag)
-    {
-        switch (tag)
-        {
-        case EDGE_0:
-            return 0;
-        case EDGE_1:
-            return 1;
-        case EDGE_2:
-            return 2;
-        default:
-        {
-            char _errline[20];
-            throw std::exception(ReportErrorString.c_str());
-        }
-        }
-    }
-
-    inline int vertex_idx(PosTag tag)
-    {
-        switch (tag)
-        {
-        case VER_0:
-            return 0;
-        case VER_1:
-            return 1;
-        case VER_2:
-            return 2;
-        default:
-        {
-            char _errline[20];
-            throw std::exception(ReportErrorString.c_str());
-        }
-        }
-    }
-
-    inline PosTag edge_tag(int idx)
-    {
-        switch (idx)
-        {
-        case 0: return EDGE_0;
-        case 1: return EDGE_1;
-        case 2: return EDGE_2;
-        default: return NONE;
-        }
-    }
-
-    inline PosTag vertex_tag(int idx)
-    {
-        switch (idx)
-        {
-        case 0: return VER_0;
-        case 1: return VER_1;
-        case 2: return VER_2;
-        default: return NONE;
-        }
-    }
-
-    inline bool is_edge(PosTag tag)
-    {
-        return tag >= EDGE_0 && tag <= EDGE_2;
-    }
-
-    inline bool is_vertex(PosTag tag)
-    {
-        return tag >= VER_0 && tag <= VER_2;
-    }
-
     inline bool is_same_edge(PosTag tag0, PosTag tag1, int& eId)
     {
         if (tag0 == tag1)
@@ -430,7 +362,7 @@ namespace CSG
         return detected;
     }
 
-    int ItstAlg::checkDuplicatedPoints(std::vector<VProxyItr>& plist, PBPoint<K> point, VProxyItr& proxy)
+    int ItstAlg::checkDuplicatedPoints(std::vector<VProxyItr>& plist, PBPoint<K>& point, VProxyItr& proxy)
     {
         for (size_t i = 0; i < plist.size(); i++)
         {
@@ -443,7 +375,7 @@ namespace CSG
         return -1;
     }
 
-    int ItstAlg::checkDuplicatedPoints(PBPoint<K> point, FH fhs, PosTag tags, VProxyItr& outcome)
+    int ItstAlg::checkDuplicatedPoints(PBPoint<K>& point, FH fhs, PosTag tags, VProxyItr& outcome)
     {
         int oId = -1;
         switch (tags)
@@ -488,7 +420,7 @@ namespace CSG
         case VER_1:
         case VER_2:
             assert(!fh->vertices[vertex_idx(tags)]->data);
-            fh->vertices[vertex_idx(tags)]->data.reset(new UserVData(&proxy));
+            fh->vertices[vertex_idx(tags)]->data.reset(new UserVData(proxy));
             return 0;
         case EDGE_0:
         case EDGE_1:
@@ -501,7 +433,19 @@ namespace CSG
         }
     }
 
-    void ItstAlg::getVProxy(PBPoint<K> point, int addwhat[2], FH fhs[2], PosTag tags[2], 
+    VProxyItr ItstAlg::addVEntity(PBPoint<K>& point)
+    {
+        vEnt.emplace_back(new VEntity);
+        auto &entity = vEnt.back();
+        entity->pos = point;
+
+        auto veItr = vEnt.end(); veItr--;
+        vProxy.push_back(veItr);
+        auto proxy = vProxy.end(); proxy--;
+        return proxy;
+    }
+
+    void ItstAlg::getVProxy(PBPoint<K>& point, int addwhat[2], FH fhs[2], PosTag tags[2], 
         int oId[2], VProxyItr outproxy[2], uint32_t meshId[2])
     {
         VProxyItr proxy;
@@ -514,13 +458,11 @@ namespace CSG
 
         if (oId[0] == -1 && oId[1] == -1)
         {
-            vEnt.emplace_back(new VEntity);
-            auto &entity = vEnt.back();
-            entity->pos = point;
+            auto entity = addVEntity(point);
             for (int i = 0; i < 2; i++)
             {
                 if (addwhat[i] > 0)
-                    entity->addContext(meshId[i], fhs[i], tags[i]);
+                    entity.pointer()->addContext(meshId[i], fhs[i], tags[i]);
             }
 
             auto veItr = vEnt.end(); veItr--;
@@ -594,6 +536,9 @@ namespace CSG
 
                 line.pts[0].idx = oIdA[i];
                 line.pts[1].idx = oIdB[i];
+
+                line.pts[0].gIdx = proxyA->pointer()->idx;
+                line.pts[1].gIdx = proxyB->pointer()->idx;
 
                 fhs[i]->data->itstTri->isectLines.push_back(line);
                 fhs[i]->data->itstTri->meshIds.insert(meshId[(i + 1) % 2]);

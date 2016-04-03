@@ -108,6 +108,7 @@ namespace CSG
         std::vector<MyMesh*>        *pMeshList = nullptr;
         Delegate<HalfedgeDS>        *pConstruct = nullptr;
         Octree                      *pOctree = nullptr;
+        ItstAlg                     *itst = nullptr;
     };
 
     Relation PolyhedralInclusionTest(Point3d& point, Octree* pOctree, std::vector<MyMesh*>& pMesh, unsigned meshId, bool IsInverse);
