@@ -43,8 +43,6 @@ namespace
         return &(*a) <= &(*b);
     }
 
-    enum Mark { SEEDED, VISITED, UNVISITED = MARK_BEGIN };
-
 }
 
 namespace CSG
@@ -364,8 +362,6 @@ namespace CSG
         if (curRelation == REL_SAME)
             needAdd = true;
 
-        needAdd = true;
-
         while (!queue.empty())
         {
             if (queue.front()->mark != VISITED)
@@ -400,26 +396,46 @@ namespace CSG
         }
     }
 
-    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& seed)
+    void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& s)
     {
         Queue<SeedInfo> q;
+        auto &ids = s.seedFacet->data->itstTri->meshIds;
+
+        SeedInfo seed;
+        seed.seedFacet = s.seedFacet;;
+        seed.seedVertex = s.seedVertex;
+        seed.indicators.reset(new SampleIndicatorVector(
+            *reinterpret_cast<FullIndicatorVector*>(seed.indicators.get()), ids));
         q.emplace(seed);
+
+        Relation *curRelationTable = new Relation[pMeshList->size()];
+        for (size_t i = 0; i < pMeshList->size(); i++)
+            curRelationTable[i] = static_cast<Relation>((*s.indicators)[i]);
+
+        for (auto& id : ids)
+            curRelationTable[id] = REL_NOT_AVAILABLE;
+
+        TestTree testList;
+        CSGTreeNode* curTree = copy2(infos.ttree1.get(), infos.curTreeLeaves);
+        auto curRelation = ParsingCSGTree((*pMeshList)[infos.curMeshId], curRelationTable,
+            pMeshList->size(), curTree, infos.curTreeLeaves, testList);
+        assert(!testList.size() || !testList.begin()->testTree->Parent);
 
         while (!q.empty())
         {
             if (q.front().seedFacet->mark != VISITED)
             {
-                FH curFace = q.front().seedFacet;
+                auto &curSeed = q.front();
+                FH curFace = seed.seedFacet;
                 curFace->mark = VISITED;
 
                 ItstGraph* ig = new ItstGraph(q.front().seedFacet, itst, infos.curMeshId);
+                ig->floodFilling(seed.seedVertex, seed.indicators, ids);
 
                 assert(ig->get_bValid());
                 SAFE_DELETE(ig);
 
-            //    ig->propInd();
 
-            //    loops.clear();
             //    fh->data->iTri->looplets->getAllCircles(loops);
 
             //    for (auto& loop : loops)

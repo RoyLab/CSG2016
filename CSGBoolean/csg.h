@@ -28,6 +28,8 @@ namespace CSG
         virtual Indicator& operator[](size_t meshId) = 0;
         virtual const Indicator& operator[](size_t meshId) const = 0;
 
+        virtual Indicator& at(size_t meshId) { return operator[](meshId); }
+        virtual const Indicator& at(size_t meshId) const { return operator[](meshId); }
         virtual ~IIndicatorVector(){}
     };
 
@@ -45,8 +47,57 @@ namespace CSG
         virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
         virtual const Indicator& operator[](size_t meshId) const { return data[meshId]; }
 
+        template <class Container>
+        void fillInSample(SampleIndicatorVector& sample, Container& ids)
+        {
+            for (int& id : ids)
+                data[id] = sample[id];
+        }
+
     private:
         std::vector<Indicator> data;
+    };
+
+    class SampleIndicatorVector :
+        public IIndicatorVector
+    {
+    public:
+
+        template <class Container>
+        SampleIndicatorVector(FullIndicatorVector& full, Container& ids)
+        {
+            for (int& id : ids)
+                data[id] = full[id];
+        }
+
+        template <class Container>
+        SampleIndicatorVector(Container& ids)
+        {
+            for (int& id : ids)
+                data[id] = REL_UNKNOWN;
+        }
+
+        virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
+        virtual const Indicator& operator[](size_t meshId) const
+        {
+            auto res = data.find(meshId);
+            if (res == data.end())
+            {
+                ReportError();
+                return REL_NOT_AVAILABLE;
+            }
+            return res->second;
+        }
+
+        void getUnknownIndicator(std::vector<int> ids)
+        {
+            for (auto& pair : data)
+                if (pair.second == REL_UNKNOWN)
+                    ids.push_back(pair.first);
+        }
+
+    private:
+        std::map<int, Indicator> data;
     };
 
     std::string InfixToPostfix(const std::string& infix);

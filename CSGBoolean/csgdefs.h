@@ -143,4 +143,5 @@ namespace CSG
         TYPE_UNION, TYPE_INTERSECT, TYPE_DIFF, TYPE_LEAF
     };
 
+    enum Mark { SEEDED, VISITED, UNVISITED = MARK_BEGIN };
 }

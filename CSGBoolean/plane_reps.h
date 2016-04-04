@@ -105,12 +105,14 @@ namespace CSG
 
             assert(CGAL::determinant(p.orthogonal_vector(),
                 q.orthogonal_vector(), r.orthogonal_vector()) > 0.f);
+
+            computeCoord();
         }
 
-        Point estimate_coords() const
-        {
-            return CGAL::intersection(planes[0], planes[1], planes[2]);
-        }
+        //Point estimate_coords() const
+        //{
+        //    return CGAL::intersection(planes[0], planes[1], planes[2]);
+        //}
 
         bool operator==(const PBPoint& p) const
         {
@@ -130,18 +132,20 @@ namespace CSG
             return true;
         }
 
-        PlaneExt planes[3];
 
-#ifdef _DEBUG
         void computeCoord()
         {
             auto result = CGAL::intersection(planes[0], planes[1], planes[2]);
             const Point* p = boost::get<Point>(&*result);
-            memcpy(&coord, p, sizeof(double3));
+            coord == *p;
         }
 
-        double3 coord;
-#endif
+        const PlaneExt* getPlanes() const { return planes; }
+        const Point& getCoord() const { return coord; }
+
+    private:
+        PlaneExt planes[3];
+        Point coord;
     };
 
     template <class _R>

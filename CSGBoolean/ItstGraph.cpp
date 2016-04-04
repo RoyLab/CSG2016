@@ -1,5 +1,6 @@
 #include <CGAL\Cartesian_matrix.h>
-
+#include <queue>
+#include <list>
 #include "ItstGraph.h"
 
 
@@ -19,8 +20,8 @@ namespace CSG
 
         bool operator()(Point& a, Point& b)
         {
-            Plane pa = a.planes[2];
-            Plane pb = b.planes[2]; //之所以是2,因为2一定是个非支撑平面
+            Plane pa = a.getPlanes()[2];
+            Plane pb = b.getPlanes()[2]; //之所以是2,因为2一定是个非支撑平面
             
             CGAL::Sign s = CGAL::sign_of_determinant(m_q.a(), m_q.b(), m_q.c(),
                 m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
@@ -48,8 +49,8 @@ namespace CSG
             CGAL::Vector_3<K> p1 = m_p.orthogonal_vector();
             auto &positive = CGAL::cross_product(p0, p1);
 
-            CGAL::Point_3<K> posa(aa.coord[0], aa.coord[1], aa.coord[2]);
-            CGAL::Point_3<K> posb(bb.coord[0], bb.coord[1], bb.coord[2]);
+            CGAL::Point_3<K> posa(aa.getCoord());
+            CGAL::Point_3<K> posb(bb.getCoord());
 
             double res2 = (posa - CGAL::ORIGIN) * positive - (posb - CGAL::ORIGIN) * positive;
             bool res = operator()(aa, bb);
@@ -78,21 +79,22 @@ namespace CSG
         adjacent.eId = eId;
         if (e.direction & SEQ)
         {
-            adjacent.vId = node1.vproxy.pointer()->idx;
+            adjacent.vId = m_maps[e.vId[1]];
             node0.edges.push_back(adjacent);
         }
 
         if (e.direction & INV)
         {
-            adjacent.vId = node0.vproxy.pointer()->idx;
+            adjacent.vId = m_maps[e.vId[1]];
             node1.edges.push_back(adjacent);
         }
     }
 
     void ItstGraph::addNode(Node& node)
     {
-        m_nodes.push_back(node);
         m_maps[node.vproxy.pointer()->idx] = m_nodes.size() - 1;
+        node.id = m_nodes.size() - 1;
+        m_nodes.push_back(node);
     }
 
     ItstGraph::ItstGraph(FH fh, ItstAlg* data, int meshId):
@@ -172,7 +174,7 @@ namespace CSG
             }
         }
 
-        // 添加内点
+        // 添加内点，注意这里没有考虑相交的情形
         if (!fh->data->itstTri || !fh->data->itstTri->inVertices.size()) return;
 
         auto &inners = fh->data->itstTri->inVertices;
@@ -199,9 +201,109 @@ namespace CSG
     {
     }
 
+    int determinePhase(double abcos, double absin)
+    {
+        if (abcos >= 0.0 && absin >= 0.0)
+            return 1;
+
+        if (abcos < 0.0 && absin >= 0.0)
+            return 2;
+
+        if (abcos < 0.0 && absin < 0.0)
+            return 3;
+
+        if (abcos >= 0.0 && absin < 0.0)
+            return 4;
+    }
+
+    struct AngleComparison
+    {
+        typedef ItstGraph::Adj Item;
+
+        AngleComparison(){}
+
+        bool operator()(Item& a, Item&b)
+        {
+            auto v1 = a.calcDirection(graph, origin);
+            auto v2 = b.calcDirection(graph, origin);
+
+            double cos1 = v1 * zero;
+            double cos2 = v2 * zero;
+
+            double sin1 = sqrt(CGAL::cross_product(zero, v1).squared_length());
+            double sin2 = sqrt(CGAL::cross_product(zero, v2).squared_length());
+
+            int phase1 = determinePhase(cos1, sin1);
+            int phase2 = determinePhase(cos2, sin2);
+
+            if (phase2 < phase1) return true;
+            if (phase2 > phase1) return false;
+
+            double tan1 = sin1 / cos1;
+            double tan2 = sin2 / cos2;
+
+            return tan2 > tan1;
+        }
+
+        K::Vector_3 zero;
+        PBPoint<K> origin;
+        ItstGraph* graph = nullptr;
+    };
+
+
+    K::Vector_3 ItstGraph::Adj::calcDirection(ItstGraph* graph, const PBPoint<K>& origin)
+    {
+        auto there = graph->get_nodes()[vId].vproxy.pointer()->pos.getCoord();
+        return there - origin.getCoord();
+    }
+
     void ItstGraph::sortEdgeDirection()
     {
+        for (auto &node : m_nodes)
+        {
+            // 以第一个为O点，计算sin, cos, 象限排序
+            AngleComparison comp;
+            comp.origin = node.vproxy.pointer()->pos;
+            comp.zero = node.edges.begin()->calcDirection(this, comp.origin);
+            comp.graph = this;
+            std::sort(node.edges.begin() + 1, node.edges.end(), comp);
+        }
+    }
 
+    void ItstGraph::floodFilling(int startId)
+    {
+        std::queue<int, std::list<int>> queue;
+        auto &startNode = m_nodes[startId];
+        auto &adjs = startNode.edges;
+
+        for (auto& edge : adjs)
+        {
+            if (isNodeVisited(edge)) continue;
+            auto &node = m_nodes[edge.vId];
+
+            node.indicator = new SampleIndicatorVector(m_ids);
+            auto &ctx = node.vproxy.pointer()->ctx;
+
+            for (int id : m_ids)
+            {
+                assert((*startNode.indicator)[id] != REL_UNKNOWN &&
+                    (*startNode.indicator)[id] != REL_NOT_AVAILABLE);
+
+                if ((*startNode.indicator)[id] != REL_SAME)
+                    (*node.indicator)[id] == (*startNode.indicator)[id];
+            }
+
+            for (auto& c : ctx)
+                node.indicator->at(c.meshId) = REL_SAME;
+
+            for (int id : m_ids)
+            {
+                if (node.indicator->at(id) == REL_UNKNOWN)
+                {
+
+                }
+            }
+        }
     }
 
 }
