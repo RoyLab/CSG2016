@@ -131,6 +131,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="adaptive.cpp" />
+    <ClCompile Include="AlgUserData.cpp" />
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="bool.cpp" />
     <ClCompile Include="BSPTree.cpp" />
@@ -138,7 +139,6 @@
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="ItstAlg.cpp" />
     <ClCompile Include="ItstGraph.cpp" />
-    <ClCompile Include="LoopletTable.cpp" />
     <ClCompile Include="MyAlgorithm.cpp" />
     <ClCompile Include="MyMesh.cpp" />
     <ClCompile Include="PointInMesh.cpp" />
@@ -159,11 +159,9 @@
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="ItstAlg.h" />
     <ClInclude Include="ItstGraph.h" />
-    <ClInclude Include="LoopletTable.h" />
     <ClInclude Include="MyMesh.h" />
     <ClInclude Include="MyAlgorithm.h" />
     <ClInclude Include="stringext.h" />
-    <ClInclude Include="TrimCSGTree.h" />
     <ClInclude Include="UndirectedGraph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

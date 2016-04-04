@@ -143,5 +143,6 @@ namespace CSG
         TYPE_UNION, TYPE_INTERSECT, TYPE_DIFF, TYPE_LEAF
     };
 
+    const int MARK_BEGIN = 0xff; // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作
     enum Mark { SEEDED, VISITED, UNVISITED = MARK_BEGIN };
 }

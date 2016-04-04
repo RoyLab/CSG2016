@@ -33,6 +33,8 @@ namespace CSG
         virtual ~IIndicatorVector(){}
     };
 
+    class SampleIndicatorVector;
+
     class FullIndicatorVector :
         public IIndicatorVector
     {
@@ -48,10 +50,10 @@ namespace CSG
         virtual const Indicator& operator[](size_t meshId) const { return data[meshId]; }
 
         template <class Container>
-        void fillInSample(SampleIndicatorVector& sample, Container& ids)
+        void fillInSample(SampleIndicatorVector* sample, Container& ids)
         {
-            for (int& id : ids)
-                data[id] = sample[id];
+            for (int id : ids)
+                data[id] = sample->at(id);
         }
 
     private:
@@ -66,16 +68,18 @@ namespace CSG
         template <class Container>
         SampleIndicatorVector(FullIndicatorVector& full, Container& ids)
         {
-            for (int& id : ids)
+            for (int id : ids)
                 data[id] = full[id];
         }
 
         template <class Container>
         SampleIndicatorVector(Container& ids)
         {
-            for (int& id : ids)
+            for (int id : ids)
                 data[id] = REL_UNKNOWN;
         }
+
+        SampleIndicatorVector(){}
 
         virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
         virtual const Indicator& operator[](size_t meshId) const
@@ -84,7 +88,7 @@ namespace CSG
             if (res == data.end())
             {
                 ReportError();
-                return REL_NOT_AVAILABLE;
+                assert(0);
             }
             return res->second;
         }

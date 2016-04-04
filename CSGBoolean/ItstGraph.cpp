@@ -80,12 +80,14 @@ namespace CSG
         if (e.direction & SEQ)
         {
             adjacent.vId = m_maps[e.vId[1]];
+            adjacent.startId = m_maps[e.vId[0]];
             node0.edges.push_back(adjacent);
         }
 
         if (e.direction & INV)
         {
-            adjacent.vId = m_maps[e.vId[1]];
+            adjacent.vId = m_maps[e.vId[0]];
+            adjacent.startId = m_maps[e.vId[1]];
             node1.edges.push_back(adjacent);
         }
     }
@@ -273,36 +275,115 @@ namespace CSG
     void ItstGraph::floodFilling(int startId)
     {
         std::queue<int, std::list<int>> queue;
-        auto &startNode = m_nodes[startId];
-        auto &adjs = startNode.edges;
+        m_nodes[startId].mark = SEEDED;
+        queue.push(startId);
 
-        for (auto& edge : adjs)
+        while (!queue.empty())
         {
-            if (isNodeVisited(edge)) continue;
-            auto &node = m_nodes[edge.vId];
+            startId = queue.front();
+            auto &startNode = m_nodes[startId];
 
-            node.indicator = new SampleIndicatorVector(m_ids);
-            auto &ctx = node.vproxy.pointer()->ctx;
-
-            for (int id : m_ids)
+            if (startNode.mark == VISITED)
             {
-                assert((*startNode.indicator)[id] != REL_UNKNOWN &&
-                    (*startNode.indicator)[id] != REL_NOT_AVAILABLE);
-
-                if ((*startNode.indicator)[id] != REL_SAME)
-                    (*node.indicator)[id] == (*startNode.indicator)[id];
+                queue.pop();
+                continue;
             }
 
-            for (auto& c : ctx)
-                node.indicator->at(c.meshId) = REL_SAME;
+            auto &adjs = startNode.edges;
+            auto startNodeContextEnd = startNode.vproxy.pointer()->ctx.end();
+            startNode.mark = VISITED;
 
-            for (int id : m_ids)
+            for (auto& edge : adjs)
             {
-                if (node.indicator->at(id) == REL_UNKNOWN)
+                if (isNodeVisited(edge)) continue;
+
+                auto &node = m_nodes[edge.vId];
+                node.indicator = new SampleIndicatorVector(m_ids);
+
+                for (int id : m_ids)
                 {
+                    assert((*startNode.indicator)[id] != REL_UNKNOWN &&
+                        (*startNode.indicator)[id] != REL_NOT_AVAILABLE);
 
+                    if (startNodeContextEnd != startNode.vproxy.pointer()->findInContext(id))
+                        node.indicator->at(id) = startNode.indicator->at(id);
                 }
+
+                for (auto& ctx : node.vproxy.pointer()->ctx)
+                    node.indicator->at(ctx.meshId) = REL_SAME;
+
+                for (int id : m_ids)
+                {
+                    if (node.indicator->at(id) == REL_UNKNOWN)
+                    {
+                        auto location = startNode.vproxy.pointer()->findInContext(id);
+                        node.indicator->at(id) = relationOfContext(*location, node.vproxy.pointer()->pos.getCoord());
+                    }
+                }
+
+                // add its neighbor
+                if (node.mark != SEEDED && node.mark != VISITED)
+                {
+                    queue.push(edge.eId);
+                    node.mark = SEEDED;
+                }
+
             }
+            queue.pop();
+        }
+    }
+
+    void ItstGraph::getAllLoops(std::deque<Loop>& loops)
+    {
+        // 从第一个node开始，必然是一个角点
+        typedef std::vector<Adj>::iterator AdjItr;
+        std::queue<Adj*, std::list<Adj*>> queue;
+
+        queue.push(&m_nodes[0].edges[0]);
+
+        while (!queue.empty())
+        {
+            if (queue.front()->visited == false)
+            {
+                Adj* adj = queue.front();
+                int startId = adj->startId;
+                int next = adj->vId;
+                adj->visited = true;
+
+                Loop loop;
+                loop.push_back(&m_nodes[startId]);
+
+                while (startId != next)
+                {
+                    auto& nextNode = m_nodes[next];
+                    loop.push_back(&nextNode);
+                    assert(adj->visited == false);
+
+                    size_t n = nextNode.edges.size();
+                    for (size_t i = 0; i < n; i++)
+                    {
+                        bool got = false;
+                        if (nextNode.edges[i].vId == adj->startId)
+                        {
+                            got = true;
+                            // find the next edge
+                            adj = &nextNode.edges[(i + 1) % n];
+                            next = adj->vId;
+                            adj->visited = true;
+
+                            // add opposite if needed
+                            if (nextNode.edges[i].visited == false)
+                                queue.push(&nextNode.edges[i]);
+
+                            break;
+                        }
+                        assert(got);
+                    }
+                }
+                loops.push_back(loop);
+            }
+
+            queue.pop();
         }
     }
 

@@ -22,6 +22,7 @@ namespace CSG
         struct Adj
         {
             int vId = -1; // local id
+            int startId = -1; // local id
             int eId = -1; // local id
             bool visited = false;
 
@@ -46,6 +47,8 @@ namespace CSG
             int direction = 0;
         };
 
+        typedef std::deque<Node*> Loop;
+
         typedef std::map<int, int> NodeMap;
         typedef std::vector<int> IdContainer;
 
@@ -63,14 +66,15 @@ namespace CSG
         template <class Container>
         void floodFilling(VH vh, SampleIndicatorVector& sample, Container& ids)
         {
-            for (int &id : ids)
+            for (int id : ids)
                 m_ids.push_back(id);
 
             auto result = m_maps.find(vh->data->proxy->pointer()->idx);
             assert(result != m_maps.end());
 
             int startId = result->second;
-            m_nodes[startId].indicator = new SampleIndicatorVector(sample);
+            m_nodes[startId].indicator = new SampleIndicatorVector;
+            *m_nodes[startId].indicator = sample;
 
             floodFilling(startId);
         }
@@ -79,7 +83,8 @@ namespace CSG
 
         void addEdge(Edge& e);
         void addNode(Node& node);
-        bool isNodeVisited(Adj& adj) const { m_nodes[adj.vId].mark == VISITED; }
+        bool isNodeVisited(Adj& adj) const { return m_nodes[adj.vId].mark == VISITED; }
+        void getAllLoops(std::deque<Loop>& loops);
 
     private:
         void sortEdgeDirection();

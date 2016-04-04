@@ -77,6 +77,8 @@ namespace CSG
 
     struct VEntity
     {
+        typedef std::vector<Context<MyMesh>> ContextList;
+
         VEntity()
         {
             static int count = 0;
@@ -84,7 +86,7 @@ namespace CSG
         }
 
         PBPoint<K> pos;
-        std::vector<Context<MyMesh>> ctx;
+        ContextList ctx;
         int idx = -1;
 
         void addContext(int meshId, MyMesh::Face_handle fh, PosTag tag)
@@ -127,11 +129,30 @@ namespace CSG
             }
             ctx.push_back(context);
         }
+
+        ContextList::iterator findInContext(int meshId)
+        {
+            ContextList::iterator result;
+            for (result = ctx.begin(); result != ctx.end(); result++)
+            {
+                if (result->meshId == meshId)
+                    break;
+            }
+            return result;
+        }
         
         bool operator<(const VEntity& other)
         {
             return idx < other.idx;
         }
     };
+
+
+    Relation convert(CGAL::Oriented_side side);
+    Relation determineEdgeBSP(MyMesh::Halfedge_handle eh, const K::Point_3& point);
+    Relation determineVertexBSP(MyMesh::Vertex_handle ctx, const K::Point_3& point);
+    Relation relationOfContextNonmember(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh, MyMesh::Face_handle &coins);
+    Relation relationOfContext(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh);
+    Relation relationOfContext(Context<MyMesh>& ctx, const K::Point_3& point);
 
 }

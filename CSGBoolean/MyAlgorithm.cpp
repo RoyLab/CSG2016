@@ -8,8 +8,6 @@
 #include "MyAlgorithm.h"
 #include "ItstAlg.h"
 #include "ItstGraph.h"
-#include "LoopletTable.h"
-#include "TrimCSGTree.h"
 #include "csg.h"
 #include "Octree.h"
 #include "MyMesh.h"
@@ -165,96 +163,9 @@ namespace CSG
         SAFE_DELETE_ARRAY(infos.curTreeLeaves);
     }
 
-    Relation MyAlgorithm::relationOfContext(FH coins, VH vh)
-    {
-        return REL_NOT_AVAILABLE;
-    }
-
-    Relation convert(CGAL::Oriented_side side)
-    {
-        switch (side)
-        {
-        case CGAL::ON_NEGATIVE_SIDE:
-            return REL_INSIDE;
-        case CGAL::ON_POSITIVE_SIDE:
-            return REL_OUTSIDE;
-        case CGAL::ON_ORIENTED_BOUNDARY:
-            return REL_SAME;
-        default:
-            ReportError();
-            return REL_NOT_AVAILABLE;
-        }
-    }
-
-    Relation determineEdgeBSP(MyMesh::Halfedge_handle eh, MyMesh::Vertex_handle vh)
-    {
-        auto f0 = eh->facet();
-        auto f1 = eh->opposite()->facet();
-        
-        auto r0 = f0->data->sp.oriented_side(vh->point());
-        auto r1 = f1->data->sp.oriented_side(vh->point());
-        
-        if (r0 == r1) return convert(r0);
-        
-        if (r0 == REL_SAME)
-        {
-            auto opvh = eh->next()->vertex();
-            auto r01 = f1->data->sp.oriented_side(opvh->point());
-            if (r01 == r1)
-                return convert(r0);
-            else
-                return convert(r1);
-        }
-        else
-        {
-            auto opvh = eh->opposite()->next()->vertex();
-            auto r10 = f0->data->sp.oriented_side(opvh->point());
-            if (r10 == r0)
-                return convert(r1);
-            else
-                return convert(r0);
-        }
-    }
-
-    Relation determineVertexBSP(MyMesh::Vertex_handle ctx, MyMesh::Vertex_handle vh)
-    {
-        typedef MyMesh::Face_handle FH;
-        std::vector<FH> facets;
-        auto end = ctx->halfedge();
-        auto cur = end;
-        do
-        {
-            facets.push_back(cur->facet());
-            cur = cur->next()->opposite();
-        } while (cur != end);
-
-        BSPTree* pTree = new BSPTree(facets);
-        SAFE_DELETE(pTree);
-
-        return REL_NOT_AVAILABLE;
-    }
-
     Relation MyAlgorithm::relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins)
     {
-        CGAL::Oriented_side side, side1;
-        Relation result = REL_NOT_AVAILABLE;
-        switch (ctx.type)
-        {
-        case CT_VERTEX:
-            result = determineVertexBSP(*ctx.vh, vh);
-        case CT_EDGE:
-            result = determineEdgeBSP(*ctx.eh, vh);
-            break;
-        case CT_FACET:
-            side = (*ctx.fh)->data->sp.oriented_side(vh->point());
-            result =  convert(side);
-            if (result == REL_SAME) coins = (*ctx.fh);
-            break;
-        default:
-            ReportError();
-            break;
-        }
-        return result;
+        return relationOfContextNonmember(ctx, vh, coins);
     }
 
     void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* pinds)
@@ -273,7 +184,8 @@ namespace CSG
             case CSG::REL_OUTSIDE:
                 break;
             case CSG::REL_SAME:
-                rel = relationOfContext(coincident, r);
+                //rel = relationOfContext(coincident, r);
+                ReportError();
                 break;
             default:
                 ReportError();
@@ -426,37 +338,52 @@ namespace CSG
             if (q.front().seedFacet->mark != VISITED)
             {
                 auto &curSeed = q.front();
-                FH curFace = seed.seedFacet;
-                curFace->mark = VISITED;
+                FH curface = seed.seedFacet;
+                curface->mark = VISITED;
 
-                ItstGraph* ig = new ItstGraph(q.front().seedFacet, itst, infos.curMeshId);
-                ig->floodFilling(seed.seedVertex, seed.indicators, ids);
-
+                ItstGraph* ig = new ItstGraph(curface, itst, infos.curMeshId);
                 assert(ig->get_bValid());
+
+                ig->floodFilling(seed.seedVertex,
+                    *reinterpret_cast<SampleIndicatorVector*>(seed.indicators.get()), ids);
+
+                std::deque<ItstGraph::Loop> loops;
+                ig->getAllLoops(loops);
+
+                for (auto& loop : loops)
+                {
+                    if (needAdd(loop, testList))
+                        addLoop(loop);
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    auto neighbour = curface->edges[i]->opposite()->facet();
+
+                    SeedInfo seed2;
+                    seed2.seedFacet = neighbour;
+                    seed2.seedVertex = curface->edges[i]->opposite()->vertex();
+
+                    if (neighbour->mark == SEEDED || neighbour->mark == VISITED) // ¸úray-tracingÓÐ¹Ø
+                        continue;
+
+                    if (isSameGroup(neighbour, curface))
+                    {
+                        seed2.indicators.reset(new FullIndicatorVector(
+                            *reinterpret_cast<FullIndicatorVector*>(s.indicators.get())));
+                        q.push(seed2);
+                    }
+                    else
+                    {
+                        seed2.indicators.reset(new FullIndicatorVector(
+                            *reinterpret_cast<FullIndicatorVector*>(s.indicators.get())));
+
+                        infos.curMeshSeedQueue.push(seed2);
+                    }
+                    neighbour->mark = SEEDED;
+                }
+
                 SAFE_DELETE(ig);
-
-
-            //    fh->data->iTri->looplets->getAllCircles(loops);
-
-            //    for (auto& loop : loops)
-            //    {
-            //        if (ig->classify(loop))
-            //            addFacet(loop);
-            //    }
-
-            //    for (size_t i = 0; i < 3; i++)
-            //    {
-            //        ig->getCornerInds(&s, i);
-            //        s.fh = ? ;
-            //        s.fh->mark = SEEDED;
-
-            //        if (IsSameGroup(s.fh, fh))
-            //            q.push(s);
-            //        else
-            //        {
-            //        }
-            //    }
-            //    delete ig;
             }
             q.pop();
         }

@@ -72,8 +72,6 @@ namespace CSG
         ItstTriangle*           itstTri = nullptr;
     };
 
-#define MARK_BEGIN 0xff // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作
-
     template <class Refs, class Point>
     struct MyVertex : public CGAL::HalfedgeDS_vertex_max_base_with_id<Refs, Point, unsigned> {
         MyVertex(){}

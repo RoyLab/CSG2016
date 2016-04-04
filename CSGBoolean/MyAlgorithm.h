@@ -97,7 +97,6 @@ namespace CSG
         void figureOutFaceInds(SeedInfo& s, int meshId);
         void figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds);
         Relation relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins);
-        Relation relationOfContext(FH coins, VH vh);
 
         void AddFacet(FH fh);
         bool isSameGroup(FH fh0, FH fh1) const;
@@ -147,7 +146,7 @@ namespace CSG
             B.end_surface();
         }
 
-        int add_vertex(const Point& pts)
+        size_t add_vertex(const Point& pts)
         {
             points.push_back(pts);
             return points.size() - 1;
