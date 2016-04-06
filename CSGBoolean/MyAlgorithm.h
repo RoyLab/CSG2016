@@ -9,6 +9,7 @@
 #include "MyMesh.h"
 #include "AlgUserData.h"
 #include "csg.h"
+#include "ItstGraph.h"
 
 namespace CSG
 {
@@ -96,11 +97,11 @@ namespace CSG
         void floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s);
         void figureOutFaceInds(SeedInfo& s, int meshId);
         void figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds);
-        Relation relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins);
 
         void AddFacet(FH fh);
         bool isSameGroup(FH fh0, FH fh1) const;
         void genVertexInds(IIndicatorVector* target, VH vh) const;
+        bool needAdd(FH fh, ItstGraph::Loop& loop, TestTree& testList);
 
     private:
         boost::shared_ptr<MyMesh>   csgResult;

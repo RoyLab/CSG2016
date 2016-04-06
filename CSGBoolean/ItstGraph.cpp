@@ -317,7 +317,7 @@ namespace CSG
                     if (node.indicator->at(id) == REL_UNKNOWN)
                     {
                         auto location = startNode.vproxy.pointer()->findInContext(id);
-                        node.indicator->at(id) = relationOfContext(*location, node.vproxy.pointer()->pos.getCoord());
+                        node.indicator->at(id) = relationOfContext(*location, node.vproxy.pointer()->pos);
                     }
                 }
 

@@ -1,8 +1,12 @@
 #include "AlgUserData.h"
 #include "BSPTree.h"
+#include "MyMesh.h"
 
 namespace CSG
 {
+    DECLARE_MYMESH_TYPES;
+
+
     Relation convert(CGAL::Oriented_side side)
     {
         switch (side)
@@ -12,46 +16,82 @@ namespace CSG
         case CGAL::ON_POSITIVE_SIDE:
             return REL_OUTSIDE;
         case CGAL::ON_ORIENTED_BOUNDARY:
-            return REL_SAME;
+            return REL_ON_BOUNDARY;
         default:
             ReportError();
             return REL_NOT_AVAILABLE;
         }
     }
 
-    Relation determineEdgeBSP(MyMesh::Halfedge_handle eh, const K::Point_3& point)
+    /* canb be coplanar */
+    Relation determineFaceBSP(FH fh, const PBPoint<K>& point, Context<MyMesh>** pCtx)
+    {
+        auto side = fh->data->sp.oriented_side(point.getCoord());
+        auto result = convert(side);
+
+        if (result == REL_ON_BOUNDARY && pCtx)
+        {
+            (*pCtx)->type = CT_FACET;
+            (*pCtx)->fh = new FH(fh);
+        }
+    }
+
+
+    Relation determineEdgeBSP(EH eh, const PBPoint<K>& point, Context<MyMesh>** pCtx)
     {
         auto f0 = eh->facet();
         auto f1 = eh->opposite()->facet();
 
-        auto r0 = f0->data->sp.oriented_side(point);
-        auto r1 = f1->data->sp.oriented_side(point);
+        CGAL::Sign r0 = f0->data->sp.oriented_side(point.getCoord());
+        CGAL::Sign r1 = f1->data->sp.oriented_side(point.getCoord());
 
-        if (r0 == r1) return convert(r0);
+        Relation result;
 
-        if (r0 == REL_SAME)
+        if (r0 == r1) result = convert(r0);
+
+        if (r0 == CGAL::ON_ORIENTED_BOUNDARY)
         {
             auto opvh = eh->next()->vertex();
-            auto r01 = f1->data->sp.oriented_side(opvh->point());
+            CGAL::Sign r01 = f1->data->sp.oriented_side(opvh->point());
             if (r01 == r1)
-                return convert(r0);
+                result = convert(r0);
             else
-                return convert(r1);
+                result = convert(r1);
         }
         else
         {
             auto opvh = eh->opposite()->next()->vertex();
-            auto r10 = f0->data->sp.oriented_side(opvh->point());
+            CGAL::Sign r10 = f0->data->sp.oriented_side(opvh->point());
             if (r10 == r0)
-                return convert(r1);
+                result = convert(r1);
             else
-                return convert(r0);
+                result = convert(r0);
+        }
+
+        if (pCtx && result == REL_ON_BOUNDARY)
+        {
+            auto ptr = *pCtx;
+            assert(ptr);
+            if (r0 == r1)
+            {
+                ptr->type = CT_EDGE;
+                ptr->eh = new EH(eh);
+            }
+            else
+            {
+                ptr->type = CT_FACET;
+                if (r0 == CGAL::ON_ORIENTED_BOUNDARY)
+                    ptr->fh = new FH(f0);
+                else
+                    ptr->fh = new FH(f1);
+            }
         }
     }
 
-    Relation determineVertexBSP(MyMesh::Vertex_handle ctx, const K::Point_3& point)
+    /* not implemented yet! */
+    Relation determineVertexBSP(VH ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx)
     {
-        typedef MyMesh::Face_handle FH;
+        ReportError("Not implemented vertex context classfication!");
         std::vector<FH> facets;
         auto end = ctx->halfedge();
         auto cur = end;
@@ -62,27 +102,27 @@ namespace CSG
         } while (cur != end);
 
         BSPTree* pTree = new BSPTree(facets);
-        ReportError("Not implemented!");
         SAFE_DELETE(pTree);
 
         return REL_NOT_AVAILABLE;
     }
 
-    Relation relationOfContextNonmember(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh, MyMesh::Face_handle &coins)
+    Relation relationOfContext(const Context<MyMesh>& ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx)
     {
-        CGAL::Oriented_side side, side1;
         Relation result = REL_NOT_AVAILABLE;
+        if (pCtx && *pCtx)
+            (*pCtx)->meshId = ctx.meshId;
+
         switch (ctx.type)
         {
         case CT_VERTEX:
-            result = determineVertexBSP(*ctx.vh, vh->point());
+            result = determineVertexBSP(*ctx.vh, point, pCtx);
+            break;
         case CT_EDGE:
-            result = determineEdgeBSP(*ctx.eh, vh->point());
+            result = determineEdgeBSP(*ctx.eh, point, pCtx);
             break;
         case CT_FACET:
-            side = (*ctx.fh)->data->sp.oriented_side(vh->point());
-            result = convert(side);
-            if (result == REL_SAME) coins = (*ctx.fh);
+            result = determineFaceBSP(*ctx.fh, point, pCtx);
             break;
         default:
             ReportError();
@@ -91,32 +131,17 @@ namespace CSG
         return result;
     }
 
-    Relation relationOfContext(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh)
+
+    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1)
     {
-        MyMesh::Face_handle coins;
-        return relationOfContextNonmember(ctx, vh, coins);
+        Context<MyMesh> *eCtx = new Context<MyMesh>;
+        auto rel = relationOfContext(ctx, p0, &eCtx);
+        if (rel == REL_ON_BOUNDARY)
+            rel = relationOfContext(*eCtx, p1);
+
+        SAFE_DELETE(eCtx);
+        return rel;
     }
 
-    Relation relationOfContext(Context<MyMesh>& ctx, const K::Point_3& point)
-    {
-        CGAL::Oriented_side side, side1;
-        Relation result = REL_NOT_AVAILABLE;
-        switch (ctx.type)
-        {
-        case CT_VERTEX:
-            result = determineVertexBSP(*ctx.vh, point);
-        case CT_EDGE:
-            result = determineEdgeBSP(*ctx.eh, point);
-            break;
-        case CT_FACET:
-            side = (*ctx.fh)->data->sp.oriented_side(point);
-            result = convert(side);
-            break;
-        default:
-            ReportError();
-            break;
-        }
-        return result;
-    }
 
 }

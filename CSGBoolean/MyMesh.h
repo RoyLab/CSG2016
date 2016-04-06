@@ -170,4 +170,9 @@ namespace CSG
     {
         return !data->itstTri || data->itstTri->meshIds.empty();
     }
+
+#define DECLARE_MYMESH_TYPES\
+    typedef MyMesh::Face_handle FH;\
+    typedef MyMesh::Halfedge_handle EH;\
+    typedef MyMesh::Vertex_handle VH
 }

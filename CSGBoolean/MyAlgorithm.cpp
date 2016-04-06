@@ -163,11 +163,6 @@ namespace CSG
         SAFE_DELETE_ARRAY(infos.curTreeLeaves);
     }
 
-    Relation MyAlgorithm::relationOfContext(Context<MyMesh>& ctx, VH vh, FH &coins)
-    {
-        return relationOfContextNonmember(ctx, vh, coins);
-    }
-
     void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* pinds)
     {
         auto &context = p->data->proxy->pointer()->ctx;
@@ -177,23 +172,7 @@ namespace CSG
         for (auto &ctx : context)
         {
             if (ctx.meshId == meshId) continue;
-            Relation rel = relationOfContext(ctx, q, coincident);
-            switch (rel)
-            {
-            case CSG::REL_INSIDE:
-            case CSG::REL_OUTSIDE:
-                break;
-            case CSG::REL_SAME:
-                //rel = relationOfContext(coincident, r);
-                ReportError();
-                break;
-            default:
-                ReportError();
-                break;
-            }
-
-            if (pMeshList->at(ctx.meshId)->bInverse)
-                inverseRelation(rel);
+            Relation rel = relationOfContext(ctx);
 
             (*pinds)[ctx.meshId] = rel;
         }
@@ -352,7 +331,7 @@ namespace CSG
 
                 for (auto& loop : loops)
                 {
-                    if (needAdd(loop, testList))
+                    if (needAdd(curface, loop, testList))
                         addLoop(loop);
                 }
 
@@ -364,19 +343,24 @@ namespace CSG
                     seed2.seedFacet = neighbour;
                     seed2.seedVertex = curface->edges[i]->opposite()->vertex();
 
+                    int gId = curface->edges[i]->opposite()->vertex()->data->proxy->pointer()->idx;
+                    SampleIndicatorVector* inds = reinterpret_cast<SampleIndicatorVector*>(ig->get_nodes()[gId].indicator);
+
                     if (neighbour->mark == SEEDED || neighbour->mark == VISITED) // ¸úray-tracingÓÐ¹Ø
                         continue;
 
                     if (isSameGroup(neighbour, curface))
                     {
-                        seed2.indicators.reset(new FullIndicatorVector(
-                            *reinterpret_cast<FullIndicatorVector*>(s.indicators.get())));
+                        auto sample = new SampleIndicatorVector;
+                        *sample = *inds;
+                        seed2.indicators.reset(sample);
                         q.push(seed2);
                     }
                     else
                     {
-                        seed2.indicators.reset(new FullIndicatorVector(
-                            *reinterpret_cast<FullIndicatorVector*>(s.indicators.get())));
+                        auto full = new FullIndicatorVector(*reinterpret_cast<FullIndicatorVector*>(s.indicators.get()));
+                        full->fillInSample(inds, ids);
+                        seed2.indicators.reset(full);
 
                         infos.curMeshSeedQueue.push(seed2);
                     }
@@ -388,5 +372,65 @@ namespace CSG
             q.pop();
         }
     }
+
+    bool MyAlgorithm::needAdd(FH fh, ItstGraph::Loop& loop, TestTree& testList)
+    {
+        // decide a relation
+        SampleIndicatorVector sample(fh->data->itstTri->meshIds);
+        size_t n = loop.size();
+        int checkPoint = -1;
+
+        for (int id : fh->data->itstTri->meshIds)
+        {
+            Indicator ind = REL_NOT_AVAILABLE;
+            int i = 0;
+            while (loop[i]->vproxy.pointer()->hasContext(id) && i < n)
+                ind = loop[i++]->indicator->at(id);
+
+            if (ind != REL_ON_BOUNDARY)
+                sample[id] = ind;
+            else
+            {
+                if (checkPoint == -1)
+                {
+                    for (size_t i = 0; i < n; i++)
+                        if (same_orientation(loop[i]->vproxy.pointer()->pos,
+                            loop[i + 1]->vproxy.pointer()->pos,
+                            loop[i + 2]->vproxy.pointer()->pos,
+                            fh->data->sp.orthogonal_vector()))
+                        {
+                            checkPoint = i;
+                            break;
+                        }
+                    sample[id] = determineRelationOfFacet(*loop[checkPoint]->vproxy.pointer()->findInContext(id),
+                        loop[i + 1]->vproxy.pointer()->pos,
+                        loop[i + 1]->vproxy.pointer()->pos);
+                }
+            }
+        }
+
+        // decide retain or drop
+        CSGTreeNode* curNode;
+        Relation curRelation(REL_UNKNOWN), outRelation(REL_UNKNOWN);
+        unsigned testId;
+        bool pass = true;
+        for (auto &test : testList)
+        {
+            curNode = GetFirstNode(test.testTree);
+            while (curNode)
+            {
+                testId = curNode->pMesh->Id;
+                curRelation = static_cast<Relation>(sample.at(testId));
+                curNode = GetNextNode(curNode, curRelation, outRelation);
+            }
+            if (!(test.targetRelation & outRelation))
+            {
+                pass = false;
+                break;
+            }
+        }
+        return pass;
+    }
+
 
 }

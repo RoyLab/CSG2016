@@ -109,11 +109,6 @@ namespace CSG
             computeCoord();
         }
 
-        //Point estimate_coords() const
-        //{
-        //    return CGAL::intersection(planes[0], planes[1], planes[2]);
-        //}
-
         bool operator==(const PBPoint& p) const
         {
             double4x4 mat;
@@ -226,10 +221,6 @@ namespace CSG
             return On;
         }
 
-        RelationToPlane ClassifyEdgeToPlane(const PlaneExt& plane, int idx) const;
-        RelationToPlane ClipByPlane(const PlaneExt& bp, PBPolygon& front) const; // only output the polygon in the front of  clipping plane
-        RelationToPlane ClipByPlaneNoFront(PlaneExt& bp); // only output the polygon in the front of  clipping plane
-
         RelationToPlane ClipByPlane(const PlaneExt& bp, PBPolygon& front, PBPolygon& back) const
         {
             if (m_sp == bp)
@@ -307,9 +298,6 @@ namespace CSG
             return res;
         }
 
-        RelationToPlane ClipByPlaneNoFront(Plane& bp, PBPolygon& back);
-        void Negate();
-
     private:
         OutputSymbol  LookupEncodingTable(RelationToPlane prevPtPos, RelationToPlane currentPtPos, RelationToPlane nextPtPos) const
         {
@@ -353,5 +341,14 @@ namespace CSG
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
             s.a(), s.b(), s.c(), s.d());
+    }
+
+    template <class _R>
+    bool same_orientation(const PBPoint<_R>& p0, const PBPoint<_R>& p1, const PBPoint<_R>& p2, const CGAL::Vector_3<_R>& normal)
+    {
+        auto e1 = p1.getCoord() - p0.getCoord();
+        auto e2 = p2.getCoord() - p1.getCoord();
+
+        return CGAL::orientation(e1, e2, normal);
     }
 }

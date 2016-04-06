@@ -121,6 +121,7 @@ namespace CSG
         REL_OUTSIDE = 0x0002,
         REL_SAME = 0x0004,
         REL_OPPOSITE = 0x0008,
+        REL_ON_BOUNDARY = 0x000F,
 
         REL_NOT_AVAILABLE = -1 // (0xffffffff)
     };

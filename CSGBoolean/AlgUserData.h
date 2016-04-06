@@ -130,10 +130,15 @@ namespace CSG
             ctx.push_back(context);
         }
 
-        ContextList::iterator findInContext(int meshId)
+        bool hasContext(size_t meshId) const
         {
-            ContextList::iterator result;
-            for (result = ctx.begin(); result != ctx.end(); result++)
+            return findInContext(meshId) != ctx.end();
+        }
+
+        ContextList::const_iterator findInContext(size_t meshId) const 
+        {
+            ContextList::const_iterator result;
+            for (result = ctx.cbegin(); result != ctx.cend(); result++)
             {
                 if (result->meshId == meshId)
                     break;
@@ -147,12 +152,6 @@ namespace CSG
         }
     };
 
-
-    Relation convert(CGAL::Oriented_side side);
-    Relation determineEdgeBSP(MyMesh::Halfedge_handle eh, const K::Point_3& point);
-    Relation determineVertexBSP(MyMesh::Vertex_handle ctx, const K::Point_3& point);
-    Relation relationOfContextNonmember(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh, MyMesh::Face_handle &coins);
-    Relation relationOfContext(Context<MyMesh>& ctx, MyMesh::Vertex_handle vh);
-    Relation relationOfContext(Context<MyMesh>& ctx, const K::Point_3& point);
-
+    Relation relationOfContext(const Context<MyMesh>& ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx = nullptr);
+    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1);
 }
