@@ -2,6 +2,7 @@
 #pragma warning(disable:4101)
 #include "csgdefs.h"
 #include <cassert>
+#include <cmath>
 
 /* On some machines, the exact arithmetic routines might be defeated by the  */
 /*   use of internal extended precision floating-point registers.  Sometimes */
@@ -459,10 +460,12 @@ namespace GS
 	  return hindex;
 	}
 
+# define FP_FILTER(x, factor) (std::round((x) * (factor)) / (factor))
+
 	inline double static_filter(double x)
 	{
-		//assert((x < -1.0) == (x > 1.0));
-		return round(x * STATIC_FILTER) / STATIC_FILTER;
+		assert((x < -1.0) == (x > 1.0));
+		return std::round(x * STATIC_FILTER) / STATIC_FILTER;
 	}
 
 	inline void static_filter(const double3& v)

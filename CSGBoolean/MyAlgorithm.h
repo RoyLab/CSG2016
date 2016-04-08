@@ -102,6 +102,7 @@ namespace CSG
         bool isSameGroup(FH fh0, FH fh1) const;
         void genVertexInds(IIndicatorVector* target, VH vh) const;
         bool needAdd(FH fh, ItstGraph::Loop& loop, TestTree& testList);
+        void addLoop(ItstGraph::Loop&);
 
     private:
         boost::shared_ptr<MyMesh>   csgResult;

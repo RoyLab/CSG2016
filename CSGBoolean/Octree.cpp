@@ -36,7 +36,7 @@ namespace CSG
             }
         }
 
-        root->bbox = myext::enlarge(tmpBox, 1e-4);
+        root->bbox = myext::enlarge(tmpBox, 1e-5);
         return root;
     }
 

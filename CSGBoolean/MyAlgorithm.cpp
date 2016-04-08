@@ -48,6 +48,21 @@ namespace CSG
     void MyAlgorithm::solve(const std::string& expr, std::vector<MyMesh*>& meshes)
     {
         pMeshList = &meshes;
+        for (auto mesh : *pMeshList)
+            mesh->calcBbox();
+
+        CGAL::Bbox_3 aabb = pMeshList->at(0)->get_bbox();
+        for (auto mesh : *pMeshList)
+            aabb += mesh->get_bbox();
+
+        aabb = myext::enlarge(aabb, 1.0e-5);
+
+        for (auto mesh : *pMeshList)
+        {
+            mesh->normalize(aabb);
+            mesh->filter();
+            mesh->init();
+        }
 
         CSGTree<MyMesh>* pCsg = new CSGTree<MyMesh>;
         pCsg->createCSGTreeFromExpr(expr, pMeshList->data(), pMeshList->size());
@@ -64,6 +79,8 @@ namespace CSG
         itst->computeDebugInfo();
 #endif
         floodColoring(pCsg, itst);
+
+        csgResult->denormalize(aabb);
 
         SAFE_DELETE(itst);
         SAFE_DELETE(pCsg);
@@ -165,17 +182,13 @@ namespace CSG
 
     void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* pinds)
     {
-        auto &context = p->data->proxy->pointer()->ctx;
-        FH coincident;
         assert(!CGAL::collinear(p->point(), q->point(), r->point()));
+        auto ventity = p->data->proxy->pointer();
+        assert(ventity->hasContext(meshId));
 
-        for (auto &ctx : context)
-        {
-            if (ctx.meshId == meshId) continue;
-            Relation rel = relationOfContext(ctx);
-
-            (*pinds)[ctx.meshId] = rel;
-        }
+        auto ctx = ventity->findInContext(meshId);
+        Relation rel = determineRelationOfFacet(*ctx, q->data->proxy->pointer()->pos, r->data->proxy->pointer()->pos);
+        (*pinds)[ctx->meshId] = rel;
     }
 
     void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId)
@@ -432,5 +445,8 @@ namespace CSG
         return pass;
     }
 
-
+    void MyAlgorithm::addLoop(ItstGraph::Loop& loop)
+    {
+        return;
+    }
 }

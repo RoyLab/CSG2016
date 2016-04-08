@@ -5,7 +5,7 @@ namespace GS
 
 	REAL splitter;     /* = 2^ceiling(p / 2) + 1.  Used to split floats in half. */
 	REAL epsilon;                /* = 2^(-p).  Used to estimate roundoff errors. */
-	const REAL STATIC_FILTER = pow(2.0, 11);
+	const REAL STATIC_FILTER = pow(2.0, 18);
 
 	REAL err3dot, err2x2, err3x3A0, err3x3A1, err3x3A2, 
 		err3x3B1, err3x3B2, err4x4A0, err4x4A1, err4x4A2, err4x4A3

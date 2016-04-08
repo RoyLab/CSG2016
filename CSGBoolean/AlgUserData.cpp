@@ -34,6 +34,7 @@ namespace CSG
             (*pCtx)->type = CT_FACET;
             (*pCtx)->fh = new FH(fh);
         }
+        return result;
     }
 
 
@@ -86,6 +87,8 @@ namespace CSG
                     ptr->fh = new FH(f1);
             }
         }
+
+        return result;
     }
 
     /* not implemented yet! */

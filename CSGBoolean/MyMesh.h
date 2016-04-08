@@ -126,13 +126,16 @@ namespace CSG
     public:
         Cube_3 get_bbox_cube() const { return Cube_3(m_bbox); }
         void init();
+        void calcBbox();
+        void normalize(CGAL::Bbox_3& aabb);
+        void denormalize(CGAL::Bbox_3& aabb);
+        void filter(int n = 18);
 
         bool bInverse = false;
         int Id = -1;
 
     private:
         void calcTriangles();
-        void calcBbox();
         void initEdgeIds();
         void initIds();
     };

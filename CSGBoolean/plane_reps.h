@@ -8,6 +8,14 @@
 
 namespace CSG
 {
+    
+    template <class _R>
+    inline CGAL::Point_3<_R> filter(CGAL::Point_3<_R>& p)
+    {
+        return CGAL::Point_3<_R>(GS::static_filter(p.x()), 
+            GS::static_filter(p.y()), GS::static_filter(p.z()));
+    }
+
     enum RelationToPlane{
         Front,
         On,
@@ -88,7 +96,7 @@ namespace CSG
     {
         DECLARE_CGAL_KERNEL_CLASS
         typedef Plane_ext<_R> PlaneExt;
-
+        
         PBPoint(){}
         PBPoint(const Plane& p, const Plane& q, const Plane& r, bool keepPositive = true)
         {
@@ -166,9 +174,9 @@ namespace CSG
             Vector normal = m_sp.orthogonal_vector();
             normal = normal / sqrt(normal.squared_length());
 
-            m_bps[0] = PlaneExt(q, r, q + normal);
-            m_bps[1] = PlaneExt(r, p, r + normal);
-            m_bps[2] = PlaneExt(p, q, p + normal);
+            m_bps[0] = PlaneExt(q, r, filter(q + normal));
+            m_bps[1] = PlaneExt(r, p, filter(r + normal));
+            m_bps[2] = PlaneExt(p, q, filter(p + normal));
         }
 
         PBPoint<_R> point(int idx)
