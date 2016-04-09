@@ -7,7 +7,9 @@
 
 namespace CSG
 {
-#define NORMALIZE(x, c, s) ((x) * (s) / 2.0 + (c))
+    double FP_FACTOR = P217;
+
+#define NORMALIZE(x, c, s) (((x) - (c)) / (s) * 2.0 )
 
     template <class _R>
     inline CGAL::Point_3<_R> normalizePoint(const CGAL::Point_3<_R>& v, double *center, double* scale)
@@ -19,14 +21,18 @@ namespace CSG
 
     void MyMesh::calcBbox()
     {
-        set_bbox(CGAL::bounding_box(points_begin(), points_end()).bbox());
+        auto bbox = CGAL::bounding_box(points_begin(), points_end());
+        //for (auto itr = points_begin(); itr != points_end(); itr++)
+        //    std::cout << *itr << std::endl;
+        //std::cout << std::endl;
+        set_bbox(bbox.bbox());
     }
 
     void MyMesh::calcTriangles()
     {
         for (auto itr = facets_begin(); itr != facets_end(); itr++)
         {
-            auto loop = itr->halfedge();
+            auto loop = itr->halfedge(), end = loop;
             K::Point_3 pts[3];
             for (size_t i = 0; i < 3; i++)
             {
@@ -34,6 +40,7 @@ namespace CSG
                 itr->vertices[i] = loop->vertex();
                 loop = loop->next();
             }
+            assert(loop == end);
             itr->data.reset(new UserFData(pts));
             itr->data->sp = Plane_ext<K>(pts[0], pts[1], pts[2]);
         }
@@ -115,11 +122,11 @@ namespace CSG
 
     void MyMesh::filter(int n)
     {
-        const double factor = std::pow(2.0, 18);
+        const double factor = FP_FACTOR;
         for (auto v = points_begin(); v != points_end(); v++)
         {
             *v = CGAL::Point_3<K>(FP_FILTER(v->x(), factor),
-                FP_FILTER(v->y(), factor), FP_FILTER(v->y(), factor));
+                FP_FILTER(v->y(), factor), FP_FILTER(v->z(), factor));
         }
 
         m_bbox = CGAL::Bbox_3(FP_FILTER(m_bbox.xmin(), factor),

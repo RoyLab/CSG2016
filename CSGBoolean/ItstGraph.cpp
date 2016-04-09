@@ -214,8 +214,7 @@ namespace CSG
         if (abcos < 0.0 && absin < 0.0)
             return 3;
 
-        if (abcos >= 0.0 && absin < 0.0)
-            return 4;
+        else return 4;
     }
 
     struct AngleComparison

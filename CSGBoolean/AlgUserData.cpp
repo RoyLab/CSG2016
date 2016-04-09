@@ -138,7 +138,8 @@ namespace CSG
     Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1)
     {
         Context<MyMesh> *eCtx = new Context<MyMesh>;
-        auto rel = relationOfContext(ctx, p0, &eCtx);
+        Relation rel = relationOfContext(ctx, p0, &eCtx);
+
         if (rel == REL_ON_BOUNDARY)
             rel = relationOfContext(*eCtx, p1);
 

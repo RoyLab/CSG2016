@@ -4,16 +4,23 @@
 #include "adaptive.h"
 #include "csgdefs.h"
 #include <cstring>
+#include <cmath>
 #include <CGAL\intersections.h>
 
 namespace CSG
 {
-    
-    template <class _R>
-    inline CGAL::Point_3<_R> filter(CGAL::Point_3<_R>& p)
+    const double P216 = std::pow(2.0, 16);
+    const double P217 = std::pow(2.0, 17);
+    const double P218 = std::pow(2.0, 18);
+
+    extern double FP_FACTOR;
+
+
+    template <class Vector>
+    inline Vector filter(Vector& p, double factor)
     {
-        return CGAL::Point_3<_R>(GS::static_filter(p.x()), 
-            GS::static_filter(p.y()), GS::static_filter(p.z()));
+        return Vector(GS::fp_filter(p.x(), factor),
+            GS::fp_filter(p.y(), factor), GS::fp_filter(p.z(), factor));
     }
 
     enum RelationToPlane{
@@ -48,8 +55,10 @@ namespace CSG
         { memcpy(this, &p, sizeof(Plane_ext)); }
 
         Plane_ext(const Point& p, const Point& q, const Point& r):
-            CGAL::Plane_3<_R>(p, CGAL::cross_product(q - p, r - p))
-        {}
+            CGAL::Plane_3<_R>(p, CGAL::cross_product(q - p, r - p)){}
+
+        Plane_ext(const Point& p, const Vector& e0, const Vector& e1):
+            CGAL::Plane_3<_R>(p, CGAL::cross_product(e0, e1)){}
 
         RelationToPlane classifyPointToPlane(const Plane_ext & p, const Plane_ext & q, const Plane_ext & r) const
         {
@@ -117,6 +126,13 @@ namespace CSG
             computeCoord();
         }
 
+        PBPoint(const PBPoint& p)
+        {
+            for (size_t i = 0; i < 3; i++)
+                planes[i] = p.planes[i];
+            coord = p.coord;
+        }
+
         bool operator==(const PBPoint& p) const
         {
             double4x4 mat;
@@ -140,7 +156,7 @@ namespace CSG
         {
             auto result = CGAL::intersection(planes[0], planes[1], planes[2]);
             const Point* p = boost::get<Point>(&*result);
-            coord == *p;
+            coord = *p;
         }
 
         const PlaneExt* getPlanes() const { return planes; }
@@ -174,9 +190,21 @@ namespace CSG
             Vector normal = m_sp.orthogonal_vector();
             normal = normal / sqrt(normal.squared_length());
 
-            m_bps[0] = PlaneExt(q, r, filter(q + normal));
-            m_bps[1] = PlaneExt(r, p, filter(r + normal));
-            m_bps[2] = PlaneExt(p, q, filter(p + normal));
+            auto pseudo = filter(normal * 0.1, FP_FACTOR);
+
+            m_bps[0] = PlaneExt(q, r - q, pseudo);
+            m_bps[1] = PlaneExt(r, p - r, pseudo);
+            m_bps[2] = PlaneExt(p, q - p, pseudo);
+
+            assert(m_sp.has_on(p));
+            assert(m_sp.has_on(q));
+            assert(m_sp.has_on(r));
+            assert(m_bps[0].has_on(q));
+            assert(m_bps[0].has_on(r));
+            assert(m_bps[1].has_on(r));
+            assert(m_bps[1].has_on(p));
+            assert(m_bps[2].has_on(p));
+            assert(m_bps[2].has_on(q));
         }
 
         PBPoint<_R> point(int idx)
@@ -345,10 +373,17 @@ namespace CSG
     template <class Plane>
     double orientation(const Plane& p, const Plane& q, const Plane& r, const Plane& s)
     {
-        return CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
+        double4x4 mat{ p.a(), p.b(), p.c(), p.d(),
+            q.a(), q.b(), q.c(), q.d(),
+            r.a(), r.b(), r.c(), r.d(),
+            s.a(), s.b(), s.c(), s.d() };
+        double sign = GS::adaptiveDet4x4Sign(mat);
+        double sign2 = CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
             s.a(), s.b(), s.c(), s.d());
+        assert(sign * sign2 > 0 || sign == sign2 || sign == 0 && std::abs(sign2) < 1.0e-10);
+        return sign;
     }
 
     template <class _R>
@@ -357,6 +392,6 @@ namespace CSG
         auto e1 = p1.getCoord() - p0.getCoord();
         auto e2 = p2.getCoord() - p1.getCoord();
 
-        return CGAL::orientation(e1, e2, normal);
+        return CGAL::orientation(e1, e2, normal) == CGAL::POSITIVE;
     }
 }

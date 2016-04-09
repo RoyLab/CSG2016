@@ -52,15 +52,6 @@ namespace CSG
         void doIntersection(std::vector<Octree::Node*>& intersectLeaves);
         bool IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2]);
         bool checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[]);
-#ifdef _DEBUG
-        void computeDebugInfo()
-        {
-            for (auto &ent : vEnt)
-            {
-                ent->pos.computeCoord();
-            }
-        }
-#endif
 
         /*  合并优先级：
         已经登记为共享点的，按顺序排大小，先到大

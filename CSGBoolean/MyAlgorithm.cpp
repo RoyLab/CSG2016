@@ -55,11 +55,9 @@ namespace CSG
         for (auto mesh : *pMeshList)
             aabb += mesh->get_bbox();
 
-        aabb = myext::enlarge(aabb, 1.0e-5);
-
         for (auto mesh : *pMeshList)
         {
-            mesh->normalize(aabb);
+            //mesh->normalize(aabb);
             mesh->filter();
             mesh->init();
         }
@@ -75,9 +73,10 @@ namespace CSG
         itst = new ItstAlg(pMeshList);
         itst->doIntersection(intersectLeaves);
 
-#ifdef _DEBUG
-        itst->computeDebugInfo();
-#endif
+        std::cout.precision(18);
+        for (auto pt : itst->vEnt)
+            std::cout << "point: " << pt->pos.getCoord() << std::endl;
+
         floodColoring(pCsg, itst);
 
         csgResult->denormalize(aabb);
@@ -136,7 +135,6 @@ namespace CSG
         pConstruct = new Delegate<HalfedgeDS>;
 
         GroupParseInfo infos;
-        std::vector<int> itstPrims;
 
         auto tree = pCsg->auxiliary();
         infos.curTreeLeaves = new CSGTreeNode*[nMesh];
@@ -151,26 +149,36 @@ namespace CSG
             while (!infos.otherMeshSeedQueue.empty())
             {
                 SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
-                itstPrims.clear();
+                std::vector<int> itstPrims;
                 itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
 
-                infos.ttree1.reset(copy2(tree->pRoot, infos.curTreeLeaves));
-                infos.curMeshId = curSeed.meshId;
-                infos.curMeshSeedQueue.push(curSeed);
+                CSGTreeNode* tree0 = copy2(tree->pRoot, infos.curTreeLeaves);
+                for (size_t id = 0; id < nMesh; id++)
+                    infos.curTreeLeaves[id]->relation = static_cast<Relation>(curSeed.indicators->at(id));
 
-                while (!infos.curMeshSeedQueue.empty())
+                for (size_t id : itstPrims)
+                    infos.curTreeLeaves[id]->relation = REL_UNKNOWN;
+
+                Relation meshRel = CompressCSGNodeIteration(tree0);
+                infos.ttree1.reset(tree0);
+
+                if (meshRel == REL_NOT_AVAILABLE)
                 {
-                    SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
-                    if (sndInfo.seedFacet->mark != VISITED)
-                    {
-                        if (sndInfo.seedFacet->isSimple()) 
-                            floodSimpleGroup(infos, sndInfo);
-                        else 
-                            floodComplexGroup(infos, sndInfo);
+                    infos.curMeshId = curSeed.meshId;
+                    infos.curMeshSeedQueue.push(curSeed);
 
-                        sndInfo.seedFacet->mark = VISITED;
+                    while (!infos.curMeshSeedQueue.empty())
+                    {
+                        SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
+                        if (sndInfo.seedFacet->mark != VISITED)
+                        {
+                            if (sndInfo.seedFacet->isSimple())
+                                floodSimpleGroup(infos, sndInfo);
+                            else
+                                floodComplexGroup(infos, sndInfo);
+                        }
+                        infos.curMeshSeedQueue.pop();
                     }
-                    infos.curMeshSeedQueue.pop();
                 }
                 infos.otherMeshSeedQueue.pop();
             }
@@ -184,20 +192,26 @@ namespace CSG
     {
         assert(!CGAL::collinear(p->point(), q->point(), r->point()));
         auto ventity = p->data->proxy->pointer();
-        assert(ventity->hasContext(meshId));
 
-        auto ctx = ventity->findInContext(meshId);
-        Relation rel = determineRelationOfFacet(*ctx, q->data->proxy->pointer()->pos, r->data->proxy->pointer()->pos);
-        (*pinds)[ctx->meshId] = rel;
+        for (auto &ctx : ventity->ctx)
+            (*pinds)[ctx.meshId] = determineRelationOfFacet(ctx, q->data->proxy->pointer()->pos, r->data->proxy->pointer()->pos);
     }
 
     void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId)
     {
         ReportError("Not fully implement");
-        VH pt2 = s.seedVertex->halfedge()->next()->vertex();
-        VH pt3 = pt2->halfedge()->next()->vertex();
+        assert(s.seedVertex->halfedge()->facet() == s.seedFacet);
+        EH eh = s.seedVertex->halfedge();
 
-        figureOutFaceInds(s.seedVertex, pt2, pt3, meshId, s.indicators.get());
+        assert(eh->vertex() == s.seedVertex);
+        VH pts[2];
+        for (size_t i = 0; i < 2; i++)
+        {
+            eh = eh->next();
+            pts[i] = eh->vertex();
+        }
+
+        figureOutFaceInds(s.seedVertex, pts[0], pts[1], meshId, s.indicators.get());
     }
 
     void MyAlgorithm::AddFacet(FH fh)
@@ -406,13 +420,13 @@ namespace CSG
             {
                 if (checkPoint == -1)
                 {
-                    for (size_t i = 0; i < n; i++)
-                        if (same_orientation(loop[i]->vproxy.pointer()->pos,
-                            loop[i + 1]->vproxy.pointer()->pos,
-                            loop[i + 2]->vproxy.pointer()->pos,
+                    for (size_t j = 0; j < n; j++)
+                        if (same_orientation(loop[j]->vproxy.pointer()->pos,
+                            loop[j+1]->vproxy.pointer()->pos,
+                            loop[j+2]->vproxy.pointer()->pos,
                             fh->data->sp.orthogonal_vector()))
                         {
-                            checkPoint = i;
+                            checkPoint = j;
                             break;
                         }
                     sample[id] = determineRelationOfFacet(*loop[checkPoint]->vproxy.pointer()->findInContext(id),

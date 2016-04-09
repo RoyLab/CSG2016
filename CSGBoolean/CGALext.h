@@ -14,8 +14,8 @@ namespace myext
     inline CGAL::Bbox_3 enlarge(const CGAL::Bbox_3& bbox, double factor)
     {
         return CGAL::Bbox_3(bbox.xmin() - factor, bbox.ymin() - factor,
-            bbox.zmin() - factor, bbox.xmax() - factor,
-            bbox.ymax() - factor, bbox.zmax() - factor);
+            bbox.zmin() - factor, bbox.xmax() + factor,
+            bbox.ymax() + factor, bbox.zmax() + factor);
     }
 
     template <class _R>

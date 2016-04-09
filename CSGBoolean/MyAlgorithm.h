@@ -25,6 +25,7 @@ namespace CSG
     {
         typedef MyMesh::Face_handle     FH;
         typedef MyMesh::Vertex_handle   VH;
+        typedef MyMesh::Halfedge_handle   EH;
         typedef MyMesh::HalfedgeDS  HalfedgeDS;
 
         template <class T>

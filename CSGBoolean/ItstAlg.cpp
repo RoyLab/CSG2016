@@ -429,7 +429,7 @@ namespace CSG
             return fh->edges[edge_idx(tags)]->data->vertices.size() - 1;
         default:
             ReportError();
-            break;
+            return -1;
         }
     }
 
@@ -458,16 +458,12 @@ namespace CSG
 
         if (oId[0] == -1 && oId[1] == -1)
         {
-            auto entity = addVEntity(point);
+            auto proxy = addVEntity(point);
             for (int i = 0; i < 2; i++)
             {
                 if (addwhat[i] > 0)
-                    entity.pointer()->addContext(meshId[i], fhs[i], tags[i]);
+                    proxy.pointer()->addContext(meshId[i], fhs[i], tags[i]);
             }
-
-            auto veItr = vEnt.end(); veItr--;
-            vProxy.push_back(veItr);
-            proxy = vProxy.end(); proxy--;
             outproxy[0] = outproxy[1] = proxy;
         }
         else if (oId[0] > -1 && oId[1] > -1)

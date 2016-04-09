@@ -129,7 +129,7 @@ namespace CSG
         GS::exactinit();
         std::vector<std::string> names;
         names.push_back("../../models/box1.off");
-        names.push_back("../../models/box1.off");
+        names.push_back("../../models/box2.off");
 
         std::string expr("0+1");
 

@@ -462,20 +462,20 @@ namespace GS
 
 # define FP_FILTER(x, factor) (std::round((x) * (factor)) / (factor))
 
-	inline double static_filter(double x)
+    inline double fp_filter(double x, double factor)
 	{
 		assert((x < -1.0) == (x > 1.0));
-		return std::round(x * STATIC_FILTER) / STATIC_FILTER;
+        return std::round(x * factor) / factor;
 	}
 
-	inline void static_filter(const double3& v)
+    inline void fp_filter(const double3& v, double factor)
 	{
 		assert((v[0] < -1.0) == (v[0] > 1.0));
 		assert((v[1] < -1.0) == (v[1] > 1.0));
 		assert((v[2] < -1.0) == (v[2] > 1.0));
 
         for (int i = 0; i < 3; i++)
-            static_filter(v[i]);
+            fp_filter(v[i], factor);
 	}
 
 	inline double inexactDet3x3(const double3x3& m)
