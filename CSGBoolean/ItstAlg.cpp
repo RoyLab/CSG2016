@@ -71,7 +71,7 @@ namespace
                 negCount.push_back(i);
                 break;
             default:
-                ReportError();
+                ReportError("");
                 break;
             }
         }
@@ -132,7 +132,7 @@ namespace
         }
         else
         {
-            ReportError();
+            ReportError("");
             return NOT_INTERSECT;
         }
     }
@@ -322,12 +322,12 @@ namespace CSG
         }
     }
 
-    bool ItstAlg::checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[])
+    bool ItstAlg::checkManifoldEdge(FH fh0, FH fh1, TriIdSet* overlaps, TriTriIsectResult<K> &result, int res[], uint32_t meshId[2])
     {
         K::Point_3 vthiz, vthat;
         K::Plane_3 plane;
         FH fh[2] = { fh0, fh1 };
-        res[0] = false; res[1] = false;
+        res[0] = 0; res[1] = 0;
         bool detected = false;
         
         for (int i = 0; i < 2; i++)
@@ -340,11 +340,11 @@ namespace CSG
             {
                 out = 0; // add vertices
                 detected = true;
-                int idx = edgeId;
-                vthiz = fh[i]->data->triangle.vertex(idx);
-                MyMesh::Halfedge_handle oppoHE = fh[i]->edges[idx]->opposite();
+
+                vthiz = fh[i]->data->triangle.vertex(edgeId);
+                MyMesh::Halfedge_handle oppoHE = fh[i]->edges[edgeId]->opposite();
                 vthat = oppoHE->facet()->data->triangle.vertex(oppoHE->id);
-                plane = fh[(i+1)%2]->data->planeRep->get_sp();
+                plane = fh[(i + 1) % 2]->data->sp;
 
                 uint32_t triId[2];
                 triId[i] = oppoHE->facet()->id();
@@ -355,7 +355,19 @@ namespace CSG
 
                 if ((plane.has_on_positive_side(vthiz) && plane.has_on_positive_side(vthat)) ||
                     (plane.has_on_negative_side(vthiz) && plane.has_on_negative_side(vthat)))
+                {
                     out = 0; // add none
+                    continue;
+                }
+
+                ItstTriangle*& it0 = fh[i]->data->itstTri;
+                ItstTriangle*& it1 = oppoHE->facet()->data->itstTri;
+
+                if (!it0) it0 = new ItstTriangle(fh0);
+                if (!it1) it1 = new ItstTriangle(fh1);
+
+                it0->meshIds.insert(meshId[(i + 1) % 2]);
+                it1->meshIds.insert(meshId[(i + 1) % 2]);
             }
         }
 
@@ -403,7 +415,7 @@ namespace CSG
             break;
         }
         default:
-            ReportError();
+            ReportError("");
             break;
         }
         return oId;
@@ -428,7 +440,7 @@ namespace CSG
             fh->edges[edge_idx(tags)]->data->vertices.push_back(proxy);
             return fh->edges[edge_idx(tags)]->data->vertices.size() - 1;
         default:
-            ReportError();
+            ReportError("");
             return -1;
         }
     }
@@ -492,7 +504,7 @@ namespace CSG
             return false;
 
         int addwhat[2]; // 0: nothing, 1: add vertex, 2: add line
-        checkManifoldEdge(fh0, fh1, overlaps, result, addwhat);
+        checkManifoldEdge(fh0, fh1, overlaps, result, addwhat, meshId);
 
         if (addwhat[0] == 0 && addwhat[1] == 0)
             return false;

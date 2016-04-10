@@ -11,6 +11,8 @@
 
 namespace CSG
 {
+
+    DECLARE_MYMESH_TYPES;
     /* 最小可运行版本，只考虑单折痕，不考虑孤立顶点 */
     class ItstGraph
     {
@@ -53,6 +55,8 @@ namespace CSG
         typedef std::vector<int> IdContainer;
 
         COMMON_PROPERTY(bool, bValid);
+        COMMON_PROPERTY(size_t, meshId);
+        COMMON_PROPERTY(FH, fh);
         COMMON_PROPERTY(std::deque<Node>, nodes);
         COMMON_PROPERTY(std::deque<Edge>, edges);
         COMMON_PROPERTY(NodeMap, maps);
@@ -73,17 +77,21 @@ namespace CSG
             assert(result != m_maps.end());
 
             int startId = result->second;
-            m_nodes[startId].indicator = new SampleIndicatorVector;
-            *m_nodes[startId].indicator = sample;
-
+            auto inds = new SampleIndicatorVector;
+            *inds = sample;
+            m_nodes[startId].indicator = inds;
+            
             floodFilling(startId);
+
+            for (auto& node : m_nodes)
+                assert(node.indicator);
         }
 
         void floodFilling(int startId);
 
         void addEdge(Edge& e);
         void addNode(Node& node);
-        bool isNodeVisited(Adj& adj) const { return m_nodes[adj.vId].mark == VISITED; }
+        bool isNodeVisited(Adj& adj) const { return m_nodes[adj.vId].mark != UNVISITED; }
         void getAllLoops(std::deque<Loop>& loops);
 
     private:

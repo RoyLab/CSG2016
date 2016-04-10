@@ -130,10 +130,11 @@ namespace CSG
     {
         switch (rel)
         {
-        case CSG::REL_INSIDE: rel = REL_OUTSIDE;
-        case CSG::REL_OUTSIDE: rel = REL_INSIDE;
-        case CSG::REL_SAME: rel = REL_OPPOSITE;
-        case CSG::REL_OPPOSITE: rel = REL_SAME;
+        case CSG::REL_INSIDE: rel = REL_OUTSIDE; break;
+        case CSG::REL_OUTSIDE: rel = REL_INSIDE; break;
+        case CSG::REL_SAME: rel = REL_OPPOSITE; break;
+        case CSG::REL_OPPOSITE: rel = REL_SAME; break;
+        default: ReportError("unexpected relation");
         }
     }
 

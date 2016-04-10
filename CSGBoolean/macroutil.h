@@ -103,6 +103,6 @@ __name__ = _##__name__##_; \
 
 #ifndef ReportError
 #define ReportError(text)\
-    {printf ("Error! %d of file \"%s\": ##text##\n",__LINE__, __FILE__);assert(0);}
+    {printf ("Error! %d of file \"%s\": %s\n",__LINE__, __FILE__, text);assert(0);}
 
 #endif

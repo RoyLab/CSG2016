@@ -95,7 +95,7 @@ namespace CSG
             case 2: return c();
             case 3: return d();
             }
-            ReportError();
+            ReportError("");
             return 0;
         }
     };

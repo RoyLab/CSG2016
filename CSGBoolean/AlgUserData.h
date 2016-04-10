@@ -87,7 +87,7 @@ namespace CSG
 
         PBPoint<K> pos;
         ContextList ctx;
-        int idx = -1;
+        int idx = -1, resultId = -1;
 
         void addContext(int meshId, MyMesh::Face_handle fh, PosTag tag)
         {
@@ -124,7 +124,7 @@ namespace CSG
                 context.vh = new MyMesh::Vertex_handle(fh->vertices[2]);
                 break;
             default:
-                ReportError();
+                ReportError("");
                 break;
             }
             ctx.push_back(context);
@@ -153,5 +153,5 @@ namespace CSG
     };
 
     Relation relationOfContext(const Context<MyMesh>& ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx = nullptr);
-    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1);
+    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1, const CGAL::Vector_3<K>& normal);
 }

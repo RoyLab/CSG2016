@@ -87,7 +87,7 @@ namespace CSG
             auto res = data.find(meshId);
             if (res == data.end())
             {
-                ReportError();
+                ReportError("");
                 assert(0);
             }
             return res->second;

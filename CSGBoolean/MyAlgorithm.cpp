@@ -45,6 +45,19 @@ namespace
 
 namespace CSG
 {
+    inline bool getSharedEdge(FH f0, FH f1, EH& eh)
+    {
+        for (size_t i = 0; i < 3; i++)
+        {
+            if (f0->edges[i]->opposite()->facet() == f1)
+            {
+                eh = f0->edges[i];
+                return true;
+            }
+        }
+        return false;
+    }
+
     void MyAlgorithm::solve(const std::string& expr, std::vector<MyMesh*>& meshes)
     {
         pMeshList = &meshes;
@@ -90,18 +103,18 @@ namespace CSG
     {
         IIndicatorVector *pind = new FullIndicatorVector(pMeshList->size());
         IIndicatorVector &ind = *pind;
-        ind[meshId] = REL_SAME;
+        ind[meshId] = REL_ON_BOUNDARY;
 
         if (vh->data && vh->data->proxy)
         {
             const auto& ctx = (*vh->data->proxy).pointer()->ctx;
             for (auto &c : ctx)
-                ind[c.meshId] = REL_SAME;
+                ind[c.meshId] = REL_ON_BOUNDARY;
         }
 
         for (size_t meshId = 0; meshId < pMeshList->size(); meshId++)
         {
-            if (ind[meshId] == REL_SAME)
+            if (ind[meshId] == REL_ON_BOUNDARY)
                 continue;
             else
                 ind[meshId] = PolyhedralInclusionTest(vh->point(), pOctree, *pMeshList, meshId, false);
@@ -188,30 +201,47 @@ namespace CSG
         SAFE_DELETE_ARRAY(infos.curTreeLeaves);
     }
 
-    void MyAlgorithm::figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* pinds)
+    void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId, Relation** dirRelation)
     {
-        assert(!CGAL::collinear(p->point(), q->point(), r->point()));
-        auto ventity = p->data->proxy->pointer();
-
-        for (auto &ctx : ventity->ctx)
-            (*pinds)[ctx.meshId] = determineRelationOfFacet(ctx, q->data->proxy->pointer()->pos, r->data->proxy->pointer()->pos);
-    }
-
-    void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId)
-    {
-        ReportError("Not fully implement");
-        assert(s.seedVertex->halfedge()->facet() == s.seedFacet);
-        EH eh = s.seedVertex->halfedge();
-
-        assert(eh->vertex() == s.seedVertex);
-        VH pts[2];
-        for (size_t i = 0; i < 2; i++)
+        if (s.seedVertex->data && s.seedVertex->data->proxy->pointer()->ctx.size() > 1)
         {
-            eh = eh->next();
-            pts[i] = eh->vertex();
+            assert(s.seedVertex->halfedge()->facet() == s.seedFacet);
+            EH eh = s.seedVertex->halfedge();
+
+            assert(eh->vertex() == s.seedVertex);
+            VH pts[2];
+            for (size_t i = 0; i < 2; i++)
+            {
+                eh = eh->next();
+                pts[i] = eh->vertex();
+            }
+
+            auto &p = s.seedVertex, &q = pts[0], &r = pts[1];
+            assert(!CGAL::collinear(p->point(), q->point(), r->point()));
+            auto ventity = p->data->proxy->pointer();
+
+            for (auto &ctx : ventity->ctx)
+            {
+                Relation relation = REL_UNKNOWN;
+                if (ctx.meshId == meshId)
+                    relation = REL_SAME;
+                else
+                    relation = determineRelationOfFacet(ctx, q->data->proxy->pointer()->pos,
+                        r->data->proxy->pointer()->pos, s.seedFacet->data->sp.orthogonal_vector());
+
+                (*dirRelation)[ctx.meshId] = relation;
+            }
         }
 
-        figureOutFaceInds(s.seedVertex, pts[0], pts[1], meshId, s.indicators.get());
+        (*dirRelation)[meshId] = REL_SAME;
+        for (size_t i = 0; i < pMeshList->size(); i++)
+        {
+            assert((*dirRelation)[i] != REL_ON_BOUNDARY);
+            if ((*dirRelation)[i] == REL_SAME || (*dirRelation)[i] == REL_OPPOSITE)
+                s.indicators->at(i) = REL_ON_BOUNDARY;
+            else
+                s.indicators->at(i) = (*dirRelation)[i];
+        }
     }
 
     void MyAlgorithm::AddFacet(FH fh)
@@ -220,14 +250,14 @@ namespace CSG
         {
             if (fh->vertices[i]->idx == -1)
             {
-                if (fh->vertices[i]->data && fh->vertices[i]->data->proxy->pointer()->idx != -1)
-                    fh->vertices[i]->idx = fh->vertices[i]->data->proxy->pointer()->idx;
+                if (fh->vertices[i]->data && fh->vertices[i]->data->proxy->pointer()->resultId != -1)
+                    fh->vertices[i]->idx = fh->vertices[i]->data->proxy->pointer()->resultId;
                 else
                 {
                     int idx = pConstruct->add_vertex(fh->vertices[i]->point());
                     fh->vertices[i]->idx = idx;
                     if (fh->vertices[i]->data)
-                        fh->vertices[i]->data->proxy->pointer()->idx = idx;
+                        fh->vertices[i]->data->proxy->pointer()->resultId = idx;
                 }
             }
         }
@@ -241,34 +271,34 @@ namespace CSG
         if (fh0->isSimple() ^ fh1->isSimple())
             return false;
 
-        if (fh0->isSimple()) return true;
+        if (fh0->isSimple())
+            return true;
+
         return fh0->data->itstTri->meshIds == fh1->data->itstTri->meshIds;
     }
 
     void MyAlgorithm::genVertexInds(IIndicatorVector* target, VH vh) const
     {
         auto &t = *target;
+
         if (!vh->data || vh->data->proxy->pointer()->ctx.size() == 0)
             return;
 
         for (auto& ctx : vh->data->proxy->pointer()->ctx)
-        {
-            t[ctx.meshId] = REL_SAME;
-        }
+            t[ctx.meshId] = REL_ON_BOUNDARY;
     }
 
     void MyAlgorithm::floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s)
     {
         // 找到这一群的共同indicators
-        if (s.seedVertex->data && s.seedVertex->data->proxy->pointer()->ctx.size() > 1)
-            figureOutFaceInds(s, infos.curMeshId);
-
-        Queue<FH> queue;
-        queue.push(s.seedFacet);
-
         Relation *curRelationTable = new Relation[pMeshList->size()];
         for (size_t i = 0; i < pMeshList->size(); i++)
             curRelationTable[i] = static_cast<Relation>((*s.indicators)[i]);
+
+        figureOutFaceInds(s, infos.curMeshId, &curRelationTable);
+
+        Queue<FH> queue;
+        queue.push(s.seedFacet);
 
         TestTree testList;
         CSGTreeNode* curTree = copy2(infos.ttree1.get(), infos.curTreeLeaves);
@@ -323,7 +353,7 @@ namespace CSG
         seed.seedFacet = s.seedFacet;;
         seed.seedVertex = s.seedVertex;
         seed.indicators.reset(new SampleIndicatorVector(
-            *reinterpret_cast<FullIndicatorVector*>(seed.indicators.get()), ids));
+            *reinterpret_cast<FullIndicatorVector*>(s.indicators.get()), ids));
         q.emplace(seed);
 
         Relation *curRelationTable = new Relation[pMeshList->size()];
@@ -364,19 +394,21 @@ namespace CSG
 
                 for (int i = 0; i < 3; i++)
                 {
-                    auto neighbour = curface->edges[i]->opposite()->facet();
+                    auto halfedge = curface->edges[i]->opposite();
+                    auto neighbor = halfedge->facet();
 
                     SeedInfo seed2;
-                    seed2.seedFacet = neighbour;
-                    seed2.seedVertex = curface->edges[i]->opposite()->vertex();
+                    seed2.seedFacet = halfedge->face();
+                    seed2.seedVertex = halfedge->vertex();
 
-                    int gId = curface->edges[i]->opposite()->vertex()->data->proxy->pointer()->idx;
-                    SampleIndicatorVector* inds = reinterpret_cast<SampleIndicatorVector*>(ig->get_nodes()[gId].indicator);
+                    int gId = seed2.seedVertex->data->proxy->pointer()->idx; 
+                    int localId = ig->get_maps()[gId];
+                    SampleIndicatorVector* inds = reinterpret_cast<SampleIndicatorVector*>(ig->get_nodes()[localId].indicator);
 
-                    if (neighbour->mark == SEEDED || neighbour->mark == VISITED) // 跟ray-tracing有关
+                    if (neighbor->mark == SEEDED || neighbor->mark == VISITED) // 跟ray-tracing有关
                         continue;
 
-                    if (isSameGroup(neighbour, curface))
+                    if (isSameGroup(neighbor, curface))
                     {
                         auto sample = new SampleIndicatorVector;
                         *sample = *inds;
@@ -391,7 +423,7 @@ namespace CSG
 
                         infos.curMeshSeedQueue.push(seed2);
                     }
-                    neighbour->mark = SEEDED;
+                    neighbor->mark = SEEDED;
                 }
 
                 SAFE_DELETE(ig);
@@ -411,11 +443,23 @@ namespace CSG
         {
             Indicator ind = REL_NOT_AVAILABLE;
             int i = 0;
-            while (loop[i]->vproxy.pointer()->hasContext(id) && i < n)
-                ind = loop[i++]->indicator->at(id);
+            for (size_t i = 0; i < n; i++)
+            {
+                if (!loop[i]->vproxy.pointer()->hasContext(id))
+                {
+                    ind = loop[i]->indicator->at(id);
+                    break;
+                }
+            }
 
-            if (ind != REL_ON_BOUNDARY)
+            if (ind != REL_NOT_AVAILABLE)
+            {
                 sample[id] = ind;
+                if (ind == REL_ON_BOUNDARY)
+                {
+                    ReportError("Not implemented!");
+                }
+            }
             else
             {
                 if (checkPoint == -1)
@@ -430,8 +474,8 @@ namespace CSG
                             break;
                         }
                     sample[id] = determineRelationOfFacet(*loop[checkPoint]->vproxy.pointer()->findInContext(id),
-                        loop[i + 1]->vproxy.pointer()->pos,
-                        loop[i + 1]->vproxy.pointer()->pos);
+                        loop[checkPoint + 1]->vproxy.pointer()->pos,
+                        loop[checkPoint + 2]->vproxy.pointer()->pos, fh->data->sp.orthogonal_vector());
                 }
             }
         }
@@ -447,6 +491,7 @@ namespace CSG
             while (curNode)
             {
                 testId = curNode->pMesh->Id;
+                assert(sample[testId] != REL_NOT_AVAILABLE && sample[testId] != REL_UNKNOWN);
                 curRelation = static_cast<Relation>(sample.at(testId));
                 curNode = GetNextNode(curNode, curRelation, outRelation);
             }
@@ -461,6 +506,40 @@ namespace CSG
 
     void MyAlgorithm::addLoop(ItstGraph::Loop& loop)
     {
-        return;
+        int *indices = new int[loop.size()];
+        for (int i = 0; i < loop.size(); i++)
+        {
+            auto pV = loop[i]->vproxy.pointer();
+            assert(pV);
+            if (pV->resultId == -1)
+            {
+                int idx = pConstruct->add_vertex(pV->pos.getCoord());
+                pV->resultId = idx;
+            }
+            indices[i] = pV->resultId;
+        }
+
+        pConstruct->addSurface(indices, loop.size());
     }
+
+
+    //int baoshu = 1;
+    //int zuobiao = 0;
+    //int renshu = renshu0;
+    //while (renshu >１)
+    //{
+    //    if (!arr[zuobiao].isOut)
+    //    {
+    //        if (baoshu == 3)
+    //        {
+    //            arr[zuobiao].isOut = true;
+    //            renshu--;
+    //        }
+
+    //        baoshu += 1;
+    //        if (baoshu == 4)
+    //            baoshu = 1;
+    //    }
+    //    zuobiao = (zuobiao + 1) % renshu0;
+    //}
 }

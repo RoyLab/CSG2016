@@ -18,7 +18,7 @@ namespace CSG
         case CGAL::ON_ORIENTED_BOUNDARY:
             return REL_ON_BOUNDARY;
         default:
-            ReportError();
+            ReportError("");
             return REL_NOT_AVAILABLE;
         }
     }
@@ -128,20 +128,33 @@ namespace CSG
             result = determineFaceBSP(*ctx.fh, point, pCtx);
             break;
         default:
-            ReportError();
+            ReportError("");
             break;
         }
         return result;
     }
 
 
-    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1)
+    Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1, const CGAL::Vector_3<K>& normal)
     {
+        assert(ctx.type != CT_NONE);
         Context<MyMesh> *eCtx = new Context<MyMesh>;
         Relation rel = relationOfContext(ctx, p0, &eCtx);
 
         if (rel == REL_ON_BOUNDARY)
-            rel = relationOfContext(*eCtx, p1);
+        {
+            rel = relationOfContext(*eCtx, p1, &eCtx);
+            if (rel == REL_ON_BOUNDARY)
+            {
+                assert(eCtx->type == CT_FACET);
+                if ((*eCtx->fh)->data->sp.orthogonal_vector() * normal > 0.0)
+                    rel = REL_SAME;
+                else
+                    rel = REL_OPPOSITE;
+            }
+        }
+
+
 
         SAFE_DELETE(eCtx);
         return rel;

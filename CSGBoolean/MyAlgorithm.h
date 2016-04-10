@@ -13,6 +13,10 @@
 
 namespace CSG
 {
+    typedef MyMesh::Face_handle     FH;
+    typedef MyMesh::Vertex_handle   VH;
+    typedef MyMesh::Halfedge_handle   EH;
+
     class ItstAlg;
 
     typedef K::Vector_3 Vec3d;
@@ -23,9 +27,6 @@ namespace CSG
 
     class MyAlgorithm
     {
-        typedef MyMesh::Face_handle     FH;
-        typedef MyMesh::Vertex_handle   VH;
-        typedef MyMesh::Halfedge_handle   EH;
         typedef MyMesh::HalfedgeDS  HalfedgeDS;
 
         template <class T>
@@ -96,8 +97,7 @@ namespace CSG
         IIndicatorVector* computeFullIndicator(VH fh, size_t meshId);
         void floodComplexGroup(GroupParseInfo& infos, SeedInfo& s);
         void floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s);
-        void figureOutFaceInds(SeedInfo& s, int meshId);
-        void figureOutFaceInds(VH p, VH q, VH r, int meshId, IIndicatorVector* inds);
+        void figureOutFaceInds(SeedInfo& s, int meshId, Relation** relation);
 
         void AddFacet(FH fh);
         bool isSameGroup(FH fh0, FH fh1) const;
@@ -124,6 +124,18 @@ namespace CSG
             int idx[3]; 
         };
 
+        struct NonTriple
+        {
+            NonTriple(int *i, size_t n)
+            {
+                idx = new int[n];
+                sz = n;
+                memcpy(idx, i, sizeof(int)*n);
+            }
+            int *idx = nullptr;
+            int sz = 0;
+        };
+
     public:
         typedef typename HDS::Vertex   Vertex;
         typedef typename Vertex::Point Point;
@@ -133,7 +145,7 @@ namespace CSG
         void operator()(HDS& hds) {
 
             CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
-            B.begin_surface(points.size(), indices.size() / 3);
+            B.begin_surface(points.size(), indices.size()+indices2.size());
 
             for (size_t i = 0; i < points.size(); i++)
                 B.add_vertex(points[i]);
@@ -143,6 +155,14 @@ namespace CSG
                 B.begin_facet();
                 for (int j = 0; j < 3; j++)
                     B.add_vertex_to_facet(indices[i].idx[j]);
+                B.end_facet();
+            }
+
+            for (size_t i = 0; i < indices2.size(); i++)
+            {
+                B.begin_facet();
+                for (int j = 0; j < indices2[i].sz; j++)
+                    B.add_vertex_to_facet(indices2[i].idx[j]);
                 B.end_facet();
             }
 
@@ -160,9 +180,15 @@ namespace CSG
             indices.emplace_back(i, j, k);
         }
 
+        void addSurface(int* i, size_t n)
+        {
+            indices2.emplace_back(i, n);
+        }
+
     private:
         std::deque<Point> points;
         std::deque<Tripple> indices;
+        std::deque<NonTriple> indices2;
     };
 }
 

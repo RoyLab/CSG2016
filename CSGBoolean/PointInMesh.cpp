@@ -253,9 +253,9 @@ namespace CSG
                     isValid = false;
                     break;
                 case RTR_ON:
-                    return REL_SAME;
+                    return REL_ON_BOUNDARY;
                 default:
-                    ReportError();
+                    ReportError("");
                     return REL_NOT_AVAILABLE;
                     break;
                 }

@@ -77,30 +77,31 @@ namespace CSG
 
         Adj adjacent;
         adjacent.eId = eId;
-        if (e.direction & SEQ)
-        {
-            adjacent.vId = m_maps[e.vId[1]];
-            adjacent.startId = m_maps[e.vId[0]];
-            node0.edges.push_back(adjacent);
-        }
 
-        if (e.direction & INV)
-        {
-            adjacent.vId = m_maps[e.vId[0]];
-            adjacent.startId = m_maps[e.vId[1]];
-            node1.edges.push_back(adjacent);
-        }
+        adjacent.vId = m_maps[e.vId[1]];
+        adjacent.startId = m_maps[e.vId[0]];
+        adjacent.visited = false;
+        if (!(e.direction & SEQ))
+            adjacent.visited = true;
+        node0.edges.push_back(adjacent);
+
+        adjacent.vId = m_maps[e.vId[0]];
+        adjacent.startId = m_maps[e.vId[1]];
+        adjacent.visited = false;
+        if (!(e.direction & INV))
+            adjacent.visited = true;
+        node1.edges.push_back(adjacent);
     }
 
     void ItstGraph::addNode(Node& node)
     {
-        m_maps[node.vproxy.pointer()->idx] = m_nodes.size() - 1;
-        node.id = m_nodes.size() - 1;
+        node.id = m_nodes.size();
         m_nodes.push_back(node);
+        m_maps[node.vproxy.pointer()->idx] = node.id;
     }
 
     ItstGraph::ItstGraph(FH fh, ItstAlg* data, int meshId):
-        mp_alg(data)
+        mp_alg(data), m_fh(fh), m_meshId(meshId)
     {
         m_bValid = false;
 
@@ -177,7 +178,7 @@ namespace CSG
         }
 
         // 添加内点，注意这里没有考虑相交的情形
-        if (!fh->data->itstTri || !fh->data->itstTri->inVertices.size()) return;
+        if (!fh->data->itstTri || !fh->data->itstTri->isectLines.size()) return;
 
         auto &inners = fh->data->itstTri->inVertices;
         for (size_t i = 0; i < inners.size(); i++)
@@ -237,8 +238,8 @@ namespace CSG
             int phase1 = determinePhase(cos1, sin1);
             int phase2 = determinePhase(cos2, sin2);
 
-            if (phase2 < phase1) return true;
-            if (phase2 > phase1) return false;
+            if (phase2 < phase1) return false;
+            if (phase2 > phase1) return true;
 
             double tan1 = sin1 / cos1;
             double tan2 = sin2 / cos2;
@@ -289,7 +290,6 @@ namespace CSG
             }
 
             auto &adjs = startNode.edges;
-            auto startNodeContextEnd = startNode.vproxy.pointer()->ctx.end();
             startNode.mark = VISITED;
 
             for (auto& edge : adjs)
@@ -304,12 +304,13 @@ namespace CSG
                     assert((*startNode.indicator)[id] != REL_UNKNOWN &&
                         (*startNode.indicator)[id] != REL_NOT_AVAILABLE);
 
-                    if (startNodeContextEnd != startNode.vproxy.pointer()->findInContext(id))
+                    if (!startNode.vproxy.pointer()->hasContext(id))
                         node.indicator->at(id) = startNode.indicator->at(id);
                 }
 
                 for (auto& ctx : node.vproxy.pointer()->ctx)
-                    node.indicator->at(ctx.meshId) = REL_SAME;
+                    if (m_meshId != ctx.meshId)
+                        node.indicator->at(ctx.meshId) = REL_ON_BOUNDARY;
 
                 for (int id : m_ids)
                 {
@@ -320,12 +321,8 @@ namespace CSG
                     }
                 }
 
-                // add its neighbor
-                if (node.mark != SEEDED && node.mark != VISITED)
-                {
-                    queue.push(edge.eId);
-                    node.mark = SEEDED;
-                }
+                queue.push(edge.vId);
+                node.mark = SEEDED;
 
             }
             queue.pop();
@@ -338,46 +335,54 @@ namespace CSG
         typedef std::vector<Adj>::iterator AdjItr;
         std::queue<Adj*, std::list<Adj*>> queue;
 
-        queue.push(&m_nodes[0].edges[0]);
+        for (auto& adjitr : m_nodes[0].edges)
+        {
+            if (!adjitr.visited)
+            {
+                queue.push(&adjitr);
+                break;
+            }
+        }
 
         while (!queue.empty())
         {
-            if (queue.front()->visited == false)
+            if (!queue.front()->visited)
             {
+                Loop loop;
+
                 Adj* adj = queue.front();
                 int startId = adj->startId;
+                int begin = startId;
                 int next = adj->vId;
                 adj->visited = true;
-
-                Loop loop;
                 loop.push_back(&m_nodes[startId]);
 
                 while (startId != next)
                 {
                     auto& nextNode = m_nodes[next];
                     loop.push_back(&nextNode);
-                    assert(adj->visited == false);
 
                     size_t n = nextNode.edges.size();
+                    bool got = false;
                     for (size_t i = 0; i < n; i++)
                     {
-                        bool got = false;
-                        if (nextNode.edges[i].vId == adj->startId)
+                        if (nextNode.edges[i].vId == begin)
                         {
                             got = true;
-                            // find the next edge
                             adj = &nextNode.edges[(i + 1) % n];
+                            begin = next;
                             next = adj->vId;
+                            assert(!adj->visited);
                             adj->visited = true;
 
                             // add opposite if needed
-                            if (nextNode.edges[i].visited == false)
+                            if (!nextNode.edges[i].visited)
                                 queue.push(&nextNode.edges[i]);
 
                             break;
                         }
-                        assert(got);
                     }
+                    assert(got);
                 }
                 loops.push_back(loop);
             }
