@@ -128,10 +128,10 @@ namespace CSG
         //main1("../../models/horse.off");
         GS::exactinit();
         std::vector<std::string> names;
-        names.push_back("../../models/box1.off");
-        names.push_back("../../models/box2.off");
+        names.push_back("../../models/ball1.off");
+        names.push_back("../../models/ball2.off");
 
-        std::string expr("0+1");
+        std::string expr("0*1");
 
         std::vector<MyMesh*> meshList;
         loadMesh(meshList, names);

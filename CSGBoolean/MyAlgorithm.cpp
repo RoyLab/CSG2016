@@ -268,6 +268,7 @@ namespace CSG
 
     bool MyAlgorithm::isSameGroup(FH fh0, FH fh1) const
     {
+        assert(fh0 != fh1);
         if (fh0->isSimple() ^ fh1->isSimple())
             return false;
 
@@ -374,7 +375,7 @@ namespace CSG
             if (q.front().seedFacet->mark != VISITED)
             {
                 auto &curSeed = q.front();
-                FH curface = seed.seedFacet;
+                FH curface = curSeed.seedFacet;
                 curface->mark = VISITED;
 
                 static int count = 0;
@@ -383,8 +384,8 @@ namespace CSG
                 ItstGraph* ig = new ItstGraph(curface, itst, infos.curMeshId);
                 assert(ig->get_bValid());
 
-                ig->floodFilling(seed.seedVertex,
-                    *reinterpret_cast<SampleIndicatorVector*>(seed.indicators.get()), ids);
+                ig->floodFilling(curSeed.seedVertex,
+                    *reinterpret_cast<SampleIndicatorVector*>(curSeed.indicators.get()), ids);
 
                 std::deque<ItstGraph::Loop> loops;
                 ig->getAllLoops(loops);
