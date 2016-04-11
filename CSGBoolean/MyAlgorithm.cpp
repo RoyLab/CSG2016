@@ -70,7 +70,7 @@ namespace CSG
 
         for (auto mesh : *pMeshList)
         {
-            //mesh->normalize(aabb);
+            mesh->normalize(aabb);
             mesh->filter();
             mesh->init();
         }
@@ -376,6 +376,9 @@ namespace CSG
                 auto &curSeed = q.front();
                 FH curface = seed.seedFacet;
                 curface->mark = VISITED;
+
+                static int count = 0;
+                count++;
 
                 ItstGraph* ig = new ItstGraph(curface, itst, infos.curMeshId);
                 assert(ig->get_bValid());

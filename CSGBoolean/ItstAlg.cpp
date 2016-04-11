@@ -141,7 +141,7 @@ namespace
     void makePositive(const CGAL::Plane_3<_R>& p, const CGAL::Plane_3<_R>& q, CGAL::Plane_3<_R>& input)
     {
         if (CGAL::determinant(p.orthogonal_vector(),
-            q.orthogonal_vector(), input.orthogonal_vector()) < 0.f)
+            q.orthogonal_vector(), input.orthogonal_vector()) < 0.0)
             input = input.opposite();
     }
 
@@ -470,6 +470,7 @@ namespace CSG
 
         if (oId[0] == -1 && oId[1] == -1)
         {
+            std::cout << "add vertex: " << point;
             auto proxy = addVEntity(point);
             for (int i = 0; i < 2; i++)
             {
@@ -518,9 +519,16 @@ namespace CSG
         int oIdA[2] = { -1, -1 }, oIdB[2] = { -1, -1 };
         VProxyItr proxyA[2], proxyB[2];
 
+        std::cout << "begin compare:\n";
+
+        static int count = 0;
+        count++;
+
         getVProxy(result.A, addwhat, fhs, result.tagA, oIdA, proxyA, meshId);
         getVProxy(result.B, addwhat, fhs, result.tagB, oIdB, proxyB, meshId);
-        
+
+        std::cout << "end compare:\n\n";
+
         for (int i = 0; i < 2; i++)
         {
             if (addwhat[i] > 0)

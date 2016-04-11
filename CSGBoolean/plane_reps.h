@@ -105,7 +105,8 @@ namespace CSG
     {
         DECLARE_CGAL_KERNEL_CLASS
         typedef Plane_ext<_R> PlaneExt;
-        
+        template <class T>
+        friend std::ostream& operator<<(std::ostream& out, const PBPoint<T>& p);
         PBPoint(){}
         PBPoint(const Plane& p, const Plane& q, const Plane& r, bool keepPositive = true)
         {
@@ -116,12 +117,12 @@ namespace CSG
             if (keepPositive)
             {
                 if (CGAL::determinant(p.orthogonal_vector(),
-                    q.orthogonal_vector(), r.orthogonal_vector()) < 0.f)
+                    q.orthogonal_vector(), r.orthogonal_vector()) < 0.0)
                     planes[2] = r.opposite();
             }
 
             assert(CGAL::determinant(p.orthogonal_vector(),
-                q.orthogonal_vector(), r.orthogonal_vector()) > 0.f);
+                q.orthogonal_vector(), r.orthogonal_vector()) > 0.0);
 
             computeCoord();
         }
@@ -138,7 +139,7 @@ namespace CSG
             double4x4 mat;
             for (int i = 0; i < 3; i++)
                 for (int j = 0; j < 4; j++)
-                    mat[i][j] = p.planes[i][j];
+                    mat[i][j] = planes[i][j];
 
             for (int i = 0; i < 3; i++)
             {
@@ -148,6 +149,10 @@ namespace CSG
                 if (GS::adaptiveDet4x4Sign(mat) != 0)
                     return false;
             }
+
+            std::cout << "\nequal event:\n";
+            std::cout << *this;
+            std::cout << p;
             return true;
         }
 
@@ -167,6 +172,17 @@ namespace CSG
         Point coord;
     };
 
+    template <class _R>
+    std::ostream& operator<<(std::ostream& out, const PBPoint<_R>& p)
+    {
+        std::cout << p.planes[0] << std::endl;
+        std::cout << p.planes[1] << std::endl;
+        std::cout << p.planes[2] << std::endl;
+        std::cout << p.coord << std::endl;
+        return out;
+    }
+
+    /* bounding planes point to the internal of the triangle */
     template <class _R>
     struct PBTriangle
     {
@@ -192,9 +208,9 @@ namespace CSG
 
             auto pseudo = filter(normal * 0.1, FP_FACTOR);
 
-            m_bps[0] = PlaneExt(q, r - q, pseudo);
-            m_bps[1] = PlaneExt(r, p - r, pseudo);
-            m_bps[2] = PlaneExt(p, q - p, pseudo);
+            m_bps[0] = PlaneExt(q, pseudo, r - q);
+            m_bps[1] = PlaneExt(r, pseudo, p - r);
+            m_bps[2] = PlaneExt(p, pseudo, q - p);
 
             assert(m_sp.has_on(p));
             assert(m_sp.has_on(q));
@@ -377,13 +393,20 @@ namespace CSG
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
             s.a(), s.b(), s.c(), s.d() };
-        double sign = GS::adaptiveDet4x4Sign(mat);
-        double sign2 = CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
+        double sign1 = GS::adaptiveDet4x4Sign(mat);
+        CGAL::Sign sign2 = CGAL::sign_of_determinant(p.a(), p.b(), p.c(), p.d(),
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
             s.a(), s.b(), s.c(), s.d());
-        assert(sign * sign2 > 0 || sign == sign2 || sign == 0 && std::abs(sign2) < 1.0e-10);
-        return sign;
+
+        double d = std::abs(CGAL::determinant(p.a(), p.b(), p.c(), p.d(),
+            q.a(), q.b(), q.c(), q.d(),
+            r.a(), r.b(), r.c(), r.d(),
+            s.a(), s.b(), s.c(), s.d()));
+        assert(sign1 == 0.0 && (sign2 == CGAL::ZERO || d < 1e-10) ||
+            sign1 < 0.0 && sign2 == CGAL::NEGATIVE ||
+            sign1 > 0.0 && sign2 == CGAL::POSITIVE);
+        return sign1;
     }
 
     template <class _R>

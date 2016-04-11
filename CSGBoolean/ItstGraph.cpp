@@ -6,6 +6,20 @@
 
 namespace CSG
 {
+    template <class RT>
+    static inline double determinant3x3(const RT& a00, const RT& a01, const RT& a02,
+        const RT& a10, const RT& a11, const RT& a12,
+        const RT& a20, const RT& a21, const RT& a22)
+    {
+        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a10, a11, a12, a20, a21, a22);
+        double3x3 mat = { a00, a01, a02, a10, a11, a12, a20, a21, a22 };
+        double ss = GS::adaptiveDet3x3Sign(mat);
+        assert(ss == 0.0 && s == CGAL::ZERO ||
+            ss < 0.0 && s == CGAL::NEGATIVE ||
+            ss > 0.0 && s == CGAL::POSITIVE);
+        return ss;
+    }
+
     class PBPointCompare
     {
         typedef Plane_ext<K> Plane;
@@ -20,18 +34,35 @@ namespace CSG
 
         bool operator()(Point& a, Point& b)
         {
-            Plane pa = a.getPlanes()[2];
-            Plane pb = b.getPlanes()[2]; //之所以是2,因为2一定是个非支撑平面
+            Plane pa = a.getPlanes()[0];
+            Plane pb = b.getPlanes()[0]; //之所以是2,因为2一定是个非支撑平面
             
-            CGAL::Sign s = CGAL::sign_of_determinant(m_q.a(), m_q.b(), m_q.c(),
+            double s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
                 m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+
+            if (s == 0.0)
+            {
+                pa = a.getPlanes()[1];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+            }
+            assert(s != 0.0);
             if (s == CGAL::NEGATIVE) pa = pa.opposite();
 
-            s = CGAL::sign_of_determinant(m_q.a(), m_q.b(), m_q.c(),
+            s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
                 m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+
+            if (s == 0.0)
+            {
+                pb = b.getPlanes()[1];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+            }
+            assert(s != 0.0);
             if (s == CGAL::NEGATIVE) pb = pb.opposite();
 
             double sign = orientation(m_q, m_p, pa, pb);
+
             if (sign > 0.0) return true;
             else return false;
         }
@@ -232,22 +263,25 @@ namespace CSG
             double cos1 = v1 * zero;
             double cos2 = v2 * zero;
 
-            double sin1 = sqrt(CGAL::cross_product(zero, v1).squared_length());
-            double sin2 = sqrt(CGAL::cross_product(zero, v2).squared_length());
+            auto cross1 = CGAL::cross_product(zero, v1);
+            auto cross2 = CGAL::cross_product(zero, v2);
 
-            int phase1 = determinePhase(cos1, sin1);
-            int phase2 = determinePhase(cos2, sin2);
+            double sign1 = cross1 * normal;
+            double sign2 = cross2 * normal;
 
-            if (phase2 < phase1) return false;
-            if (phase2 > phase1) return true;
+            int phase1 = determinePhase(cos1, sign1);
+            int phase2 = determinePhase(cos2, sign2);
 
-            double tan1 = sin1 / cos1;
-            double tan2 = sin2 / cos2;
+            if (phase1 > phase2) return true;
+            if (phase2 > phase1) return false;
 
-            return tan2 > tan1;
+            double tan1 = sign1 / cos1;
+            double tan2 = sign2 / cos2;
+
+            return tan1 > tan2;
         }
 
-        K::Vector_3 zero;
+        K::Vector_3 zero, normal;
         PBPoint<K> origin;
         ItstGraph* graph = nullptr;
     };
@@ -268,6 +302,7 @@ namespace CSG
             comp.origin = node.vproxy.pointer()->pos;
             comp.zero = node.edges.begin()->calcDirection(this, comp.origin);
             comp.graph = this;
+            comp.normal = m_fh->data->sp.orthogonal_vector();
             std::sort(node.edges.begin() + 1, node.edges.end(), comp);
         }
     }
@@ -389,6 +424,14 @@ namespace CSG
 
             queue.pop();
         }
+
+#ifdef _DEBUG
+        for (auto& node : m_nodes)
+        {
+            for (auto& adj : node.edges)
+                assert(adj.visited);
+        }
+#endif
     }
 
 }
