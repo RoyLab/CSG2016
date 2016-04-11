@@ -156,9 +156,9 @@ namespace CSG
                 for (int j = 0; j < 3; j++)
                 {
                     B.add_vertex_to_facet(indices[i].idx[j]);
-                    std::cout << indices[i].idx[j] << "\t";
+                    //std::cout << indices[i].idx[j] << "\t";
                 }
-                std::cout << std::endl;
+                //std::cout << std::endl;
                 B.end_facet();
             }
 
@@ -167,10 +167,10 @@ namespace CSG
                 B.begin_facet();
                 for (int j = 0; j < indices2[i].sz; j++)
                 {
-                    std::cout << indices2[i].idx[j] << "\t";
+                    //std::cout << indices2[i].idx[j] << "\t";
                     B.add_vertex_to_facet(indices2[i].idx[j]);
                 }
-                std::cout << std::endl;
+                //std::cout << std::endl;
                 B.end_facet();
                 if (B.error()) assert(0);
             }

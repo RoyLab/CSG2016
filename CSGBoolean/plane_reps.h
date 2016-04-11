@@ -150,9 +150,9 @@ namespace CSG
                     return false;
             }
 
-            std::cout << "\nequal event:\n";
-            std::cout << *this;
-            std::cout << p;
+            //std::cout << "\nequal event:\n";
+            //std::cout << *this;
+            //std::cout << p;
             return true;
         }
 

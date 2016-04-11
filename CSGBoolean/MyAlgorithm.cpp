@@ -86,9 +86,9 @@ namespace CSG
         itst = new ItstAlg(pMeshList);
         itst->doIntersection(intersectLeaves);
 
-        std::cout.precision(18);
-        for (auto pt : itst->vEnt)
-            std::cout << "point: " << pt->pos.getCoord() << std::endl;
+        //std::cout.precision(18);
+        //for (auto pt : itst->vEnt)
+            //std::cout << "point: " << pt->pos.getCoord() << std::endl;
 
         floodColoring(pCsg, itst);
 
