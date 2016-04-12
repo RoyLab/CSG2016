@@ -12,6 +12,7 @@ typedef CGAL::Iso_cuboid_3<K> Cube_3;
 typedef CGAL::Bbox_3 Bbox_3;
 
 typedef uint64_t IndexPair;
+typedef int8_t Indicator;
 
 static inline void MakeIndex(const uint32_t id[], IndexPair& indexPair)
 {
@@ -127,6 +128,18 @@ namespace CSG
     };
 
     inline void inverseRelation(Relation& rel)
+    {
+        switch (rel)
+        {
+        case CSG::REL_INSIDE: rel = REL_OUTSIDE; break;
+        case CSG::REL_OUTSIDE: rel = REL_INSIDE; break;
+        case CSG::REL_SAME: rel = REL_OPPOSITE; break;
+        case CSG::REL_OPPOSITE: rel = REL_SAME; break;
+        default: ReportError("unexpected relation");
+        }
+    }
+
+    inline void inverseRelation(Indicator& rel)
     {
         switch (rel)
         {

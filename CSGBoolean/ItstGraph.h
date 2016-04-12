@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <deque>
+#include <vector>
 
 #include "MyMesh.h"
 #include "macroutil.h"
@@ -62,9 +63,10 @@ namespace CSG
         COMMON_PROPERTY(NodeMap, maps);
         COMMON_PROPERTY(IdContainer, ids);
         COMMON_PROPERTY_POINTER(ItstAlg, alg);
+        COMMON_PROPERTY_POINTER(std::vector<MyMesh*>, meshList);
     public:
 
-        ItstGraph(FH fh, ItstAlg* data, int meshId);
+        ItstGraph(FH fh, ItstAlg* data, int meshId, std::vector<MyMesh*>* meshes);
         ~ItstGraph();
 
         template <class Container>

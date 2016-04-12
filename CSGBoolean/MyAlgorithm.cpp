@@ -117,7 +117,7 @@ namespace CSG
             if (ind[meshId] == REL_ON_BOUNDARY)
                 continue;
             else
-                ind[meshId] = PolyhedralInclusionTest(vh->point(), pOctree, *pMeshList, meshId, false);
+                ind[meshId] = PolyhedralInclusionTest(vh->point(), pOctree, *pMeshList, meshId, pMeshList->at(meshId)->bInverse);
         }
         return pind;
 
@@ -203,11 +203,14 @@ namespace CSG
 
     void MyAlgorithm::figureOutFaceInds(SeedInfo& s, int meshId, Relation** dirRelation)
     {
+        /* 如果存在context，则context相关的indicator不是准确的 */
         if (s.seedVertex->data && s.seedVertex->data->proxy->pointer()->ctx.size() > 1)
         {
             assert(s.seedVertex->halfedge()->facet() == s.seedFacet);
             EH eh = s.seedVertex->halfedge();
 
+
+            /* 找到它的三个顶点 */
             assert(eh->vertex() == s.seedVertex);
             VH pts[2];
             for (size_t i = 0; i < 2; i++)
@@ -220,20 +223,29 @@ namespace CSG
             assert(!CGAL::collinear(p->point(), q->point(), r->point()));
             auto ventity = p->data->proxy->pointer();
 
+
+            /* 遍历所有的context */
             for (auto &ctx : ventity->ctx)
             {
                 Relation relation = REL_UNKNOWN;
-                if (ctx.meshId == meshId)
-                    relation = REL_SAME;
-                else
+                if (ctx.meshId != meshId)
+                {
+                    K::Vector_3 normal = s.seedFacet->data->sp.orthogonal_vector();
                     relation = determineRelationOfFacet(ctx, q->data->proxy->pointer()->pos,
-                        r->data->proxy->pointer()->pos, s.seedFacet->data->sp.orthogonal_vector());
+                        r->data->proxy->pointer()->pos, normal);
+
+                    if (pMeshList->at(ctx.meshId)->bInverse)
+                        inverseRelation(relation);
+                }
 
                 (*dirRelation)[ctx.meshId] = relation;
             }
         }
 
+        /*  如果是自身的context，则一定为REL_SAME */
         (*dirRelation)[meshId] = REL_SAME;
+
+        /* 转换为点的indicator */
         for (size_t i = 0; i < pMeshList->size(); i++)
         {
             assert((*dirRelation)[i] != REL_ON_BOUNDARY);
@@ -244,7 +256,7 @@ namespace CSG
         }
     }
 
-    void MyAlgorithm::AddFacet(FH fh)
+    void MyAlgorithm::AddFacet(FH fh, size_t meshId)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -263,7 +275,7 @@ namespace CSG
         }
 
         pConstruct->addFacets(fh->vertices[0]->idx,
-            fh->vertices[1]->idx, fh->vertices[2]->idx);
+            fh->vertices[1]->idx, fh->vertices[2]->idx, pMeshList->at(meshId)->bInverse);
     }
 
     bool MyAlgorithm::isSameGroup(FH fh0, FH fh1) const
@@ -311,13 +323,16 @@ namespace CSG
         if (curRelation == REL_SAME)
             needAdd = true;
 
+        size_t count = 0;
+
         while (!queue.empty())
         {
             if (queue.front()->mark != VISITED)
             {
                 FH curface = queue.front();
                 curface->mark = VISITED;
-                if (needAdd) AddFacet(curface);
+                count++;
+                if (needAdd) AddFacet(curface, infos.curMeshId);
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -343,6 +358,7 @@ namespace CSG
             }
             queue.pop();
         }
+        std::cout << "processing " << count << "facets" << std::endl;
     }
 
     void MyAlgorithm::floodComplexGroup(GroupParseInfo& infos, SeedInfo& s)
@@ -370,6 +386,7 @@ namespace CSG
             pMeshList->size(), curTree, infos.curTreeLeaves, testList);
         assert(!testList.size() || !testList.begin()->testTree->Parent);
 
+        size_t count = 0;
         while (!q.empty())
         {
             if (q.front().seedFacet->mark != VISITED)
@@ -378,10 +395,9 @@ namespace CSG
                 FH curface = curSeed.seedFacet;
                 curface->mark = VISITED;
 
-                static int count = 0;
                 count++;
 
-                ItstGraph* ig = new ItstGraph(curface, itst, infos.curMeshId);
+                ItstGraph* ig = new ItstGraph(curface, itst, infos.curMeshId, pMeshList);
                 assert(ig->get_bValid());
 
                 ig->floodFilling(curSeed.seedVertex,
@@ -393,7 +409,7 @@ namespace CSG
                 for (auto& loop : loops)
                 {
                     if (needAdd(curface, loop, testList))
-                        addLoop(loop);
+                        addLoop(loop, infos.curMeshId);
                 }
 
                 for (int i = 0; i < 3; i++)
@@ -434,6 +450,7 @@ namespace CSG
             }
             q.pop();
         }
+        std::cout << "processing " << count << "complex facets" << std::endl;
     }
 
     bool MyAlgorithm::needAdd(FH fh, ItstGraph::Loop& loop, TestTree& testList)
@@ -443,10 +460,13 @@ namespace CSG
         size_t n = loop.size();
         int checkPoint = -1;
 
+        /* 确定每一个indicator的值 */
         for (int id : fh->data->itstTri->meshIds)
         {
             Indicator ind = REL_NOT_AVAILABLE;
             int i = 0;
+
+            /* 如果存在顶点没有context的，则indicator值等于该顶点的值 */
             for (size_t i = 0; i < n; i++)
             {
                 if (!loop[i]->vproxy.pointer()->hasContext(id))
@@ -456,9 +476,12 @@ namespace CSG
                 }
             }
 
+            /* 如果所有的都有context */
             if (ind != REL_NOT_AVAILABLE)
             {
                 sample[id] = ind;
+
+                /* 这里是一个bug，无法判断，可以加一个coplanar list来判断 */
                 if (ind == REL_ON_BOUNDARY)
                 {
                     ReportError("Not implemented!");
@@ -466,20 +489,28 @@ namespace CSG
             }
             else
             {
+                /* 找三个点 */
                 if (checkPoint == -1)
                 {
                     for (size_t j = 0; j < n; j++)
+                    {
                         if (same_orientation(loop[j]->vproxy.pointer()->pos,
-                            loop[j+1]->vproxy.pointer()->pos,
-                            loop[j+2]->vproxy.pointer()->pos,
+                            loop[(j + 1)%n]->vproxy.pointer()->pos,
+                            loop[(j + 2)%n]->vproxy.pointer()->pos,
                             fh->data->sp.orthogonal_vector()))
                         {
                             checkPoint = j;
                             break;
                         }
+                    }
+
+                    K::Vector_3 normal = fh->data->sp.orthogonal_vector();
                     sample[id] = determineRelationOfFacet(*loop[checkPoint]->vproxy.pointer()->findInContext(id),
-                        loop[checkPoint + 1]->vproxy.pointer()->pos,
-                        loop[checkPoint + 2]->vproxy.pointer()->pos, fh->data->sp.orthogonal_vector());
+                        loop[(checkPoint + 1)%n]->vproxy.pointer()->pos,
+                        loop[(checkPoint + 2)%n]->vproxy.pointer()->pos, normal);
+
+                    if (pMeshList->at(id)->bInverse)
+                        inverseRelation(sample[id]);
                 }
             }
         }
@@ -508,7 +539,7 @@ namespace CSG
         return pass;
     }
 
-    void MyAlgorithm::addLoop(ItstGraph::Loop& loop)
+    void MyAlgorithm::addLoop(ItstGraph::Loop& loop, size_t meshId)
     {
         int *indices = new int[loop.size()];
         for (int i = 0; i < loop.size(); i++)
@@ -523,10 +554,72 @@ namespace CSG
             indices[i] = pV->resultId;
         }
 
-        pConstruct->addSurface(indices, loop.size());
+        pConstruct->addSurface(indices, loop.size(), pMeshList->at(meshId)->bInverse);
+        SAFE_DELETE_ARRAY(indices);
     }
 
+    template <class HDS>
+    void Delegate<HDS>::operator()(HDS& hds) {
 
+        int count = 0;
+        using namespace std;
+
+        CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
+        B.begin_surface(points.size(), indices.size() + indices2.size());
+
+        cout << "recording endpoints\n";
+        cout.precision(10);
+        for (size_t i = 0; i < points.size(); i++)
+        {
+            B.add_vertex(points[i]);
+            cout << count++ << "\t" << points[i] << endl;
+        }
+
+        for (size_t i = 0; i < indices.size(); i++)
+        {
+            B.begin_facet();
+            for (int j = 0; j < 3; j++)
+            {
+                B.add_vertex_to_facet(indices[i].idx[j]);
+                std::cout << indices[i].idx[j] << "\t";
+            }
+            std::cout << std::endl;
+            B.end_facet();
+            count++;
+        }
+
+        for (size_t i = 0; i < indices2.size(); i++)
+        {
+            std::vector<int> vec;
+            for (int j = 0; j < indices2[i].sz; j++)
+                vec.push_back(indices2[i].idx[j]);
+
+            if (!B.test_facet(vec.begin(), vec.end()))
+            {
+                std::cout << "detect error facets!\n";
+                for (auto id : vec)
+                    std::cout << id << '\t';
+                std::cout << std::endl;
+
+                count++;
+                continue;
+            }
+
+            B.begin_facet();
+            for (int j = 0; j < indices2[i].sz; j++)
+            {
+                std::cout << indices2[i].idx[j] << "\t";
+                B.add_vertex_to_facet(indices2[i].idx[j]);
+            }
+            std::cout << std::endl;
+            B.end_facet();
+            if (B.error()) assert(0);
+
+            count++;
+        }
+
+        B.end_surface();
+    }
     //int baoshu = 1;
     //int zuobiao = 0;
     //int renshu = renshu0;

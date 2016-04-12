@@ -20,8 +20,6 @@ namespace CSG
         return false;
     }
 
-    typedef int8_t Indicator;
-
     class IIndicatorVector
     {
     public:

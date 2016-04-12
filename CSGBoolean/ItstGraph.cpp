@@ -72,10 +72,8 @@ namespace CSG
             // a before than b
             auto aa = a.pointer()->pos;
             auto bb = b.pointer()->pos;
-
+            bool res = operator()(aa, bb); 
 #ifdef _DEBUG
-            aa.computeCoord();
-            bb.computeCoord();
             CGAL::Vector_3<K> p0 = m_q.orthogonal_vector();
             CGAL::Vector_3<K> p1 = m_p.orthogonal_vector();
             auto &positive = CGAL::cross_product(p0, p1);
@@ -84,12 +82,9 @@ namespace CSG
             CGAL::Point_3<K> posb(bb.getCoord());
 
             double res2 = (posa - CGAL::ORIGIN) * positive - (posb - CGAL::ORIGIN) * positive;
-            bool res = operator()(aa, bb);
-
             assert(res && res2 < 1e-5 || !res && res2 > -1e-5);
-
-            return res;
 #endif
+            return res;
         }
     };
 
@@ -131,8 +126,8 @@ namespace CSG
         m_maps[node.vproxy.pointer()->idx] = node.id;
     }
 
-    ItstGraph::ItstGraph(FH fh, ItstAlg* data, int meshId):
-        mp_alg(data), m_fh(fh), m_meshId(meshId)
+    ItstGraph::ItstGraph(FH fh, ItstAlg* data, int meshId, std::vector<MyMesh*>* meshes) :
+        mp_alg(data), m_fh(fh), m_meshId(meshId), mp_meshList(meshes)
     {
         m_bValid = false;
 
@@ -334,6 +329,7 @@ namespace CSG
                 auto &node = m_nodes[edge.vId];
                 node.indicator = new SampleIndicatorVector(m_ids);
 
+                /* 如果种子没有context，则直接继承种子的这部分indicators */
                 for (int id : m_ids)
                 {
                     assert((*startNode.indicator)[id] != REL_UNKNOWN &&
@@ -343,16 +339,24 @@ namespace CSG
                         node.indicator->at(id) = startNode.indicator->at(id);
                 }
 
+                /* 如果衍生有context，直接为REL_ON_BOUNDARY */
                 for (auto& ctx : node.vproxy.pointer()->ctx)
                     if (m_meshId != ctx.meshId)
                         node.indicator->at(ctx.meshId) = REL_ON_BOUNDARY;
 
+                /* 剩下的种子有context而衍生没有的，用relationOfContext求解 */
                 for (int id : m_ids)
                 {
                     if (node.indicator->at(id) == REL_UNKNOWN)
                     {
                         auto location = startNode.vproxy.pointer()->findInContext(id);
-                        node.indicator->at(id) = relationOfContext(*location, node.vproxy.pointer()->pos);
+                        auto relation = relationOfContext(*location, node.vproxy.pointer()->pos);
+
+                        /* 修正结果 */
+                        if (mp_meshList->at(id)->bInverse)
+                            inverseRelation(relation);
+
+                        node.indicator->at(id) = relation;
                     }
                 }
 

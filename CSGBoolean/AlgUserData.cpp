@@ -154,8 +154,6 @@ namespace CSG
             }
         }
 
-
-
         SAFE_DELETE(eCtx);
         return rel;
     }

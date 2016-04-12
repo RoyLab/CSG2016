@@ -65,11 +65,11 @@ namespace CSG
 
     static RayTriRelation RayFaceTest(K::Ray_3 &ray, K::Triangle_3& triangle)
     {
-        if (triangle.has_on(ray.source()))
-            return RTR_ON;
-
         bool result = CGAL::do_intersect(ray, triangle);
         if (!result) return RTR_NONE;
+
+        if (triangle.has_on(ray.source()))
+            return RTR_ON;
 
         for (size_t i = 0; i < 3; i++)
             if (CGAL::coplanar(ray.source(), ray.point(1), triangle.vertex(i), triangle.vertex((i + 1) % 3)))

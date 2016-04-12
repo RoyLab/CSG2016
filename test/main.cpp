@@ -7,6 +7,6 @@ int main()
 {
     test();
     std::cout << "This is the end!" << std::endl;
-    _sleep(10000);
+    system("pause");
     return 0;
 }

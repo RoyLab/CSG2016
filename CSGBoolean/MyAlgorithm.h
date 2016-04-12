@@ -99,11 +99,11 @@ namespace CSG
         void floodSimpleGroup(GroupParseInfo& infos, SeedInfo& s);
         void figureOutFaceInds(SeedInfo& s, int meshId, Relation** relation);
 
-        void AddFacet(FH fh);
+        void AddFacet(FH fh, size_t meshId);
         bool isSameGroup(FH fh0, FH fh1) const;
         void genVertexInds(IIndicatorVector* target, VH vh) const;
         bool needAdd(FH fh, ItstGraph::Loop& loop, TestTree& testList);
-        void addLoop(ItstGraph::Loop&);
+        void addLoop(ItstGraph::Loop&, size_t meshId);
 
     private:
         boost::shared_ptr<MyMesh>   csgResult;
@@ -142,41 +142,7 @@ namespace CSG
 
         Delegate() {}
 
-        void operator()(HDS& hds) {
-
-            CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
-            B.begin_surface(points.size(), indices.size()+indices2.size());
-
-            for (size_t i = 0; i < points.size(); i++)
-                B.add_vertex(points[i]);
-
-            for (size_t i = 0; i < indices.size(); i++)
-            {
-                B.begin_facet();
-                for (int j = 0; j < 3; j++)
-                {
-                    B.add_vertex_to_facet(indices[i].idx[j]);
-                    //std::cout << indices[i].idx[j] << "\t";
-                }
-                //std::cout << std::endl;
-                B.end_facet();
-            }
-
-            for (size_t i = 0; i < indices2.size(); i++)
-            {
-                B.begin_facet();
-                for (int j = 0; j < indices2[i].sz; j++)
-                {
-                    //std::cout << indices2[i].idx[j] << "\t";
-                    B.add_vertex_to_facet(indices2[i].idx[j]);
-                }
-                //std::cout << std::endl;
-                B.end_facet();
-                if (B.error()) assert(0);
-            }
-
-            B.end_surface();
-        }
+        void operator()(HDS& hds);
 
         size_t add_vertex(const Point& pts)
         {
@@ -184,14 +150,22 @@ namespace CSG
             return points.size() - 1;
         }
 
-        void addFacets(int i, int j, int k)
+        void addFacets(int i, int j, int k, bool inverse = false)
         {
-            indices.emplace_back(i, j, k);
+            if (inverse)
+                indices.emplace_back(k, j, i);
+            else
+                indices.emplace_back(i, j, k);
         }
 
-        void addSurface(int* i, size_t n)
+        void addSurface(int* indices, size_t n, bool inverse = false)
         {
-            indices2.emplace_back(i, n);
+            if (inverse)
+            {
+                for (int i = 0; i < n / 2; i++)
+                    std::swap(indices[i], indices[n - 1 - i]);
+            }
+            indices2.emplace_back(indices, n);
         }
 
     private:
