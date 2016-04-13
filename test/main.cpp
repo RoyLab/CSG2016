@@ -5,7 +5,12 @@ using namespace CSG;
 
 int main()
 {
-    test();
+    std::vector<std::string> names;
+    names.push_back("../../models/ball1.off");
+    names.push_back("../../models/ball2.off");
+
+    std::string expr("0-1");
+    test(names, expr);
     std::cout << "This is the end!" << std::endl;
     system("pause");
     return 0;

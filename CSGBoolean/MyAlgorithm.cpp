@@ -179,6 +179,7 @@ namespace CSG
                 {
                     infos.curMeshId = curSeed.meshId;
                     infos.curMeshSeedQueue.push(curSeed);
+                    curSeed.seedFacet->mark = SEEDED1;
 
                     while (!infos.curMeshSeedQueue.empty())
                     {
@@ -312,6 +313,7 @@ namespace CSG
 
         Queue<FH> queue;
         queue.push(s.seedFacet);
+        s.seedFacet->mark = SEEDED2;
 
         TestTree testList;
         CSGTreeNode* curTree = copy2(infos.ttree1.get(), infos.curTreeLeaves);
@@ -337,12 +339,15 @@ namespace CSG
                 for (int i = 0; i < 3; i++)
                 {
                     auto neighbour = curface->edges[i]->opposite()->facet();
-                    if (neighbour->mark == SEEDED || neighbour->mark == VISITED) // 跟ray-tracing有关
+                    if (neighbour->mark == SEEDED2 || neighbour->mark == VISITED) // 跟ray-tracing有关
                         continue;
 
                     if (isSameGroup(neighbour, curface))
+                    {
                         queue.push(neighbour);
-                    else
+                        neighbour->mark = SEEDED2;
+                    }
+                    else if (neighbour->mark != SEEDED1)
                     {
                         SeedInfo seed2;
                         seed2.seedFacet = neighbour;
@@ -352,8 +357,8 @@ namespace CSG
                         genVertexInds(seed2.indicators.get(), seed2.seedVertex);
 
                         infos.curMeshSeedQueue.push(seed2);
+                        neighbour->mark = SEEDED1;
                     }
-                    neighbour->mark = SEEDED;
                 }
             }
             queue.pop();
@@ -371,6 +376,8 @@ namespace CSG
         seed.seedVertex = s.seedVertex;
         seed.indicators.reset(new SampleIndicatorVector(
             *reinterpret_cast<FullIndicatorVector*>(s.indicators.get()), ids));
+
+        seed.seedFacet->mark = SEEDED2;
         q.emplace(seed);
 
         Relation *curRelationTable = new Relation[pMeshList->size()];
@@ -425,7 +432,7 @@ namespace CSG
                     int localId = ig->get_maps()[gId];
                     SampleIndicatorVector* inds = reinterpret_cast<SampleIndicatorVector*>(ig->get_nodes()[localId].indicator);
 
-                    if (neighbor->mark == SEEDED || neighbor->mark == VISITED) // 跟ray-tracing有关
+                    if (neighbor->mark == SEEDED2 || neighbor->mark == VISITED) // 跟ray-tracing有关
                         continue;
 
                     if (isSameGroup(neighbor, curface))
@@ -434,16 +441,17 @@ namespace CSG
                         *sample = *inds;
                         seed2.indicators.reset(sample);
                         q.push(seed2);
+                        neighbor->mark = SEEDED2;
                     }
-                    else
+                    else if (neighbor->mark != SEEDED1)
                     {
                         auto full = new FullIndicatorVector(*reinterpret_cast<FullIndicatorVector*>(s.indicators.get()));
                         full->fillInSample(inds, ids);
                         seed2.indicators.reset(full);
 
                         infos.curMeshSeedQueue.push(seed2);
+                        neighbor->mark = SEEDED1;
                     }
-                    neighbor->mark = SEEDED;
                 }
 
                 SAFE_DELETE(ig);
@@ -567,12 +575,12 @@ namespace CSG
         CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
         B.begin_surface(points.size(), indices.size() + indices2.size());
 
-        cout << "recording endpoints\n";
-        cout.precision(10);
+        //cout << "recording endpoints\n";
+        //cout.precision(10);
         for (size_t i = 0; i < points.size(); i++)
         {
             B.add_vertex(points[i]);
-            cout << count++ << "\t" << points[i] << endl;
+            //cout << count++ << "\t" << points[i] << endl;
         }
 
         for (size_t i = 0; i < indices.size(); i++)
@@ -581,9 +589,9 @@ namespace CSG
             for (int j = 0; j < 3; j++)
             {
                 B.add_vertex_to_facet(indices[i].idx[j]);
-                std::cout << indices[i].idx[j] << "\t";
+                //std::cout << indices[i].idx[j] << "\t";
             }
-            std::cout << std::endl;
+            //std::cout << std::endl;
             B.end_facet();
             count++;
         }
@@ -608,10 +616,10 @@ namespace CSG
             B.begin_facet();
             for (int j = 0; j < indices2[i].sz; j++)
             {
-                std::cout << indices2[i].idx[j] << "\t";
+                //std::cout << indices2[i].idx[j] << "\t";
                 B.add_vertex_to_facet(indices2[i].idx[j]);
             }
-            std::cout << std::endl;
+            //std::cout << std::endl;
             B.end_facet();
             if (B.error()) assert(0);
 

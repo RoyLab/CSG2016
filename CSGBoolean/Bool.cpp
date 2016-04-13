@@ -123,16 +123,10 @@ namespace CSG
     //    return 0;
     //}
 
-    extern "C" CSG_API void test()
+    extern "C" CSG_API void test(std::vector<std::string>& names, std::string& expr)
     {
         //main1("../../models/horse.off");
         GS::exactinit();
-        std::vector<std::string> names;
-        names.push_back("../../models/box1.off");
-        names.push_back("../../models/box2.off");
-
-        std::string expr("0*1");
-
         std::vector<MyMesh*> meshList;
         loadMesh(meshList, names);
 
