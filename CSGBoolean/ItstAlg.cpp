@@ -235,6 +235,7 @@ namespace
         //std::cout << result->A.coord[0] << " " << result->A.coord[1] << " " << result->A.coord[2] << " " << std::endl;
         //std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
 
+        assert(orientation(p[0], p[1], result->B.getPlane(2), result->A.getPlane(2)) > 0);
         assert(result->tagA[0] == INNER && result->tagB[0] == INNER || result->tagA[0] != result->tagB[0]);
         assert(result->tagA[1] == INNER && result->tagB[1] == INNER || result->tagA[1] != result->tagB[1]);
 
@@ -460,8 +461,6 @@ namespace CSG
     void ItstAlg::getVProxy(PBPoint<K>& point, int addwhat[2], FH fhs[2], PosTag tags[2], 
         int oId[2], VProxyItr outproxy[2], uint32_t meshId[2])
     {
-        VProxyItr proxy;
-
         for (int i = 0; i < 2; i++)
         {
             if (addwhat[i] > 0)
@@ -487,9 +486,15 @@ namespace CSG
                 mergeProxy(outproxy[1], outproxy[0]);
         }
         else if (oId[0] == -1)
+        {
+            outproxy[1].pointer()->addContext(meshId[0], fhs[0], tags[0]);
             outproxy[0] = outproxy[1];
+        }
         else
+        {
+            outproxy[0].pointer()->addContext(meshId[1], fhs[1], tags[1]);
             outproxy[1] = outproxy[0];
+        }
     }
 
     bool ItstAlg::IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2])
@@ -499,10 +504,28 @@ namespace CSG
         FH fhs[2] = { fh0, fh1 };
         TriTriIsectResult<K> result;
 
+        /* 统一正方向cross(n0, n1) */
         Sign sign = tri_tri_intersect(t, sp, &result, fhs);
 
         if (sign == NOT_INTERSECT || sign == INTERSECT_ON_POINT || sign == COPLANAR)
             return false;
+
+        /* 记录coplanar的原因是，没有原因 */
+        //if (sign == COPLANAR)
+        //{
+        //    ItstTriangle*& it0 = fh0->data->itstTri;
+        //    ItstTriangle*& it1 = fh1->data->itstTri;
+
+        //    if (!it0) it0 = new ItstTriangle(fh0);
+        //    if (!it1) it1 = new ItstTriangle(fh1);
+
+        //    if (CGAL::do_intersect(t[0], t[1]))
+        //    {
+        //        it0->coplanars[meshId[1]].push_back(fh1);
+        //        it1->coplanars[meshId[0]].push_back(fh0);
+        //    }
+        //    return true;
+        //}
 
         int addwhat[2]; // 0: nothing, 1: add vertex, 2: add line
         checkManifoldEdge(fh0, fh1, overlaps, result, addwhat, meshId);
@@ -543,22 +566,26 @@ namespace CSG
 
         // prepare the line segments
         ItstLine line;
-        for (int i = 0; i < 2; i++)
+        if (addwhat[0] > 1)
         {
-            if (addwhat[i] > 1)
-            {
-                line.pts[0].tag = result.tagA[i];
-                line.pts[1].tag = result.tagB[i];
+            line.pts[0].vertex = proxyA[0];
+            line.pts[1].vertex = proxyB[0];
+            line.plane = fhs[1];
+            assert(line.check(fhs[0]->data->sp));
 
-                line.pts[0].idx = oIdA[i];
-                line.pts[1].idx = oIdB[i];
+            fhs[0]->data->itstTri->isectLines[meshId[1]].push_back(line);
+            fhs[0]->data->itstTri->meshIds.insert(meshId[1]);
+        }
 
-                line.pts[0].gIdx = proxyA->pointer()->idx;
-                line.pts[1].gIdx = proxyB->pointer()->idx;
+        if (addwhat[1] > 1)
+        {
+            line.pts[0].vertex = proxyB[1];
+            line.pts[1].vertex = proxyA[1];
+            line.plane = fhs[0];
+            assert(line.check(fhs[1]->data->sp));
 
-                fhs[i]->data->itstTri->isectLines.push_back(line);
-                fhs[i]->data->itstTri->meshIds.insert(meshId[(i + 1) % 2]);
-            }
+            fhs[1]->data->itstTri->isectLines[meshId[0]].push_back(line);
+            fhs[1]->data->itstTri->meshIds.insert(meshId[0]);
         }
         return true;
     }
@@ -572,4 +599,215 @@ namespace CSG
             b.pointer()->ctx.begin(), b.pointer()->ctx.end());
         *b = *a;
     }
+
+
+    void ItstAlg::resolveIntersection(FH fh, size_t meshId)
+    {
+        std::map<int, std::vector<VProxyItr>> modifyPoints;
+
+        auto tri = fh->data->itstTri;
+        assert(tri);
+        
+        if (tri->isectLines.size() == 0)
+            return;
+
+        if (tri->isectLines.size() == 1)
+        {
+            tri->unifiedLines.swap(tri->isectLines.begin()->second);
+            tri->isectLines.clear();
+            return;
+        }
+
+        /* 初始化ID */
+        int idx = 0;
+        for (auto& pair : tri->isectLines)
+        {
+            for (auto& line : pair.second)
+                line.id = idx++;
+        }
+
+        /* for each pair */
+        for (auto& pair : tri->isectLines)
+        {
+            for (auto pair2 = tri->isectLines.begin(); pair2->first != pair.first; pair2++)
+            {
+                size_t meshIds[3] = { pair.first, pair2->first, meshId };
+                for (auto& line0 : pair.second)
+                {
+                    for (auto& line1 : pair2->second)
+                    {
+                        RelationToPlane vx2fx[2][2];
+                        vx2fx[0][1] = line0.pts[0].vertex.pointer()->pos.classifyByPlane(line1.plane->data->sp);
+                        vx2fx[1][1] = line0.pts[1].vertex.pointer()->pos.classifyByPlane(line1.plane->data->sp);
+                        if (vx2fx[0][1] == vx2fx[1][1])
+                        {
+                            if (vx2fx[1][1] == On)
+                            {
+                                /* 对这四个点排序，如果有相交，去掉两个线 */
+                                ReportError("unimplemented!");
+                            }
+                            continue;
+                        }
+
+                        vx2fx[0][0] = line1.pts[0].vertex.pointer()->pos.classifyByPlane(line0.plane->data->sp);
+                        vx2fx[1][0] = line1.pts[1].vertex.pointer()->pos.classifyByPlane(line0.plane->data->sp);
+                        if (vx2fx[0][0] == vx2fx[1][0])
+                        {
+                            /* 因为前面已经不是两个On了，这边肯定不是 */
+                            assert(vx2fx[0][0] != On && vx2fx[1][0] != On);
+                            continue;
+                        }
+
+                        if (vx2fx[0][1] == On || vx2fx[1][1] == On)
+                        {
+                            /* ----------- 1 */
+                            /*      |        */
+                            /*      |0       */
+                            assert(vx2fx[0][0] != On && vx2fx[1][0] != On); /* 否则这里应该在checkDuplicated阶段就检查到 */
+                            if (vx2fx[0][1] == On)
+                                modifyPoints[line1.id].push_back(line0.pts[0].vertex);
+                            else
+                                modifyPoints[line1.id].push_back(line0.pts[1].vertex);
+                        }
+                        else if (vx2fx[0][0] == On || vx2fx[1][0] == On)
+                        {
+                            /* ----------- 0 */
+                            /*      |        */
+                            /*      |1       */
+                            assert(vx2fx[0][1] != On && vx2fx[1][1] != On); /* 否则这里应该在checkDuplicated阶段就检查到 */
+                            if (vx2fx[0][0] == On)
+                                modifyPoints[line0.id].push_back(line1.pts[0].vertex);
+                            else
+                                modifyPoints[line0.id].push_back(line1.pts[1].vertex);
+                        }
+                        else
+                        {
+                            PBPoint<K> p(line0.plane->data->sp, line1.plane->data->sp, fh->data->sp);
+                            VProxyItr outcomes[3];
+
+                            const PosTag tags[] = { INNER, VER_0, VER_1, VER_2, EDGE_0, EDGE_1, EDGE_2 };
+                            const FH fhs[] = { fh, line0.plane, line1.plane };
+
+                            PosTag flags[3] = { NONE, NONE, INNER };
+                            int ids[3] = { -1, -1, -1 };
+                            for (size_t i = 0; i < 2; i++)
+                            {
+                                for (auto tag : tags)
+                                {
+                                    ids[i] = checkDuplicatedPoints(p, fhs[i], tag, outcomes[i]);
+                                    if (ids[i] != -1)
+                                    {
+                                        flags[i] = tag;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            ids[2] = checkDuplicatedPoints(p, fh, INNER, outcomes[2]);
+
+                            std::vector<int> positives;
+                            std::vector<int> negatives;
+                            for (size_t i = 0; i < 3; i++)
+                            {
+                                if (ids[i] > -1) positives.push_back(i);
+                                else negatives.push_back(i);
+                            }
+                            
+
+                            /* 在所有的相关面中加入该点，合并context，并且给出最终的proxy */
+                            VProxyItr proxy;
+                            switch (positives.size())
+                            {
+                            case 0:
+                            {
+                                proxy = addVEntity(p);
+                                for (int i = 0; i < 3; i++)
+                                {
+                                    proxy.pointer()->addContext(meshIds[i], fhs[i], INNER);
+                                    addPoint(fhs[i], INNER, proxy); /* 如果哪里都没找到，点一定都落在inner里面，未证明 */
+                                }
+                                break;
+                            }
+                            case 1:
+                            {
+                                int id = positives[0];
+                                proxy = outcomes[id];
+                                for (int i = 0; i < 2; i++)
+                                {
+                                    proxy.pointer()->addContext(meshIds[(id + i) % 3], fhs[(id + i) % 3], INNER);
+                                    addPoint(fhs[(id + i) % 3], INNER, proxy);
+                                }
+                                break;
+                            }
+                            case 2:
+                            {
+                                if (*outcomes[positives[0]].pointer() < *outcomes[positives[1]].pointer())
+                                    mergeProxy(outcomes[0], outcomes[1]);
+                                else mergeProxy(outcomes[1], outcomes[0]);
+                                proxy = outcomes[0];
+                                proxy.pointer()->addContext(meshIds[negatives[0]], fhs[negatives[0]], INNER);
+                                addPoint(fhs[negatives[0]], INNER, proxy);
+                                break;
+                            }
+                            case 3:
+                            {
+                                int minI = 0;
+                                for (int i = 1; i < 3; i++)
+                                {
+                                    if (*outcomes[i].pointer() < *outcomes[minI].pointer())
+                                        minI = i;
+                                }
+                                mergeProxy(outcomes[minI], outcomes[(minI+1)%3]);
+                                mergeProxy(outcomes[minI], outcomes[(minI+2)%3]);
+                                proxy = outcomes[minI];
+                                break;
+                            }
+                            }
+
+                            modifyPoints[line0.id].push_back(proxy);
+                            modifyPoints[line1.id].push_back(proxy);
+                        }
+                    }
+                } // end for pair
+            } 
+        } // end for
+
+        for (auto& pair : tri->isectLines)
+        {
+            for (auto& line : pair.second)
+            {
+                auto itr = modifyPoints.find(line.id);
+                if (itr == modifyPoints.end())
+                {
+                    tri->unifiedLines.push_back(line);
+                }
+                else
+                {
+                    PBPointCompare2 comp(fh->data->sp, line.plane->data->sp);
+                    auto& points = itr->second;
+                    std::sort(points.begin(), points.end(), comp);
+                    ItstLine newline(line);
+
+                    newline.pts[0].vertex = line.pts[0].vertex;
+                    newline.pts[1].vertex = points[0];
+                    tri->unifiedLines.push_back(newline);
+
+                    newline.pts[0].vertex = points[points.size() - 1];
+                    newline.pts[1].vertex = line.pts[1].vertex;
+                    tri->unifiedLines.push_back(newline);
+
+                    for (size_t i = 0; i < points.size() - 1; i++)
+                    {
+                        newline.pts[0].vertex = points[i];
+                        newline.pts[1].vertex = points[i+1];
+                        tri->unifiedLines.push_back(newline);
+                    }
+                }
+            }
+        }
+
+        tri->isectLines.clear();
+    }
+
+
 }

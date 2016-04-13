@@ -152,6 +152,109 @@ namespace CSG
         }
     };
 
+
+    class PBPointCompare
+    {
+    public:
+        typedef Plane_ext<K> Plane;
+        typedef PBPoint<K> Point;
+
+        COMMON_PROPERTY(Plane, p);
+        COMMON_PROPERTY(Plane, q);
+    public:
+        PBPointCompare(Plane& sp, Plane& bp)
+        {
+            m_p = sp; m_q = bp;
+        }
+
+        bool compare(Point& a, Point& b)
+        {
+            Plane pa = a.getPlanes()[0];
+            Plane pb = b.getPlanes()[0];
+
+            double s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+
+            if (s == 0.0)
+            {
+                pa = a.getPlanes()[1];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+            }
+            assert(s != 0.0);
+            if (s == CGAL::NEGATIVE) pa = pa.opposite();
+
+            s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+
+            if (s == 0.0)
+            {
+                pb = b.getPlanes()[1];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+            }
+            assert(s != 0.0);
+            if (s == CGAL::NEGATIVE) pb = pb.opposite();
+
+            double sign = orientation(m_q, m_p, pa, pb);
+
+            if (sign > 0.0) return true;
+            else return false;
+        }
+
+        bool operator()(VProxyItr& a, VProxyItr& b)
+        {
+            // a before than b
+            auto aa = a.pointer()->pos;
+            auto bb = b.pointer()->pos;
+            bool res = compare(aa, bb);
+#ifdef _DEBUG
+            CGAL::Vector_3<K> p0 = m_q.orthogonal_vector();
+            CGAL::Vector_3<K> p1 = m_p.orthogonal_vector();
+            auto &positive = CGAL::cross_product(p0, p1);
+
+            CGAL::Point_3<K> posa(aa.getCoord());
+            CGAL::Point_3<K> posb(bb.getCoord());
+
+            double res2 = (posa - CGAL::ORIGIN) * positive - (posb - CGAL::ORIGIN) * positive;
+            assert(res && res2 < 1e-5 || !res && res2 > -1e-5);
+#endif
+            return res;
+        }
+    };
+
+    /* used for merging intersection */
+    class PBPointCompare2 :
+        public PBPointCompare
+    {
+    public:
+        PBPointCompare2(Plane& sp, Plane& bp) :
+            PBPointCompare(sp, bp){}
+
+        bool compare(Point& a, Point& b)
+        {
+            Plane pa = a.getPlanes()[2];
+            Plane pb = b.getPlanes()[2]; //之所以是2,因为2一定是个非支撑平面
+
+            double s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+
+            assert(s != 0.0);
+            if (s == CGAL::NEGATIVE) pa = pa.opposite();
+
+            s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+
+            assert(s != 0.0);
+            if (s == CGAL::NEGATIVE) pb = pb.opposite();
+
+            double sign = orientation(m_q, m_p, pa, pb);
+
+            if (sign > 0.0) return true;
+            else return false;
+        }
+    };
+
     Relation relationOfContext(const Context<MyMesh>& ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx = nullptr);
     Relation determineRelationOfFacet(const Context<MyMesh>& ctx, const PBPoint<K>& p0, const PBPoint<K>& p1, const CGAL::Vector_3<K>& normal);
 }

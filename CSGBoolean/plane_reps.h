@@ -156,6 +156,15 @@ namespace CSG
             return true;
         }
 
+        double estimateSquaredDistance(const PBPoint& p) const
+        {
+            return (coord - p.coord).squared_distance();
+        }
+
+        RelationToPlane classifyByPlane(const Plane_ext<_R>& p) const
+        {
+            return p.classifyPointToPlane(planes[0], planes[1], planes[2]);
+        }
 
         void computeCoord()
         {
@@ -165,6 +174,7 @@ namespace CSG
         }
 
         const PlaneExt* getPlanes() const { return planes; }
+        const PlaneExt& getPlane(size_t i) const { return planes[i]; }
         const Point& getCoord() const { return coord; }
 
     private:
@@ -409,12 +419,77 @@ namespace CSG
         return sign1;
     }
 
+    template <class Vector>
+    double orientation(const Vector& p, const Vector& q, const Vector& r)
+    {
+        double3x3 mat{ p.x(), p.y(), p.z(),
+            q.x(), q.y(), q.z(),
+            r.x(), r.y(), r.z() };
+
+        double sign1 = GS::adaptiveDet3x3Sign(mat);
+        CGAL::Sign sign2 = CGAL::sign_of_determinant(p.x(), p.y(), p.z(),
+            q.x(), q.y(), q.z(),
+            r.x(), r.y(), r.z());
+
+        double d = std::abs(CGAL::determinant(p.x(), p.y(), p.z(),
+            q.x(), q.y(), q.z(),
+            r.x(), r.y(), r.z()));
+        assert(sign1 == 0.0 && (sign2 == CGAL::ZERO || d < 1e-10) ||
+            sign1 < 0.0 && sign2 == CGAL::NEGATIVE ||
+            sign1 > 0.0 && sign2 == CGAL::POSITIVE);
+        return sign1;
+    }
+
     template <class _R>
-    bool same_orientation(const PBPoint<_R>& p0, const PBPoint<_R>& p1, const PBPoint<_R>& p2, const CGAL::Vector_3<_R>& normal)
+    static inline bool same_orientation(const PBPoint<_R>& p0, const PBPoint<_R>& p1, const PBPoint<_R>& p2, const CGAL::Vector_3<_R>& normal)
     {
         auto e1 = p1.getCoord() - p0.getCoord();
         auto e2 = p2.getCoord() - p1.getCoord();
 
         return CGAL::orientation(e1, e2, normal) == CGAL::POSITIVE;
     }
+
+    template <class RT>
+    static inline double determinant3x3(const RT& a00, const RT& a01, const RT& a02,
+        const RT& a10, const RT& a11, const RT& a12,
+        const RT& a20, const RT& a21, const RT& a22)
+    {
+        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a10, a11, a12, a20, a21, a22);
+        double3x3 mat = { a00, a01, a02, a10, a11, a12, a20, a21, a22 };
+        double ss = GS::adaptiveDet3x3Sign(mat);
+        assert(ss == 0.0 && s == CGAL::ZERO ||
+            ss < 0.0 && s == CGAL::NEGATIVE ||
+            ss > 0.0 && s == CGAL::POSITIVE);
+        return ss;
+    }
+
+    template <class RT>
+    static inline double determinant4x4(const RT& a00, const RT& a01, const RT& a02, const RT& a03,
+        const RT& a10, const RT& a11, const RT& a12, const RT& a13,
+        const RT& a20, const RT& a21, const RT& a22, const RT& a23,
+        const RT& a30, const RT& a31, const RT& a32, const RT& a33)
+    {
+        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33);
+        double3x3 mat = { a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33 };
+        double ss = GS::adaptiveDet4x4Sign(mat);
+        assert(ss == 0.0 && s == CGAL::ZERO ||
+            ss < 0.0 && s == CGAL::NEGATIVE ||
+            ss > 0.0 && s == CGAL::POSITIVE);
+        return ss;
+    }
+
+    static inline int determinePhase(double abcos, double absin)
+    {
+        if (abcos >= 0.0 && absin >= 0.0)
+            return 1;
+
+        if (abcos < 0.0 && absin >= 0.0)
+            return 2;
+
+        if (abcos < 0.0 && absin < 0.0)
+            return 3;
+
+        else return 4;
+    }
+
 }

@@ -4,6 +4,7 @@
 #include <CGAL\HalfedgeDS_halfedge_max_base_with_id.h>
 #include <CGAL\HalfedgeDS_face_max_base_with_id.h>
 #include <set>
+#include <map>
 
 #include <boost\shared_ptr.hpp>
 
@@ -15,6 +16,7 @@ namespace CSG
 {
     struct ItstTriangle;
     struct VEntity;
+    class ItstAlg;
 
     typedef std::list<VEntity*>     VEntities;
     typedef VEntities::iterator     VProxy;
@@ -145,25 +147,35 @@ namespace CSG
     typedef MyMesh::Halfedge_handle EH;\
     typedef MyMesh::Face_handle FH
 
+    DEFINE_HANDLES;
 
+    /* 注意确保pts顺序顺着方向n0 x plane.sp */
     struct ItstLine
     {
         // tag 和 idx 共同确定了独一无二的面内点坐标
         struct
         {
-            PosTag tag = NONE;
-            int gIdx = -1;
-            int idx = -1;
+            //PosTag tag = NONE;
+            //int idx = -1;
+            VProxyItr vertex;
         } pts[2];
+
+        FH plane;
+        int id = -1;
+
+        bool check(const Plane_ext<K>& sp);
     };
 
     typedef std::list<ItstLine> ItstLineList;
+    typedef std::map<int, ItstLineList> ItstLineLists;
 
     struct ItstTriangle
     {
-        ItstLineList            isectLines;
+        ItstLineLists           isectLines;
+        ItstLineList            unifiedLines;
         std::vector<VProxyItr>  inVertices;
         std::set<int>           meshIds;
+
 
         ItstTriangle(MyMesh::Face_handle fh){}
     };

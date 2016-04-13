@@ -67,7 +67,7 @@ namespace CSG
     public:
 
         ItstGraph(FH fh, ItstAlg* data, int meshId, std::vector<MyMesh*>* meshes);
-        ~ItstGraph();
+        ~ItstGraph(){}
 
         template <class Container>
         void floodFilling(VH vh, SampleIndicatorVector& sample, Container& ids)

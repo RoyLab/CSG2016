@@ -62,6 +62,7 @@ namespace CSG
         void getVProxy(PBPoint<K>& point, int addwhat[2], FH fhs[2], PosTag tags[2], int oId[2], VProxyItr outproxy[2], uint32_t meshId[2]);
         int addPoint(FH fh, PosTag tags, VProxyItr proxy);
         VProxyItr addVEntity(PBPoint<K>& point);
+        void resolveIntersection(FH tri, size_t meshId);
 
         VProxies                vProxy;
         VEntities               vEnt;

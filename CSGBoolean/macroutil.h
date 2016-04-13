@@ -38,7 +38,7 @@
 
 #ifndef COMMON_PROPERTY
 #define COMMON_PROPERTY(__type__,__name__) \
-private: \
+protected: \
 __type__ m_##__name__; \
 public: \
 const __type__ & get_##__name__() const{ \
@@ -54,7 +54,7 @@ m_##__name__ = _##__name__##_; \
 
 #ifndef COMMON_PROPERTY_POINTER
 #define COMMON_PROPERTY_POINTER(__type__,__name__) \
-private: \
+protected: \
 __type__ * mp_##__name__ = nullptr; \
 public: \
 const __type__ * get_##__name__() const{ \
@@ -70,7 +70,7 @@ mp_##__name__ = _##__name__##_; \
 
 #ifndef STATIC_PROPERTY
 #define STATIC_PROPERTY(__type__,__name__) \
-private: \
+protected: \
 static __type__ __name__; \
 public: \
 static __type__ & get_##__name__(){ \
@@ -84,7 +84,7 @@ __name__ = _##__name__##_; \
 
 #ifndef STATIC_PROPERTY_POINTER
 #define STATIC_PROPERTY_POINTER(__type__,__name__) \
-private: \
+protected: \
 static __type__ * __name__; \
 public: \
 static __type__ * get_##__name__(){ \

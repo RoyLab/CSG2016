@@ -3,6 +3,7 @@
 
 #include "adaptive.h"
 #include "MyMesh.h"
+#include "AlgUserData.h"
 
 
 namespace CSG
@@ -11,12 +12,33 @@ namespace CSG
 
 #define NORMALIZE(x, c, s) (((x) - (c)) / (s) * 2.0 )
 
+
     template <class _R>
     inline CGAL::Point_3<_R> normalizePoint(const CGAL::Point_3<_R>& v, double *center, double* scale)
     {
         return CGAL::Point_3<_R>(NORMALIZE(v.x(), center[0], scale[0]),
             NORMALIZE(v.y(), center[1], scale[1]),
             NORMALIZE(v.z(), center[2], scale[2]));
+    }
+
+    bool ItstLine::check(const Plane_ext<K>& sp)
+    {
+        Plane_ext<K> ps[2];
+        for (size_t k = 0; k < 2; k++)
+            for (size_t i = 0; i < 3; i++)
+            {
+                double ori = orientation(sp.orthogonal_vector(), plane->data->sp.orthogonal_vector(), 
+                    pts[k].vertex.pointer()->pos.getPlane(i).orthogonal_vector());
+                if (ori == 0.0) continue;
+                else
+                {
+                    if (ori < 0.0) ps[k] = pts[k].vertex.pointer()->pos.getPlane(i).opposite();
+                    else ps[k] = pts[k].vertex.pointer()->pos.getPlane(i);
+                    break;
+                }
+            }
+
+        return orientation(sp, plane->data->sp, ps[1], ps[0]) > 0.0;
     }
 
     void MyMesh::calcBbox()
@@ -53,7 +75,7 @@ namespace CSG
             auto loop = itr->halfedge();
             for (size_t i = 0; i < 3; i++)
             {
-                itr->edges[(i+1)%3] = loop;
+                itr->edges[(i + 1) % 3] = loop;
                 loop = loop->next();
             }
 
@@ -91,7 +113,7 @@ namespace CSG
             center[i] = (aabb.max(i) + aabb.min(i)) / 2.0;
             scale[i] = aabb.max(i) - aabb.min(i);
         }
-        
+
         for (auto v = points_begin(); v != points_end(); v++)
             *v = normalizePoint(*v, center, scale);
 

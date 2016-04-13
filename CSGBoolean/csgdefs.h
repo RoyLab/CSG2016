@@ -135,6 +135,7 @@ namespace CSG
         case CSG::REL_OUTSIDE: rel = REL_INSIDE; break;
         case CSG::REL_SAME: rel = REL_OPPOSITE; break;
         case CSG::REL_OPPOSITE: rel = REL_SAME; break;
+        case CSG::REL_ON_BOUNDARY: rel = REL_ON_BOUNDARY; break;
         default: ReportError("unexpected relation");
         }
     }
