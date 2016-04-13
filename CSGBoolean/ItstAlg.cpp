@@ -400,7 +400,10 @@ namespace CSG
         case VER_1:
         case VER_2:
             if (fhs->vertices[vertex_idx(tags)]->data)
+            {
                 oId = 0;
+                outcome = *fhs->vertices[vertex_idx(tags)]->data->proxy;
+            }
             break;
         case EDGE_0:
         case EDGE_1:

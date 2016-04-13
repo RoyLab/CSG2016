@@ -404,6 +404,7 @@ namespace CSG
             r.a(), r.b(), r.c(), r.d(),
             s.a(), s.b(), s.c(), s.d() };
         double sign1 = GS::adaptiveDet4x4Sign(mat);
+#ifdef _DEBUG
         CGAL::Sign sign2 = CGAL::sign_of_determinant(p.a(), p.b(), p.c(), p.d(),
             q.a(), q.b(), q.c(), q.d(),
             r.a(), r.b(), r.c(), r.d(),
@@ -416,6 +417,7 @@ namespace CSG
         assert(sign1 == 0.0 && (sign2 == CGAL::ZERO || d < 1e-10) ||
             sign1 < 0.0 && sign2 == CGAL::NEGATIVE ||
             sign1 > 0.0 && sign2 == CGAL::POSITIVE);
+#endif
         return sign1;
     }
 
@@ -427,6 +429,7 @@ namespace CSG
             r.x(), r.y(), r.z() };
 
         double sign1 = GS::adaptiveDet3x3Sign(mat);
+#ifdef _DEBUG
         CGAL::Sign sign2 = CGAL::sign_of_determinant(p.x(), p.y(), p.z(),
             q.x(), q.y(), q.z(),
             r.x(), r.y(), r.z());
@@ -437,6 +440,7 @@ namespace CSG
         assert(sign1 == 0.0 && (sign2 == CGAL::ZERO || d < 1e-10) ||
             sign1 < 0.0 && sign2 == CGAL::NEGATIVE ||
             sign1 > 0.0 && sign2 == CGAL::POSITIVE);
+#endif
         return sign1;
     }
 
@@ -454,12 +458,14 @@ namespace CSG
         const RT& a10, const RT& a11, const RT& a12,
         const RT& a20, const RT& a21, const RT& a22)
     {
-        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a10, a11, a12, a20, a21, a22);
         double3x3 mat = { a00, a01, a02, a10, a11, a12, a20, a21, a22 };
         double ss = GS::adaptiveDet3x3Sign(mat);
+#ifdef _DEBUG
+        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a10, a11, a12, a20, a21, a22);
         assert(ss == 0.0 && s == CGAL::ZERO ||
             ss < 0.0 && s == CGAL::NEGATIVE ||
             ss > 0.0 && s == CGAL::POSITIVE);
+#endif
         return ss;
     }
 
@@ -469,12 +475,14 @@ namespace CSG
         const RT& a20, const RT& a21, const RT& a22, const RT& a23,
         const RT& a30, const RT& a31, const RT& a32, const RT& a33)
     {
-        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33);
         double3x3 mat = { a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33 };
         double ss = GS::adaptiveDet4x4Sign(mat);
+#ifdef _DEBUG
+        CGAL::Sign s = CGAL::sign_of_determinant(a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33);
         assert(ss == 0.0 && s == CGAL::ZERO ||
             ss < 0.0 && s == CGAL::NEGATIVE ||
             ss > 0.0 && s == CGAL::POSITIVE);
+#endif
         return ss;
     }
 

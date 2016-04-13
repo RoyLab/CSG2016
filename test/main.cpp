@@ -6,8 +6,8 @@ using namespace CSG;
 int main()
 {
     std::vector<std::string> names;
-    names.push_back("../../models/ball1.off");
-    names.push_back("../../models/ball2.off");
+    names.push_back("../../models/box1.off");
+    names.push_back("../../models/box3.off");
 
     std::string expr("0-1");
     test(names, expr);
