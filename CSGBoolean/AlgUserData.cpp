@@ -94,7 +94,7 @@ namespace CSG
     /* not implemented yet! */
     Relation determineVertexBSP(VH ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx)
     {
-        ReportError("Not implemented vertex context classfication!");
+        //ReportError("Not implemented vertex context classfication!");
         std::vector<FH> facets;
         auto end = ctx->halfedge();
         auto cur = end;
@@ -105,9 +105,35 @@ namespace CSG
         } while (cur != end);
 
         BSPTree* pTree = new BSPTree(facets);
+        auto result = pTree->determine(point);
+
+        if (pCtx && result == REL_ON_BOUNDARY)
+        {
+            auto& coins = pTree->getCoins();
+            assert(coins.size() <= 2 && !coins.empty());
+
+            if (coins.size() == 1)
+            {
+                auto ptr = *pCtx;
+                assert(ptr);
+                ptr->type = CT_FACET;
+                ptr->fh = new FH(*coins.begin());
+            }
+            else if (coins.size() == 2)
+            {
+                auto ptr = *pCtx;
+                assert(ptr);
+                ptr->type = CT_EDGE;
+                auto fh0 = *coins.begin();
+                auto fh1 = *(++coins.begin());
+                ptr->eh = new EH;
+                bool vr = getSharedEdge(fh0, fh1, *(ptr->eh));
+                assert(vr);
+            }
+        }
         SAFE_DELETE(pTree);
 
-        return REL_NOT_AVAILABLE;
+        return result;
     }
 
     Relation relationOfContext(const Context<MyMesh>& ctx, const PBPoint<K>& point, Context<MyMesh>** pCtx)

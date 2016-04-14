@@ -186,6 +186,19 @@ namespace CSG
         return !data->itstTri || data->itstTri->meshIds.empty();
     }
 
+    inline bool getSharedEdge(FH f0, FH f1, EH& eh)
+    {
+        for (size_t i = 0; i < 3; i++)
+        {
+            if (f0->edges[i]->opposite()->facet() == f1)
+            {
+                eh = f0->edges[i];
+                return true;
+            }
+        }
+        return false;
+    }
+
 #define DECLARE_MYMESH_TYPES\
     typedef MyMesh::Face_handle FH;\
     typedef MyMesh::Halfedge_handle EH;\

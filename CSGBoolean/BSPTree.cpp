@@ -12,11 +12,58 @@ namespace CSG
             if (!face->data->planeRep)
             {
                 face->data->planeRep = new PBTriangle<K>(face->data->triangle);
-                polygons.emplace_back(*face->data->planeRep);
             }
+            polygons.emplace_back(*face->data->planeRep, face);
         }
 
-        buildBSP(polygons);
+        mp_root = buildBSP(polygons);
+    }
+    
+    Relation BSPTree::determine(const PBPoint<K>& point)
+    {
+        return determine(point, mp_root);
+    }
+
+    Relation BSPTree::determine(const PBPoint<K>& point, Node* node)
+    {
+        if (node->relation == PR_In)
+            return REL_INSIDE;
+
+        if (node->relation == PR_Out)
+            return REL_OUTSIDE;
+
+        assert(node->relation == PR_None);
+        assert(node->left && node->right);
+
+        RelationToPlane rel = point.classifyByPlane(node->sp); 
+        switch (rel)
+        {
+        case CSG::Front:
+            return determine(point, node->left);
+        case CSG::On:
+        {
+            if (node->coins.size() > 1) ReportError("more than 1 coin, strange.");
+            Relation rell = determine(point, node->left);
+            Relation relr = determine(point, node->right);
+            if (rell == relr) return rell;
+            else
+            {
+                Plane_ext<K> k;
+                for (auto& polys : node->coins)
+                {
+                    assert(polys.fh->data->planeRep);
+                    if (polys.fh->data->planeRep->insideBPs(point))
+                        m_lastCoins.insert(node->coins[0].fh);
+                }
+                return REL_ON_BOUNDARY;
+            }
+        }
+        case CSG::Behind:
+            return determine(point, node->left);
+        default:
+            assert(0);
+            return REL_NOT_AVAILABLE;
+        }
     }
 
     BSPTree::Node* BSPTree::buildBSP(std::vector<Polygon>& facets)
@@ -36,9 +83,9 @@ namespace CSG
         {
             pNode->left = new Node;
             if (bSameOrient)
-                pNode->left->relation = In;
+                pNode->left->relation = PR_Out;
             else
-                pNode->left->relation = Out;
+                pNode->left->relation = PR_In;
         }
         else
             pNode->left = buildBSP(fronts);
@@ -46,9 +93,9 @@ namespace CSG
         {
             pNode->right = new Node;
             if (bSameOrient)
-                pNode->right->relation = Out;
+                pNode->right->relation = PR_In;
             else
-                pNode->right->relation = In;
+                pNode->right->relation = PR_Out;
         }
         else
             pNode->right = buildBSP(backs);

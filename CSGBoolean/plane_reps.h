@@ -39,9 +39,10 @@ namespace CSG
     };
 
     enum PosRelation{
-        In,
-        Out,
-        OnBoundary
+        PR_None,
+        PR_In,
+        PR_Out,
+        PR_OnBoundary
     };
 
     template <class _R>
@@ -236,6 +237,16 @@ namespace CSG
         PBPoint<_R> point(int idx)
         {
             return PBPoint<_R>(m_bps[(idx + 1) % 3], m_bps[(idx + 2) % 3], m_sp);
+        }
+
+        bool insideBPs(const PBPoint<_R>& p) const
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (p.classifyByPlane(m_bps[i]) == Behind)
+                    return false;
+            }
+            return true;
         }
     };
 
