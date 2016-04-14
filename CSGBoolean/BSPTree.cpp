@@ -42,7 +42,7 @@ namespace CSG
             return determine(point, node->left);
         case CSG::On:
         {
-            if (node->coins.size() > 1) ReportError("more than 1 coin, strange.");
+            if (node->coins.size() > 1) ReportError("more than 1 coin, not strange.");
             Relation rell = determine(point, node->left);
             Relation relr = determine(point, node->right);
             if (rell == relr) return rell;

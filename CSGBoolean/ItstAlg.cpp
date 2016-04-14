@@ -220,14 +220,26 @@ namespace
         //std::cout << t[0] << std::endl;
         //std::cout << t[1] << std::endl;
 
+        PosTag defaultTag[2] = { INNER, INNER };
+        for (size_t i = 0; i < 2; i++)
+        {
+            if (is_vertex(tagA[i]) && is_vertex(tagB[i]))
+            {
+                int ida = vertex_idx(tagA[i]);
+                int idb = vertex_idx(tagB[i]);
+                int biggerId = (ida+1)%3 == idb? idb:ida;
+                defaultTag[i] = edge_tag((biggerId + 1) % 3);
+            }
+        }
+
         // if (Acmp > 0): A0在A1右边，取A0
-        result->tagA[0] = Acmp >= 0.0 ? tagA[0] : INNER;
-        result->tagA[1] = Acmp <= 0.0 ? tagA[1] : INNER;
+        result->tagA[0] = Acmp >= 0.0 ? tagA[0] : defaultTag[0];
+        result->tagA[1] = Acmp <= 0.0 ? tagA[1] : defaultTag[1];
         result->A = PBPoint<_R>(p[0], p[1], (Acmp >= 0.0 ? posA[0] : posA[1]));
 
         // if (Bcmp > 0): B0在B1右边，取B1
-        result->tagB[0] = Bcmp <= 0.0 ? tagB[0] : INNER;
-        result->tagB[1] = Bcmp >= 0.0 ? tagB[1] : INNER;
+        result->tagB[0] = Bcmp <= 0.0 ? tagB[0] : defaultTag[0];
+        result->tagB[1] = Bcmp >= 0.0 ? tagB[1] : defaultTag[1];
         result->B = PBPoint<_R>(p[0], p[1], (Bcmp >= 0.0 ? posB[1] : posB[0]));
 
         //result->A.computeCoord();
@@ -412,8 +424,7 @@ namespace CSG
             auto &pEdge = fhs->edges[edge_idx(tags)]->data;
             if (!pEdge)
             {
-                pEdge.reset(new UserEData);
-                fhs->edges[edge_idx(tags)]->opposite()->data = pEdge;
+                oId = -1;
             }
             else oId = checkDuplicatedPoints(pEdge->vertices, point, outcome);
             break;
@@ -441,8 +452,16 @@ namespace CSG
         case EDGE_0:
         case EDGE_1:
         case EDGE_2:
+        {
+            auto &pEdge = fh->edges[edge_idx(tags)]->data;
+            if (!pEdge)
+            {
+                pEdge.reset(new UserEData);
+                fh->edges[edge_idx(tags)]->opposite()->data = pEdge;
+            }
             fh->edges[edge_idx(tags)]->data->vertices.push_back(proxy);
             return fh->edges[edge_idx(tags)]->data->vertices.size() - 1;
+        }
         default:
             ReportError("");
             return -1;
@@ -467,7 +486,25 @@ namespace CSG
         for (int i = 0; i < 2; i++)
         {
             if (addwhat[i] > 0)
+            {
                 oId[i] = checkDuplicatedPoints(point, fhs[i], tags[i], outproxy[i]);
+#ifdef _DEBUG
+                const PosTag TAGS[] = { INNER, VER_0, VER_1, VER_2, EDGE_0, EDGE_1, EDGE_2 };
+                VProxyItr proxy;
+                int idd = -1;
+                PosTag ttag;
+                for (auto tag : TAGS)
+                {
+                    idd = checkDuplicatedPoints(point, fhs[i], tag, proxy);
+                    if (idd != -1)
+                    {
+                        ttag = tag;
+                        break;
+                    }
+                }
+                assert(oId[i] == idd);
+#endif
+            }
         }
 
         if (oId[0] == -1 && oId[1] == -1)
@@ -490,22 +527,33 @@ namespace CSG
         }
         else if (oId[0] == -1)
         {
-            outproxy[1].pointer()->addContext(meshId[0], fhs[0], tags[0]);
+            if (!outproxy[1].pointer()->hasContext(meshId[0]))
+                outproxy[1].pointer()->addContext(meshId[0], fhs[0], tags[0]);
             outproxy[0] = outproxy[1];
         }
         else
         {
-            outproxy[0].pointer()->addContext(meshId[1], fhs[1], tags[1]);
+            if (!outproxy[0].pointer()->hasContext(meshId[1]))
+                outproxy[0].pointer()->addContext(meshId[1], fhs[1], tags[1]);
             outproxy[1] = outproxy[0];
         }
     }
 
     bool ItstAlg::IntersectionTest(FH fh0, FH fh1, TriIdSet* overlaps, uint32_t meshId[2])
     {
+        static int count = 0;
+        count++;
+
         K::Triangle_3 t[2] = { fh0->data->triangle, fh1->data->triangle };
         Plane_ext<K> sp[2] = { fh0->data->sp, fh1->data->sp };
         FH fhs[2] = { fh0, fh1 };
         TriTriIsectResult<K> result;
+
+        if (false)
+        {
+            std::cout << t[0] << std::endl;
+            std::cout << t[1] << std::endl;
+        }
 
         /* 统一正方向cross(n0, n1) */
         Sign sign = tri_tri_intersect(t, sp, &result, fhs);
@@ -518,10 +566,10 @@ namespace CSG
         //{
         //    ItstTriangle*& it0 = fh0->data->itstTri;
         //    ItstTriangle*& it1 = fh1->data->itstTri;
-
+        //
         //    if (!it0) it0 = new ItstTriangle(fh0);
         //    if (!it1) it1 = new ItstTriangle(fh1);
-
+        //
         //    if (CGAL::do_intersect(t[0], t[1]))
         //    {
         //        it0->coplanars[meshId[1]].push_back(fh1);
@@ -546,9 +594,6 @@ namespace CSG
         VProxyItr proxyA[2], proxyB[2];
 
         //std::cout << "begin compare:\n";
-
-        static int count = 0;
-        count++;
 
         getVProxy(result.A, addwhat, fhs, result.tagA, oIdA, proxyA, meshId);
         getVProxy(result.B, addwhat, fhs, result.tagB, oIdB, proxyB, meshId);
@@ -598,6 +643,11 @@ namespace CSG
     {
         if (a.pointer() == b.pointer()) return;
 
+        std::cout << a.pointer()->idx << " and " << b.pointer()->idx << std::endl;
+#ifdef _DEBUG
+        for (auto &ctx : a.pointer()->ctx)
+            assert(!a.pointer()->hasContext(ctx.meshId));
+#endif
         a.pointer()->ctx.insert(a.pointer()->ctx.end(), 
             b.pointer()->ctx.begin(), b.pointer()->ctx.end());
         *b = *a;

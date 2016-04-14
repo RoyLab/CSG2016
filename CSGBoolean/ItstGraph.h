@@ -76,7 +76,8 @@ namespace CSG
             std::cout.precision(20);
             for (int i = 0; i < m_nodes.size(); i++)
             {
-                std::cout << i << " : " << m_nodes[i].vproxy.pointer()->pos.getCoord() << std::endl;
+                std::cout << i << " : " << m_nodes[i].vproxy.pointer()->pos.getCoord() << ", "
+                    << m_nodes[i].vproxy.pointer()->idx << std::endl;
             }
 
             for (int id : ids)
