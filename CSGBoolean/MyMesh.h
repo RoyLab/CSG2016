@@ -137,6 +137,7 @@ namespace CSG
         int Id = -1;
 
     private:
+        void initDebugInf();
         void calcTriangles();
         void initEdgeIds();
         void initIds();

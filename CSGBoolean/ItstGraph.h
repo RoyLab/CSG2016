@@ -73,12 +73,12 @@ namespace CSG
         void floodFilling(VH vh, SampleIndicatorVector& sample, Container& ids)
         {
             // debug
-            std::cout.precision(20);
-            for (int i = 0; i < m_nodes.size(); i++)
-            {
-                std::cout << i << " : " << m_nodes[i].vproxy.pointer()->pos.getCoord() << ", "
-                    << m_nodes[i].vproxy.pointer()->idx << std::endl;
-            }
+            //std::cout.precision(20);
+            //for (int i = 0; i < m_nodes.size(); i++)
+            //{
+            //    std::cout << i << " : " << m_nodes[i].vproxy.pointer()->pos.getCoord() << ", "
+            //        << m_nodes[i].vproxy.pointer()->idx << std::endl;
+            //}
 
             for (int id : ids)
                 m_ids.push_back(id);

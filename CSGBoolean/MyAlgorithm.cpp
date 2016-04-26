@@ -4,6 +4,7 @@
 #include <queue>
 #include <deque>
 #include <CGAL/Polyhedron_incremental_builder_3.h>
+#include <fstream>
 
 #include "MyAlgorithm.h"
 #include "ItstAlg.h"
@@ -57,7 +58,7 @@ namespace CSG
 
         for (auto mesh : *pMeshList)
         {
-            mesh->normalize(aabb);
+            //mesh->normalize(aabb);
             mesh->filter();
             mesh->init();
         }
@@ -79,7 +80,7 @@ namespace CSG
 
         floodColoring(pCsg, itst);
 
-        csgResult->denormalize(aabb);
+        //csgResult->denormalize(aabb);
 
         SAFE_DELETE(itst);
         SAFE_DELETE(pCsg);
@@ -400,6 +401,20 @@ namespace CSG
                 std::deque<ItstGraph::Loop> loops;
                 ig->getAllLoops(loops);
 
+                if (true)
+                {
+                    std::ofstream f("D:\\Codes\\Boolean2016\\models\\test.off");
+                    f << "OFF\n";
+                    f << "3 1 0\n";
+                    for (size_t i = 0; i < 3; i++)
+                    {
+                        f << curface->vertices[i]->data->proxy->pointer()->pos.getCoord();
+                        f << std::endl;
+                    }
+                    f << "3 0 1 2\n";
+                    f.close();
+                }
+
                 for (auto& loop : loops)
                 {
                     if (needAdd(curface, loop, testList))
@@ -471,18 +486,68 @@ namespace CSG
                 }
             }
 
-            /* 如果所有的都有context */
             if (ind != REL_NOT_AVAILABLE)
             {
                 sample[id] = ind;
 
-                /* 这里是一个bug，无法判断，可以加一个coplanar list来判断 */
+                /* 这里无法判断, 尝试通过context来解决 */
                 if (ind == REL_ON_BOUNDARY)
                 {
-                    ReportError("Not implemented!");
+                    if (false)
+                    {
+                        std::ofstream f("D:\\Codes\\Boolean2016\\models\\test.off");
+                        f << "OFF\n";
+                        f << loop.size() << " 1 0\n";
+                        for (size_t i = 0; i < n; i++)
+                        {
+                            f << loop[i]->vproxy.pointer()->pos.getCoord();
+                            f << std::endl;
+                        }
+                        f << loop.size();
+                        for (size_t i = 0; i < n; i++)
+                            f << " " << i;
+                        f << std::endl;
+                        f.close();
+                    }
+
+                    int ctxCount = 0, ctxIdx;
+                    for (size_t i = 0; i < n; i++)
+                    {
+                        if (loop[i]->vproxy.pointer()->hasContext(id))
+                        {
+                            ctxCount++;
+                            ctxIdx = i;
+                        }
+                    }
+
+                    if (ctxCount == 0)
+                    {
+                        /* 所有的点都没有context，且所有的点都为boundary */
+                        /* 之前应该已经做过过滤，这边所有的点应该为SAME / OPPO */
+                        ReportError("Unexpected condition");
+                    }
+
+                    /* 一定是On的情况，所以没必要做全context分析，考虑找到那个context点 */
+                    assert(loop[ctxIdx]->vproxy.pointer()->hasContext(id));
+
+                    K::Vector_3 normal = fh->data->sp.orthogonal_vector();
+                    sample[id] = determineRelationOfFacet(*loop[ctxIdx]->vproxy.pointer()->findInContext(id),
+                        loop[(ctxIdx + 1) % n]->vproxy.pointer()->pos,
+                        loop[(ctxIdx + 2) % n]->vproxy.pointer()->pos, normal);
+
+                    assert(sample[id] == REL_SAME || sample[id] == REL_OPPOSITE);
+
+                    /* 传染给所有的非context的on boundary点 */
+                    for (size_t i = 0; i < n; i++)
+                    {
+                        if (!loop[i]->vproxy.pointer()->hasContext(id))
+                        {
+                            loop[i]->indicator->at(id) = sample[i];
+                        }
+                    }
                 }
             }
-            else
+            else /* 如果所有的都有context */
             {
                 /* 找三个点 */
                 if (checkPoint == -1)

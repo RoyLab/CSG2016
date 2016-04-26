@@ -102,6 +102,7 @@ namespace CSG
         calcTriangles();
         initEdgeIds();
         initIds();
+        initDebugInf();
     }
 
     /* -1.0 ~ +1.0 */
@@ -158,5 +159,13 @@ namespace CSG
             FP_FILTER(m_bbox.ymax(), factor),
             FP_FILTER(m_bbox.zmax(), factor));
     }
+
+    void MyMesh::initDebugInf()
+    {
+        int count = 0;
+        for (auto f = facets_begin(); f != facets_end(); f++)
+            f->id() = count++;
+    }
+
 
 }

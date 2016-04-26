@@ -42,7 +42,6 @@ namespace CSG
             return determine(point, node->left);
         case CSG::On:
         {
-            if (node->coins.size() > 1) ReportError("more than 1 coin, not strange.");
             Relation rell = determine(point, node->left);
             Relation relr = determine(point, node->right);
             if (rell == relr) return rell;
@@ -59,7 +58,7 @@ namespace CSG
             }
         }
         case CSG::Behind:
-            return determine(point, node->left);
+            return determine(point, node->right);
         default:
             assert(0);
             return REL_NOT_AVAILABLE;
@@ -78,24 +77,25 @@ namespace CSG
 
         auto dir1 = pNode->sp.orthogonal_direction(),
             dir2 = pNode->coins[0].get_sp().orthogonal_direction();
-        bool bSameOrient = dir1.to_vector() * dir2.to_vector() > 0.0;
+        ///* 很奇怪，为什么要有dir1, dir2? sp的选取保证了这里一定是true */
+        //bool bSameOrient = dir1.to_vector() * dir2.to_vector() > 0.0;
         if (fronts.empty())
         {
             pNode->left = new Node;
-            if (bSameOrient)
-                pNode->left->relation = PR_Out;
-            else
-                pNode->left->relation = PR_In;
+            //if (bSameOrient)
+            pNode->left->relation = PR_Out;
+            //else
+                //pNode->left->relation = PR_In;
         }
         else
             pNode->left = buildBSP(fronts);
         if (backs.empty())
         {
             pNode->right = new Node;
-            if (bSameOrient)
-                pNode->right->relation = PR_In;
-            else
-                pNode->right->relation = PR_Out;
+            //if (bSameOrient)
+            pNode->right->relation = PR_In;
+            //else
+                //pNode->right->relation = PR_Out;
         }
         else
             pNode->right = buildBSP(backs);

@@ -185,12 +185,14 @@ namespace
         // 规定cross(n1, n0)为正方向
         sign = compute_intervals_isectline(da, t[0], *fhs[0]->data->planeRep, p[1], tagA[0], tagB[0], posA[0], posB[0]);
         if (sign == INTERSECT_ON_POINT)
-            return sign;
+            return LESS_THAN_INTERSECT_ON_POINT;
 
         // 规定cross(n0, n1)为正方向
         sign = compute_intervals_isectline(db, t[1], *fhs[1]->data->planeRep, p[0], tagA[1], tagB[1], posA[1], posB[1]);
         if (sign == INTERSECT_ON_POINT)
-            return sign;
+            return LESS_THAN_INTERSECT_ON_POINT;
+
+        /* 上述判断是不对的，因为 */
 
         // 统一正方向cross(n0, n1)
         std::swap(tagA[0], tagB[0]);
@@ -351,7 +353,7 @@ namespace CSG
             out = 2; // add lines
             if (is_same_edge(result.tagA[i], result.tagB[i], edgeId))
             {
-                out = 0; // add vertices
+                out = 1; // add vertices
                 detected = true;
 
                 vthiz = fh[i]->data->triangle.vertex(edgeId);
@@ -411,7 +413,7 @@ namespace CSG
         case VER_0:
         case VER_1:
         case VER_2:
-            if (fhs->vertices[vertex_idx(tags)]->data)
+            if (fhs->vertices[vertex_idx(tags)]->data && fhs->vertices[vertex_idx(tags)]->data->proxy->pointer()->pos == point)
             {
                 oId = 0;
                 outcome = *fhs->vertices[vertex_idx(tags)]->data->proxy;
@@ -502,7 +504,7 @@ namespace CSG
                         break;
                     }
                 }
-                assert(oId[i] == idd);
+                assert(oId[i] == idd); /* 要求部分查找和全查找所得到的内容相同 */
 #endif
             }
         }
@@ -544,21 +546,26 @@ namespace CSG
         static int count = 0;
         count++;
 
+        int id0 = fh0->id();
+        int id1 = fh1->id();
+
         K::Triangle_3 t[2] = { fh0->data->triangle, fh1->data->triangle };
         Plane_ext<K> sp[2] = { fh0->data->sp, fh1->data->sp };
         FH fhs[2] = { fh0, fh1 };
         TriTriIsectResult<K> result;
 
-        if (false)
-        {
-            std::cout << t[0] << std::endl;
-            std::cout << t[1] << std::endl;
-        }
+        //if (true)
+        //{
+        //    std::cout << std::endl;
+        //    std::cout << t[0] << std::endl;
+        //    std::cout << t[1] << std::endl;
+        //}
 
         /* 统一正方向cross(n0, n1) */
         Sign sign = tri_tri_intersect(t, sp, &result, fhs);
 
-        if (sign == NOT_INTERSECT || sign == INTERSECT_ON_POINT || sign == COPLANAR)
+        if (sign == NOT_INTERSECT || sign == INTERSECT_ON_POINT ||
+            sign == COPLANAR || sign == LESS_THAN_INTERSECT_ON_POINT)
             return false;
 
         /* 记录coplanar的原因是，没有原因 */
@@ -643,7 +650,7 @@ namespace CSG
     {
         if (a.pointer() == b.pointer()) return;
 
-        std::cout << a.pointer()->idx << " and " << b.pointer()->idx << std::endl;
+        //std::cout << a.pointer()->idx << " and " << b.pointer()->idx << std::endl;
 #ifdef _DEBUG
         for (auto &ctx : a.pointer()->ctx)
             assert(!a.pointer()->hasContext(ctx.meshId));

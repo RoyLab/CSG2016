@@ -75,8 +75,24 @@ namespace CSG
             assert(ptr);
             if (r0 == r1)
             {
-                ptr->type = CT_EDGE;
-                ptr->eh = new EH(eh);
+                bool res0 = f0->data->planeRep->insideBPs(point);
+                bool res1 = f1->data->planeRep->insideBPs(point);
+
+                if (res0 && res1)
+                {
+                    ptr->type = CT_EDGE;
+                    ptr->eh = new EH(eh);
+                }
+                else
+                {
+                    ptr->type = CT_FACET;
+                    if (res0)
+                        ptr->fh = new FH(f0);
+                    else if (res1)
+                        ptr->fh = new FH(f1);
+                    else
+                        ReportError("????");
+                }
             }
             else
             {
@@ -169,15 +185,17 @@ namespace CSG
 
         if (rel == REL_ON_BOUNDARY)
         {
-            rel = relationOfContext(*eCtx, p1, &eCtx);
+            Context<MyMesh> *eCtx2 = new Context<MyMesh>;
+            rel = relationOfContext(*eCtx, p1, &eCtx2);
             if (rel == REL_ON_BOUNDARY)
             {
-                assert(eCtx->type == CT_FACET);
-                if ((*eCtx->fh)->data->sp.orthogonal_vector() * normal > 0.0)
+                assert(eCtx2->type == CT_FACET);
+                if ((*eCtx2->fh)->data->sp.orthogonal_vector() * normal > 0.0)
                     rel = REL_SAME;
                 else
                     rel = REL_OPPOSITE;
             }
+            SAFE_DELETE(eCtx2);
         }
 
         SAFE_DELETE(eCtx);

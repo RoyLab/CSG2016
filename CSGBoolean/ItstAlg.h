@@ -18,6 +18,7 @@ namespace CSG
         INTERSECT_ON_LINE,
         INTERSECT_ON_POINT,
         COPLANAR,
+        LESS_THAN_INTERSECT_ON_POINT,
         NOT_INTERSECT
     };
 
