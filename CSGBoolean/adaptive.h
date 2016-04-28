@@ -762,7 +762,7 @@ namespace GS
 		Four_Two_Sum(sum[3], sum[2], sum[1], sum[0], w2[2], w2tail[2], 
 			sum2[5], sum2[4], sum2[3], sum2[2], sum2[1], sum2[0]);
 
-		estimate(6, sum2);
+		det = estimate(6, sum2);
 
 		eb = eb1 * err3x3B1 + eb2 * err3x3B2;
 		if ((det > eb) != (det < -eb))

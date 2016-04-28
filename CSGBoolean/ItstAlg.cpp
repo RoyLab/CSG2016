@@ -1,4 +1,5 @@
 #include <vector>
+#include <fstream>
 
 #include "csgdefs.h"
 #include "ItstAlg.h"
@@ -38,7 +39,9 @@ namespace
         }
         else if (is_vertex(tag0) && is_vertex(tag1))
         {
-            eId = (std::max(vertex_idx(tag0), vertex_idx(tag1)) + 1) % 3;
+            int id0 = vertex_idx(tag0);
+            int id1 = vertex_idx(tag1);
+            eId = (id0 + 1) % 3 == id1 ? (id1 + 1) % 3 : (id0 + 1) % 3;
             return true;
         }
         else
@@ -250,8 +253,6 @@ namespace
         //std::cout << result->B.coord[0] << " " << result->B.coord[1] << " " << result->B.coord[2] << " " << std::endl;
 
         assert(orientation(p[0], p[1], result->B.getPlane(2), result->A.getPlane(2)) > 0);
-        assert(result->tagA[0] == INNER && result->tagB[0] == INNER || result->tagA[0] != result->tagB[0]);
-        assert(result->tagA[1] == INNER && result->tagB[1] == INNER || result->tagA[1] != result->tagB[1]);
 
         return INTERSECT_ON_LINE;
     }
@@ -322,6 +323,28 @@ namespace CSG
                             uint32_t triId[2] = { fh0->id(), fh1->id() };
                             IndexPair triIdPair;
                             MakeIndex(triId, triIdPair);
+
+                            int id0 = fh0->id();
+                            int id1 = fh1->id();
+
+                            if (false)
+                            {
+                                std::ofstream f("D:\\Codes\\Boolean2016\\models\\test.off");
+                                f << "OFF\n";
+                                f << "6 2 0\n";
+                                for (size_t i = 0; i < 3; i++)
+                                {
+                                    f << fh0->vertices[i]->point();
+                                    f << std::endl;
+                                }
+                                for (size_t i = 0; i < 3; i++)
+                                {
+                                    f << fh1->vertices[i]->point();
+                                    f << std::endl;
+                                }
+                                f << "3 0 1 2\n3 3 4 5\n";
+                                f.close();
+                            }
 
                             if (antiOverlapSet->find(triIdPair) != antiOverlapSet->end())
                                 continue;
@@ -563,6 +586,25 @@ namespace CSG
 
         /* 统一正方向cross(n0, n1) */
         Sign sign = tri_tri_intersect(t, sp, &result, fhs);
+
+        if (false)
+        {
+            std::ofstream f("D:\\Codes\\Boolean2016\\models\\test.off");
+            f << "OFF\n";
+            f << "6 2 0\n";
+            for (size_t i = 0; i < 3; i++)
+            {
+                f << fh0->vertices[i]->point();
+                f << std::endl;
+            }
+            for (size_t i = 0; i < 3; i++)
+            {
+                f << fh1->vertices[i]->point();
+                f << std::endl;
+            }
+            f << "3 0 1 2\n3 3 4 5\n";
+            f.close();
+        }
 
         if (sign == NOT_INTERSECT || sign == INTERSECT_ON_POINT ||
             sign == COPLANAR || sign == LESS_THAN_INTERSECT_ON_POINT)

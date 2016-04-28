@@ -181,8 +181,14 @@ namespace CSG
                 s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
                     m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
             }
+            if (s == 0.0)
+            {
+                pa = a.getPlanes()[2];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pa.a(), pa.b(), pa.c());
+            }
             assert(s != 0.0);
-            if (s == CGAL::NEGATIVE) pa = pa.opposite();
+            if (s < 0.0) pa = pa.opposite();
 
             s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
                 m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
@@ -193,12 +199,18 @@ namespace CSG
                 s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
                     m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
             }
+            if (s == 0.0)
+            {
+                pb = b.getPlanes()[2];
+                s = determinant3x3(m_q.a(), m_q.b(), m_q.c(),
+                    m_p.a(), m_p.b(), m_p.c(), pb.a(), pb.b(), pb.c());
+            }
             assert(s != 0.0);
-            if (s == CGAL::NEGATIVE) pb = pb.opposite();
+            if (s < 0.0) pb = pb.opposite();
 
             double sign = orientation(m_q, m_p, pa, pb);
 
-            if (sign > 0.0) return true;
+            if (sign < 0.0) return true;
             else return false;
         }
 
@@ -216,8 +228,8 @@ namespace CSG
             CGAL::Point_3<K> posa(aa.getCoord());
             CGAL::Point_3<K> posb(bb.getCoord());
 
-            double res2 = (posa - CGAL::ORIGIN) * positive - (posb - CGAL::ORIGIN) * positive;
-            assert(res && res2 < 1e-5 || !res && res2 > -1e-5);
+            double res2 = (posa - posb) * positive;
+            assert((res && res2 < 1e-5 * std::sqrt(positive.squared_length()) || !res && res2 > -1e-5 * std::sqrt(positive.squared_length())));
 #endif
             return res;
         }

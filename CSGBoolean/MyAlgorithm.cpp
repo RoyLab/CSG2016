@@ -58,7 +58,7 @@ namespace CSG
 
         for (auto mesh : *pMeshList)
         {
-            //mesh->normalize(aabb);
+            mesh->normalize(aabb);
             mesh->filter();
             mesh->init();
         }
@@ -80,7 +80,7 @@ namespace CSG
 
         floodColoring(pCsg, itst);
 
-        //csgResult->denormalize(aabb);
+        csgResult->denormalize(aabb);
 
         SAFE_DELETE(itst);
         SAFE_DELETE(pCsg);
@@ -401,7 +401,7 @@ namespace CSG
                 std::deque<ItstGraph::Loop> loops;
                 ig->getAllLoops(loops);
 
-                if (true)
+                if (false)
                 {
                     std::ofstream f("D:\\Codes\\Boolean2016\\models\\test.off");
                     f << "OFF\n";
