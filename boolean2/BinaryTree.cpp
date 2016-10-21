@@ -43,7 +43,7 @@ namespace Boolean
 			res->bInverse = inverse;
 			res->Type = TYPE_LEAF;
 			res->pMesh = root->pMesh;
-			res->pMesh->bInverse = res->bInverse;
+			res->pMesh->inverse() = res->bInverse;
 			maxLvl = (maxLvl < level)? level:maxLvl;
 		}
 		else
@@ -83,7 +83,7 @@ namespace Boolean
     {
 		if (root->Type == TYPE_LEAF)
 		{
-			list.push_back(root->pMesh->Id);
+			list.push_back(root->pMesh->id());
 		}
 		else
 		{
@@ -96,7 +96,7 @@ namespace Boolean
 	{
 		if (root->Type == TYPE_LEAF)
 		{
-			leaves[root->pMesh->Id] = root;
+			leaves[root->pMesh->id()] = root;
 		}
 		else
 		{
@@ -152,7 +152,7 @@ namespace Boolean
 
 		CSGTreeNode* pRes = new CSGTreeNode(*thiz);
 
-        if (thiz->pMesh) leafList[thiz->pMesh->Id] = pRes;
+        if (thiz->pMesh) leafList[thiz->pMesh->id()] = pRes;
 
         pRes->pLeft = copy2(thiz->pLeft, leafList);
 		pRes->pRight = copy2(thiz->pRight, leafList);
@@ -554,7 +554,7 @@ namespace Boolean
 			    leaves[i]->relation = tab[i];
         }
 
-		CSGTreeNode *seed = leaves[pMesh->Id], *comp;
+		CSGTreeNode *seed = leaves[pMesh->id()], *comp;
 		int checkRel;
 		bool pass = true;
 		bool simple = true;

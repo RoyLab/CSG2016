@@ -6,6 +6,9 @@
       <Extensions>
       </Extensions>
     </Filter>
+    <Filter Include="Source Files\csg">
+      <UniqueIdentifier>{e619df0d-4ce5-4ef7-b503-b820a15bf381}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompile.h">
@@ -30,7 +33,10 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="csg.h">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\csg</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryTree.h">
+      <Filter>Source Files\csg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -38,7 +44,10 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="csg.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\csg</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryTree.cpp">
+      <Filter>Source Files\csg</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

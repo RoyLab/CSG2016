@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="adaptive.h" />
+    <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="boolean.h" />
     <ClInclude Include="csg.h" />
     <ClInclude Include="global.h" />
@@ -29,6 +30,7 @@
     <ClInclude Include="RegularSetMesh.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
     <ClCompile Include="csg.cpp" />
   </ItemGroup>

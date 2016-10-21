@@ -6,6 +6,7 @@
 
 #include <macros.h>
 #include "global.h"
+#include "BinaryTree.h"
 
 namespace Boolean
 {
