@@ -41,7 +41,6 @@ namespace
     {
         return &(*a) <= &(*b);
     }
-
 }
 
 namespace CSG
