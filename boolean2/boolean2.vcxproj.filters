@@ -38,6 +38,15 @@
     <ClInclude Include="BinaryTree.h">
       <Filter>Source Files\csg</Filter>
     </ClInclude>
+    <ClInclude Include="csgdefs.h">
+      <Filter>Source Files\csg</Filter>
+    </ClInclude>
+    <ClInclude Include="CGALext.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.h">
+      <Filter>Source Files\csg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boolean.cpp">
@@ -47,6 +56,9 @@
       <Filter>Source Files\csg</Filter>
     </ClCompile>
     <ClCompile Include="BinaryTree.cpp">
+      <Filter>Source Files\csg</Filter>
+    </ClCompile>
+    <ClCompile Include="Octree.cpp">
       <Filter>Source Files\csg</Filter>
     </ClCompile>
   </ItemGroup>

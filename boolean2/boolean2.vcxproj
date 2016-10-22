@@ -22,9 +22,12 @@
     <ClInclude Include="adaptive.h" />
     <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="boolean.h" />
+    <ClInclude Include="CGALext.h" />
     <ClInclude Include="csg.h" />
+    <ClInclude Include="csgdefs.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="Memory.h" />
+    <ClInclude Include="Octree.h" />
     <ClInclude Include="offio.h" />
     <ClInclude Include="precompile.h" />
     <ClInclude Include="RegularSetMesh.h" />
@@ -33,6 +36,7 @@
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
     <ClCompile Include="csg.cpp" />
+    <ClCompile Include="Octree.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3}</ProjectGuid>
@@ -96,7 +100,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -123,7 +127,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

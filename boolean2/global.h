@@ -1,28 +1,11 @@
 #pragma once
 #include <cstdint>
+#include "csgdefs.h"
 
 typedef double Real;
 
 namespace Boolean
 {
-	enum Relation
-	{
-		REL_UNKNOWN = 0x0000,
-		REL_INSIDE = 0x0001,
-		REL_OUTSIDE = 0x0002,
-		REL_SAME = 0x0004,
-		REL_OPPOSITE = 0x0008,
-		REL_ON_BOUNDARY = 0x000F,
-
-		REL_NOT_AVAILABLE = -1
-	};
-
-	enum CSGNodeOp
-	{
-		TYPE_UNKNOWN = 0,
-		TYPE_UNION, TYPE_INTERSECT, TYPE_DIFF, TYPE_LEAF
-	};
-
 	typedef uint64_t IndexPair;
 	typedef int8_t Indicator;
 
@@ -33,7 +16,6 @@ namespace Boolean
 		virtual const bool& inverse() const = 0;
 		virtual size_t id() const = 0;
 	};
-
 
 	class XPlane;
 	class XPoint;

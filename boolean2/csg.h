@@ -245,7 +245,7 @@ namespace Boolean
             if (root->type == TYPE_LEAF)
             {
                 root->bInverse = inverse;
-                root->pMesh->bInverse = inverse;
+                root->pMesh->inverse() = inverse;
                 maxLvl = (maxLvl < lvl) ? lvl : maxLvl;
             }
             else
@@ -293,7 +293,7 @@ namespace Boolean
         {
             nodeList.push_back(node);
             if (node->type == TYPE_LEAF)
-                meshNodeList[node->pMesh->Id] = node;
+                meshNodeList[node->pMesh->id()] = node;
             return node;
         }
 

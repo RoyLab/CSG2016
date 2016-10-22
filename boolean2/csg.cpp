@@ -18,7 +18,6 @@ namespace Boolean
         }
     }
 
-
     std::string InfixToPostfix(const std::string& infix)
     {
         std::string postfix;

@@ -3,22 +3,26 @@
 #include <vector>
 #include <fstream>
 
+#include <CGAL/Bbox_3.h>
+
 #define XRWY_EXPORTS
 #include <macros.h>
 #include "global.h"
 #include "adaptive.h"
+#include "CGALext.h"
+
+#include "boolean.h"
 #include "RegularSetMesh.h"
 #include "csg.h"
 
 extern "C"
 {
 	using namespace Boolean;
-	using namespace CSG;
 
 	void initContext();
 	void releaseContext();
 
-	void XRWY_DLL test(std::vector<std::string>& names, std::string& expr, const std::string& output)
+	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
 		initContext();
 
@@ -36,45 +40,44 @@ extern "C"
 		releaseContext();
 	}
 
-	RegularMesh* XRWY_DLL solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
+	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
-		pMeshList = &meshes;
-		for (auto mesh : *pMeshList)
-			mesh->calcBbox();
+		CGAL::Bbox_3 aabb = meshes[0]->bbox();
+		for (auto meshItr = meshes.begin()+1; 
+			meshItr != meshes.end(); meshItr++)
+			aabb += (*meshItr)->bbox();
 
-		CGAL::Bbox_3 aabb = pMeshList->at(0)->get_bbox();
-		for (auto mesh : *pMeshList)
-			aabb += mesh->get_bbox();
-
-		for (auto mesh : *pMeshList)
+		for (auto mesh : meshes)
 		{
-			mesh->normalize(aabb);
-			mesh->filter();
+			mesh->transformCoords(aabb, 20);
 			mesh->init();
 		}
 
-		CSGTree<MyMesh>* pCsg = new CSGTree<MyMesh>;
-		pCsg->createCSGTreeFromExpr(expr, pMeshList->data(), pMeshList->size());
+		CSGTree<RegularMesh>* pCsg = new CSGTree<RegularMesh>;
+		pCsg->createCSGTreeFromExpr(expr, meshes.data(), meshes.size());
 		pCsg->makePositiveAndLeftHeavy();
+
+		RegularMesh* csgResult = new RegularMesh;
 
 		Octree* pOctree = new Octree;
 		std::vector<Octree::Node*> intersectLeaves;
 		pOctree->build(*pMeshList, &intersectLeaves);
 
-		itst = new ItstAlg(pMeshList);
-		itst->doIntersection(intersectLeaves);
+		//itst = new ItstAlg(pMeshList);
+		//itst->doIntersection(intersectLeaves);
 
-		//std::cout.precision(18);
-		//for (auto pt : itst->vEnt)
-		//std::cout << "point: " << pt->pos.getCoord() << std::endl;
+		////std::cout.precision(18);
+		////for (auto pt : itst->vEnt)
+		////std::cout << "point: " << pt->pos.getCoord() << std::endl;
 
-		floodColoring(pCsg, itst);
+		//floodColoring(pCsg, itst);
 
-		csgResult->denormalize(aabb);
+		csgResult->invCoords(aabb);
+		return csgResult;
 
-		SAFE_DELETE(itst);
-		SAFE_DELETE(pCsg);
-		SAFE_DELETE(pOctree);
+		//SAFE_DELETE(itst);
+		//SAFE_DELETE(pCsg);
+		//SAFE_DELETE(pOctree);
 	}
 
 
