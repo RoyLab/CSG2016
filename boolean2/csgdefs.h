@@ -4,10 +4,12 @@
 #include <cy/cyPoint.h>
 
 #include <CGAL\Exact_predicates_inexact_constructions_kernel.h>
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Depick;
+
+#include <CGAL\Simple_cartesian.h>
+typedef CGAL::Simple_cartesian<double> Dipick;
 
 #include <CGAL\Iso_cuboid_3.h>
-typedef CGAL::Iso_cuboid_3<K> Cube_3;
 
 #include <CGAL\Bbox_3.h>
 typedef CGAL::Bbox_3 Bbox_3;
@@ -39,7 +41,7 @@ typedef double4 double4x4[4];
 
 namespace Boolean
 {
-    typedef cyPoint3f cyPointT;
+    typedef cyPoint3<double> cyPointT;
 
     enum PosTag
     {

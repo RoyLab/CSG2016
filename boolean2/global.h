@@ -16,10 +16,9 @@ namespace Boolean
 		virtual const bool& inverse() const = 0;
 		virtual size_t id() const = 0;
 	};
-
+    class Octree;
 	class XPlane;
 	class XPoint;
 	class RegularMesh;
-
 	class MemoryManager;
 }

@@ -1,6 +1,5 @@
 #pragma once
 #include <list>
-
 #include <macros.h>
 
 #include "global.h"
@@ -9,38 +8,55 @@
 
 namespace Boolean
 {
-    class InsctData
+    struct MyVertex
+    {
+        int prepId = -1;
+        std::list<size_t> edges;
+    };
+
+    struct FH
+    {
+        bool orientation;
+        size_t idx;
+    };
+        
+    struct MyEdge
+    {
+        FH fhs[2];
+        FH *extra = 0;
+        InsctData* inscts = nullptr;
+
+		~MyEdge() { SAFE_DELETE(inscts); }
+    };
+
+    class IPolygon
     {
     public:
-        typedef std::list<PBIRep> Data;
-
-        void refine();
-        void isRefined();
-        Data& data() { return inscts; }
-        const Data& data() const { return inscts; }
+		virtual ~IPolygon() {}
+        size_t degree() const { return m_degree; }
 
     protected:
-        bool        refined = false;
-        Data        inscts;
+        size_t m_degree = 0;
     };
 
-    struct Edge: public InsctData
-    {
-
-    };
-
-    class IPolygon: public InsctData
+    class Triangle : public IPolygon
     {
     public:
+        bool collide(const CGAL::Iso_cuboid_3<Depick>& cube) const;
 
-    };
+    protected:
+        Depick::Triangle_3 cgalTri;
+        size_t eIds[3];
+        size_t vIds[3];
 
-    class Triangle: public IPolygon 
-    {
+        int spId = -1;
+        int bpIds[3] = { -1, -1, -1 };
+        InsctData* inscts = nullptr;
 
-    };
+		~Triangle() { SAFE_DELETE(inscts); }
+	};
 
-    class Polygon: public IPolygon
+    class SubPolygon : public IPolygon
     {
 
     };
@@ -48,21 +64,28 @@ namespace Boolean
 	class RegularMesh:
 		public ICSGMesh
 	{
-        typedef cyPointT        PointT;
         typedef IPolygon        FaceT;
-        typedef Edge            EdgeT;
 	public:
 		static RegularMesh* loadFromFile(const char*);
 		static RegularMesh* writeFile(const RegularMesh& mesh, const char*);
 
-		bool& inverse();
-		const bool& inverse() const;
-		size_t id() const;
+		RegularMesh();
+		~RegularMesh();
+
+        // csg related
+		bool& inverse() { return m_bInverse; }
+		const bool& inverse() const { return m_bInverse; }
+		size_t id() const { return m_id; }
+
+        // geometry info
+        Bbox_3& bbox();
 
     protected:
-        PointT*     m_vertices;
-        FaceT*      m_faces;
-        EdgeT*      m_edges;
+        static      MemoryManager* memmgr;
 
+        FaceT*      m_faces;
+
+		int m_id = -1;
+		bool m_bInverse = false;
 	};
 }

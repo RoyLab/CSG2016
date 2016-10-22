@@ -8,22 +8,27 @@ namespace Boolean
     public:
         XPlane();
         XPlane(Real *);
-        XPlane(Real x, Real y, Real z);
+        XPlane(Real, Real, Real, Real);
 
         template <class PointT>
         XPlane(const PointT &p, const PointT&, const PointT& r);
 
+		const Real& a() const { return m_data[0]; }
+		const Real& b() const { return m_data[1]; }
+		const Real& c() const { return m_data[2]; }
+		const Real& d() const { return m_data[3]; }
+		
     protected:
-        Real* m_data;
+        Real m_data[4];
     };
 
     class XPoint
     {
     public:
         XPoint();
-        XPoint(XPlane*);
+
     protected:
-        XPlane *m_planes[3];
+        size_t planeIds[3];
     };
 
 }

@@ -12,7 +12,8 @@
 #include "CGALext.h"
 
 #include "boolean.h"
-#include "RegularSetMesh.h"
+#include "RegularMesh.h"
+#include "Octree.h"
 #include "csg.h"
 
 extern "C"
@@ -50,7 +51,7 @@ extern "C"
 		for (auto mesh : meshes)
 		{
 			mesh->transformCoords(aabb, 20);
-			mesh->init();
+			mesh->prepareBoolean();
 		}
 
 		CSGTree<RegularMesh>* pCsg = new CSGTree<RegularMesh>;
@@ -61,23 +62,16 @@ extern "C"
 
 		Octree* pOctree = new Octree;
 		std::vector<Octree::Node*> intersectLeaves;
-		pOctree->build(*pMeshList, &intersectLeaves);
+		pOctree->build(meshes, &intersectLeaves);
 
-		//itst = new ItstAlg(pMeshList);
-		//itst->doIntersection(intersectLeaves);
-
-		////std::cout.precision(18);
-		////for (auto pt : itst->vEnt)
-		////std::cout << "point: " << pt->pos.getCoord() << std::endl;
-
-		//floodColoring(pCsg, itst);
+		doIntersection(meshes, intersectLeaves);
+		doClassification(pCsg, meshes, csgResult);
 
 		csgResult->invCoords(aabb);
 		return csgResult;
 
-		//SAFE_DELETE(itst);
-		//SAFE_DELETE(pCsg);
-		//SAFE_DELETE(pOctree);
+		SAFE_DELETE(pCsg);
+		SAFE_DELETE(pOctree);
 	}
 
 

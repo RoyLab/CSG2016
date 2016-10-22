@@ -14,13 +14,7 @@
     <ClInclude Include="precompile.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="RegularSetMesh.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="global.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Memory.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="offio.h">
@@ -47,6 +41,18 @@
     <ClInclude Include="Octree.h">
       <Filter>Source Files\csg</Filter>
     </ClInclude>
+    <ClInclude Include="intersection.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="preps.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RegularMesh.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="xmemory.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boolean.cpp">
@@ -60,6 +66,9 @@
     </ClCompile>
     <ClCompile Include="Octree.cpp">
       <Filter>Source Files\csg</Filter>
+    </ClCompile>
+    <ClCompile Include="RegularMesh.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -22,16 +22,16 @@ namespace Boolean
 
     class Octree
     {
-        typedef CGAL::Point_3<K> Point;
-        typedef CGAL::Vector_3<K> Vector;
-        typedef Cube_3 Bbox;
+        typedef CGAL::Point_3<Depick> Point;
+        typedef CGAL::Vector_3<Depick> Vector;
+        typedef CGAL::Iso_cuboid_3<Depick> NodeShape;
         typedef std::vector<size_t> TriList;
         typedef std::map<uint32_t, TriList*> TriTableT;
 
     public:
         struct Node
         {
-            Bbox        bbox;
+            NodeShape   bbox;
             NodeType    type = NODE_UNKNOWN;
 
             Node        *pChildren = nullptr,
@@ -66,7 +66,7 @@ namespace Boolean
         size_t					m_nMesh = 0;
 
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
-        STATIC_PROPERTY(int, MAX_LEVEL);
+        STATIC_PROPERTY(int, MAX_LEVEL);ll
     };
 
 }// namespace CSG

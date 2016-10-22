@@ -26,17 +26,20 @@
     <ClInclude Include="csg.h" />
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="global.h" />
-    <ClInclude Include="Memory.h" />
+    <ClInclude Include="intersection.h" />
+    <ClInclude Include="xmemory.h" />
     <ClInclude Include="Octree.h" />
     <ClInclude Include="offio.h" />
     <ClInclude Include="precompile.h" />
-    <ClInclude Include="RegularSetMesh.h" />
+    <ClInclude Include="preps.h" />
+    <ClInclude Include="RegularMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="Octree.cpp" />
+    <ClCompile Include="RegularMesh.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3}</ProjectGuid>
@@ -102,6 +105,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>precompile.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\3rdparty\lib\$(Platform);$(BOOST_INCLUDEDIR)\lib64-msvc-14.0</AdditionalLibraryDirectories>
@@ -129,6 +134,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>precompile.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
