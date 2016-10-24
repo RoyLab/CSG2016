@@ -35,11 +35,13 @@
     <ClInclude Include="RegularMesh.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="adaptive.cpp" />
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="RegularMesh.cpp" />
+    <ClCompile Include="xmemory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3}</ProjectGuid>

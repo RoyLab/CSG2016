@@ -20,6 +20,7 @@ namespace Boolean
 		static MemoryManager* getInstance();
 
 		int insertVertices(Point* begin, Point* end);
+		int getEdgeId(int a, int b);
 
 		//// access
 		//XPlane* getPlaneBuffer() { return m_pplanes; }

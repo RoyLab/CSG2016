@@ -1,11 +1,13 @@
 #include "precompile.h"
+#define XRWY_EXPORTS
+
 #include <string>
 #include <vector>
 #include <fstream>
 
 #include <CGAL/Bbox_3.h>
+#include <CGAL/bounding_box.h>
 
-#define XRWY_EXPORTS
 #include <macros.h>
 #include "global.h"
 #include "adaptive.h"
@@ -15,6 +17,8 @@
 #include "RegularMesh.h"
 #include "Octree.h"
 #include "csg.h"
+#include "xmemory.h"
+#include "xgeometry.h"
 
 extern "C"
 {
@@ -25,7 +29,8 @@ extern "C"
 
 	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
-		initContext();
+		const int precision = 20;
+		initContext(precision);
 
 		std::vector<RegularMesh*> meshList(names.size());
 		for (int i = 0; i < names.size(); i++)
@@ -43,14 +48,24 @@ extern "C"
 
 	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
-		CGAL::Bbox_3 aabb = meshes[0]->bbox();
-		for (auto meshItr = meshes.begin()+1; 
-			meshItr != meshes.end(); meshItr++)
-			aabb += (*meshItr)->bbox();
+		MemoryManager* pMem = MemoryManager::getInstance();
+		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end());
+
+		cyPointT center, scale;
+		for (size_t i = 0; i < 3; i++)
+		{
+			center[i] = (aabb.max(i) + aabb.min(i)) / 2.0;
+			scale[i] = aabb.max(i) - aabb.min(i);
+		}
+
+		for (int i = 0; i < pMem->points.size(); i++)
+		{
+			GS::
+		}
 
 		for (auto mesh : meshes)
 		{
-			mesh->transformCoords(aabb, 20);
+			mesh->transformCoords(aabb, precision);
 			mesh->prepareBoolean();
 		}
 
@@ -60,7 +75,7 @@ extern "C"
 
 		RegularMesh* csgResult = new RegularMesh;
 
-		Octree* pOctree = new Octree;
+		Octree* pOctree = new Octree(aabb, 1e-3);
 		std::vector<Octree::Node*> intersectLeaves;
 		pOctree->build(meshes, &intersectLeaves);
 
@@ -75,9 +90,9 @@ extern "C"
 	}
 
 
-	void initContext()
+	void initContext(int precision)
 	{
-		GS::exactinit();
+		GS::exactinit(precision);
 	}
 
 	void releaseContext()

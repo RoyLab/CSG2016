@@ -18,13 +18,40 @@ namespace Boolean
         OffFile file;
         readOffFile(fileName, file);
 
-		MemoryManager* pMemmgr = MemoryManager::getInstance();
-		cyPointT* pPts = reinterpret_cast<cyPointT*>(file.vertices.get());
-		int offset = pMemmgr->insertVertices(pPts, pPts + file.nVertices);
-
-		RegularMesh* result = new RegularMesh;
-
+		RegularMesh* result = new RegularMesh(file);
         return result;
     }
+
+	RegularMesh::RegularMesh(const OffFile& file)
+	{
+		assert(file.isValid());
+		assert(!memmgr || memmgr == MemoryManager::getInstance());
+		if (!memmgr)
+			memmgr = MemoryManager::getInstance();
+
+		cyPointT* pPts = reinterpret_cast<cyPointT*>(file.vertices.get());
+		int offset = memmgr->insertVertices(pPts, pPts + file.nVertices);
+
+		m_faces.resize(file.nFaces);
+		int n, ptr = 0, id;
+		size_t* indices = file.indices.get();
+		Triangle* face;
+		for (int i = 0; i < file.nFaces; i++)
+		{
+			n = indices[ptr++];
+			assert(n == 3);
+			face = new Triangle;
+			auto tmpIdx = indices + ptr;
+
+			for (int j = 0; j < 3; j++)
+				face->vIds[j] = tmpIdx[j]+offset;
+
+			face->eIds[2] = memmgr->getEdgeId(tmpIdx[0], tmpIdx[1]);
+			face->eIds[0] = memmgr->getEdgeId(tmpIdx[1], tmpIdx[2]);
+			face->eIds[1] = memmgr->getEdgeId(tmpIdx[2], tmpIdx[0]);
+
+			m_faces[i] = face;
+		}
+	}
 }
 

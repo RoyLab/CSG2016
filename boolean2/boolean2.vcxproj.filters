@@ -20,9 +20,6 @@
     <ClInclude Include="offio.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="adaptive.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="boolean.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -53,6 +50,9 @@
     <ClInclude Include="xmemory.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="adaptive.h">
+      <Filter>Source Files\csg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boolean.cpp">
@@ -69,6 +69,10 @@
     </ClCompile>
     <ClCompile Include="RegularMesh.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="xmemory.cpp" />
+    <ClCompile Include="adaptive.cpp">
+      <Filter>Source Files\csg</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

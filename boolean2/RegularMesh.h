@@ -5,6 +5,7 @@
 #include "global.h"
 #include "preps.h"
 #include "intersection.h"
+#include "offio.h"
 
 namespace Boolean
 {
@@ -41,6 +42,7 @@ namespace Boolean
 
     class Triangle : public IPolygon
     {
+		friend class RegularMesh;
     public:
         bool collide(const CGAL::Iso_cuboid_3<Depick>& cube) const;
 
@@ -70,6 +72,7 @@ namespace Boolean
 		static RegularMesh* writeFile(const RegularMesh& mesh, const char*);
 
 		RegularMesh();
+		RegularMesh(const OffFile& file); // triangle mesh
 		~RegularMesh();
 
         // csg related
@@ -78,12 +81,13 @@ namespace Boolean
 		size_t id() const { return m_id; }
 
         // geometry info
-        Bbox_3& bbox();
+        //Bbox_3& bbox();
+		void prepareBoolean();
 
     protected:
-        static      MemoryManager* memmgr;
+        static  MemoryManager* memmgr;
 
-        FaceT*      m_faces;
+        std::vector<FaceT*>  m_faces;
 
 		int m_id = -1;
 		bool m_bInverse = false;

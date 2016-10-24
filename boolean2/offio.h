@@ -7,7 +7,9 @@ struct OffFile
 {
 	std::shared_ptr<Real> vertices;
 	std::shared_ptr<size_t> indices;
-	size_t nVertices, nFaces, nEdges;
+	int nVertices = -1, nFaces = -1, nEdges = -1;
+
+	bool isValid() const;
 };
 
 bool readOffFile(const char*, OffFile&);

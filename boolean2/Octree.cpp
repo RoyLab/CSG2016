@@ -1,6 +1,6 @@
 #include "Octree.h"
 #include "CGALext.h"
-#include "RegularSetMesh.h"
+#include "RegularMesh.h"
 
 
 namespace Boolean

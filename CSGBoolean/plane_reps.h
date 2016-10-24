@@ -11,7 +11,7 @@ namespace CSG
 {
     const double P216 = std::pow(2.0, 16);
     const double P217 = std::pow(2.0, 17);
-    const double P218 = std::pow(2.0, 18);
+	const double P218 = std::pow(2.0, 18);
 
     extern double FP_FACTOR;
 

@@ -30,5 +30,13 @@ namespace Boolean
     protected:
         size_t planeIds[3];
     };
+	
+	template <class T>
 
+	template <class PointT, class ForwardIterator>
+	void normalizeAndFilter(typename PointT::Scalar* c, typename PointT::Scalar* d,
+		ForwardIterator begin, ForwardIterator end)
+	{
+
+	}
 }

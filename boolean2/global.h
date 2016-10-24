@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "csgdefs.h"
+#include "xgeometry.h"
 
 typedef double Real;
 

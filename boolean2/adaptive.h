@@ -1,8 +1,6 @@
 #pragma once
-#pragma warning(disable:4101)
-#include "csgdefs.h"
-#include <cassert>
-#include <cmath>
+#include <assert.h>
+#include <math.h>
 
 /* On some machines, the exact arithmetic routines might be defeated by the  */
 /*   use of internal extended precision floating-point registers.  Sometimes */
@@ -269,8 +267,8 @@ namespace GS
 	extern REAL err3dot, err2x2, 
 		err3x3A0, err3x3A1, err3x3A2, err3x3B1, err3x3B2,
 		err4x4A0, err4x4A1, err4x4A2, err4x4A3, err4x4B;
-	void exactinit();
-	double round(double);
+	void exactinit(size_t precision);
+
 	/*****************************************************************************/
 	/*                                                                           */
 	/*  compress()   Compress an expansion.                                      */
@@ -460,25 +458,25 @@ namespace GS
 	  return hindex;
 	}
 
-# define FP_FILTER(x, factor) (std::round((x) * (factor)) / (factor))
+# define FP_FILTER(x, factor) (round((x) * (factor)) / (factor))
 
-    inline double fp_filter(double x, double factor)
+    inline REAL fp_filter(REAL x, REAL factor)
 	{
 		assert((x < -1.0) == (x > 1.0));
-        return std::round(x * factor) / factor;
+        return round(x * factor) / factor;
 	}
 
-    inline void fp_filter(const double3& v, double factor)
+    inline void fp_filter(REAL* v, REAL factor)
 	{
 		assert((v[0] < -1.0) == (v[0] > 1.0));
 		assert((v[1] < -1.0) == (v[1] > 1.0));
 		assert((v[2] < -1.0) == (v[2] > 1.0));
 
         for (int i = 0; i < 3; i++)
-            fp_filter(v[i], factor);
+			v[i] = fp_filter(v[i], factor);
 	}
 
-	inline double inexactDet3x3(const double3x3& m)
+	inline REAL inexactDet3x3(const REAL** m)
 	{
 		// non-robust
 		return 
@@ -487,7 +485,7 @@ namespace GS
 			m[2][0]*(m[0][1]*m[1][2] - m[0][2]*m[1][1]);
 	}
 
-	inline int exactDot3Sign(const double3&v1, const double3& v2, double* res)
+	inline int exactDot3Sign(const REAL* v1, const REAL* v2, double* res)
 	{
 		REAL Declare_Var, Declare_VarEX, x[2], y[2], z[2], k[4], m[6];
 		Two_Product(v1[0], v2[0], x[1], x[0]);
@@ -502,7 +500,7 @@ namespace GS
 	}
 
 
-    inline double adaptivePointClassify(const double3& normal, double distance, const double3& point)
+    inline REAL adaptivePointClassify(const REAL*  normal, double distance, const REAL*  point)
     {
 		REAL Declare_Var, Declare_VarEX, xe, ye, ze, x[2], y[2], z[2], k[4], m[6];
 		Two_Product(normal[0], point[0], x[1], x[0]);
@@ -520,7 +518,7 @@ namespace GS
     }
 
 
-	inline double adaptiveDot3Sign(const double3&v1, const double3& v2)
+	inline REAL adaptiveDot3Sign(const REAL* v1, const REAL*  v2)
 	{
 		REAL x, y, z, det;
 		x = v1[0] * v2[0];
@@ -1022,4 +1020,6 @@ namespace GS
 			return det;
 		}
 	}
+
+
 }

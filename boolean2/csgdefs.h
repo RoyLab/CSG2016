@@ -1,5 +1,4 @@
 #pragma once
-#include <macros.h>
 #include <linmath.h>
 #include <cy/cyPoint.h>
 
@@ -65,7 +64,7 @@ namespace Boolean
         default:
         {
             char _errline[20];
-            throw std::exception(ReportErrorString.c_str());
+            throw std::exception();
         }
         }
     }
@@ -83,7 +82,7 @@ namespace Boolean
         default:
         {
             char _errline[20];
-            throw std::exception(ReportErrorString.c_str());
+            throw std::exception();
         }
         }
     }
@@ -141,7 +140,7 @@ namespace Boolean
         case REL_SAME: rel = REL_OPPOSITE; break;
         case REL_OPPOSITE: rel = REL_SAME; break;
         case REL_ON_BOUNDARY: rel = REL_ON_BOUNDARY; break;
-        default: ReportError("unexpected relation");
+		default: throw std::exception();
         }
     }
 
@@ -153,7 +152,7 @@ namespace Boolean
         case REL_OUTSIDE: rel = REL_INSIDE; break;
         case REL_SAME: rel = REL_OPPOSITE; break;
         case REL_OPPOSITE: rel = REL_SAME; break;
-        default: ReportError("unexpected relation");
+        default: throw std::exception();
         }
     }
 
