@@ -7,6 +7,6 @@
 extern "C"
 {
 	XRWY_DLL Boolean::RegularMesh* solveCSG(const std::string& expr, std::vector<Boolean::RegularMesh*>& meshes);
-	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output);
+	XRWY_DLL void test2(std::vector<std::string>& names, std::string& expr, const std::string& output);
 }
 

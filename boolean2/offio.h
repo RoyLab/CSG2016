@@ -3,14 +3,20 @@
 #include <memory>
 #include "global.h"
 
-struct OffFile
+
+namespace XR
 {
-	std::shared_ptr<Real> vertices;
-	std::shared_ptr<size_t> indices;
-	int nVertices = -1, nFaces = -1, nEdges = -1;
+	struct OffFile
+	{
+		std::shared_ptr<Real> vertices;
+		std::shared_ptr<int> indices;
+		int nVertices = -1, nFaces = -1, nEdges = -1;
 
-	bool isValid() const;
-};
+		bool isValid() const;
+	};
 
-bool readOffFile(const char*, OffFile&);
-bool writeOffFile(const char*, const OffFile&);
+	bool readOffFile(const char*, OffFile&);
+	bool writeOffFile(const char*, const OffFile&);
+}
+
+

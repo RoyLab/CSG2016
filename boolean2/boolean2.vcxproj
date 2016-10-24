@@ -42,6 +42,7 @@
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="intersection.cpp" />
     <ClCompile Include="Octree.cpp" />
+    <ClCompile Include="offio.cpp" />
     <ClCompile Include="preps.cpp" />
     <ClCompile Include="RegularMesh.cpp" />
     <ClCompile Include="xmemory.cpp" />

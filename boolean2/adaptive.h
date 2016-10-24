@@ -19,9 +19,6 @@
 
 #define REAL double                      /* float or REAL */
 
-extern REAL FP_FACTOR;
-
-
 /* Which of the following two methods of finding the absolute values is      */
 /*   fastest is compiler-dependent.  A few compilers can inline and optimize */
 /*   the fabs() call; but most will incur the overhead of a function call,   */
@@ -265,9 +262,10 @@ extern REAL FP_FACTOR;
 	err = (::abs(a0) + ::abs(a1) + ::abs(b))
 
 
-namespace GS
+namespace Boolean
 {
-	extern const REAL STATIC_FILTER;
+	extern REAL FP_FACTOR;
+
 	extern REAL splitter;     /* = 2^ceiling(p / 2) + 1.  Used to split floats in half. */
 	extern REAL epsilon;                /* = 2^(-p).  Used to estimate roundoff errors. */
 	extern REAL err3dot, err2x2, 

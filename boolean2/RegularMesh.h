@@ -15,39 +15,46 @@ namespace Boolean
 
     struct MyVertex
     {
-        int prepId = -1;
-        std::list<size_t> edges;
+		int rep; // positive is v-base, negative is p-base
+        std::list<uint32_t> edges;
+
+		bool findEdge(uint32_t other, uint32_t* result = nullptr) const;
     };
 
     struct FH
     {
-        bool orientation;
-        IPolygon* ptr = 0;
+        int orientation;
+        IPolygon* ptr = nullptr;
     };
         
     struct MyEdge
     {
-		size_t points[2];
+		MyEdge(uint32_t a, uint32_t b)
+		{ ends[0] = a; ends[1] = b; }
+
+		uint32_t ends[2];
+
         FH fhs[2];
 		std::list<FH> extrafhs;
+
         InsctData* inscts = nullptr;
 
 		~MyEdge() { SAFE_DELETE(inscts); }
-		size_t addAjacentFace(int s, int e);
+		void addAjacentFace(uint32_t s, uint32_t e, IPolygon* fPtr);
     };
 
     class IPolygon
     {
     public:
-		IPolygon(int d, size_t i):
+		IPolygon(uint32_t d, uint32_t i):
 			m_degree(d), m_id(i){}
 		virtual ~IPolygon() {}
-		size_t degree() const { return m_degree; }
-		size_t id() const { return m_id; }
+		uint32_t degree() const { return m_degree; }
+		uint32_t id() const { return m_id; }
 
     protected:
-        const size_t m_degree;
-		const size_t m_id;
+        const uint32_t m_degree;
+		const uint32_t m_id;
     };
 
     class Triangle : public IPolygon
@@ -86,15 +93,15 @@ namespace Boolean
 		static  MemoryManager* memmgr;
 		std::vector<FaceT*>  m_faces;
 		uint32_t m_id;
-		bool m_bInverse;
+		bool m_bInverse = false;
 
 	public:
-		static RegularMesh* loadFromFile(const char*);
+		static RegularMesh* loadFromFile(const char*, uint32_t id);
 		static RegularMesh* writeFile(const RegularMesh& mesh, const char*);
 
-		RegularMesh();
-		RegularMesh(const OffFile& file); // triangle mesh
-		~RegularMesh();
+		RegularMesh() {}
+		RegularMesh(const XR::OffFile& file); // triangle mesh
+		~RegularMesh() {}
 
         // csg related
 		bool& inverse() { return m_bInverse; }

@@ -27,17 +27,19 @@ extern "C"
 	void initContext(int precision);
 	void releaseContext();
 
-	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
+	XRWY_DLL void test2(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
 		const int precision = 20;
 		initContext(precision);
 
 		std::vector<RegularMesh*> meshList(names.size());
 		for (int i = 0; i < names.size(); i++)
-			meshList[i] = RegularMesh::loadFromFile(names[i].c_str());
+		{
+			meshList[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
+		}
 
 		RegularMesh* result = solveCSG(expr, meshList);
-		RegularMesh::writeFile(*result, output.c_str());
+		//RegularMesh::writeFile(*result, output.c_str());
 
 		SAFE_DELETE(result);
 		for (auto mesh : meshList)
@@ -52,7 +54,7 @@ extern "C"
 		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end());
 
 		cyPointT center, scale;
-		for (size_t i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			center[i] = (aabb.max(i) + aabb.min(i)) / 2.0;
 			scale[i] = aabb.max(i) - aabb.min(i);
@@ -61,7 +63,7 @@ extern "C"
 		for (auto &pt: pMem->points)
 		{
 			XR::normalizeCoords(center, scale, pt);
-			GS::fp_filter(reinterpret_cast<double*>(&pt));
+			fp_filter(reinterpret_cast<double*>(&pt));
 		}
 
 		for (auto mesh : meshes)
@@ -82,20 +84,22 @@ extern "C"
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
-		doIntersection(meshes, intersectLeaves);
-		doClassification(pCsg, meshes, csgResult);
+		//doIntersection(meshes, intersectLeaves);
+		//doClassification(pCsg, meshes, csgResult);
 
-		csgResult->invCoords(aabb);
+		//csgResult->invCoords(aabb);
+		//return csgResult;
+
+		//SAFE_DELETE(pCsg);
+		//SAFE_DELETE(pOctree);
+
 		return csgResult;
-
-		SAFE_DELETE(pCsg);
-		SAFE_DELETE(pOctree);
 	}
 
 
 	void initContext(int precision)
 	{
-		GS::exactinit(precision);
+		exactinit(precision);
 	}
 
 	void releaseContext()

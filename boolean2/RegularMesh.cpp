@@ -1,13 +1,15 @@
 #include "precompile.h"
 #include <CGAL/Point_3.h>
-
 #include <cstring>
+
 #include "RegularMesh.h"
 #include "xmemory.h"
 #include "offio.h"
 
 namespace Boolean
 {
+	using namespace XR;
+
 	namespace
 	{
 		template <class CGALPointT>
@@ -18,18 +20,13 @@ namespace Boolean
 	}
 	MemoryManager* RegularMesh::memmgr;
 
-    RegularMesh * RegularMesh::loadFromFile(const char *fileName)
+    RegularMesh * RegularMesh::loadFromFile(const char *fileName, uint32_t id)
     {
-        int n = std::strlen(fileName);
-        const char posfix[] = ".off";
-        const int n1 = std::strlen(posfix);
-        assert(n > n1);
-        assert(std::strcmp(fileName + n - n1, posfix) == 0);
-
         OffFile file;
         readOffFile(fileName, file);
 
 		RegularMesh* result = new RegularMesh(file);
+		result->m_id = id;
         return result;
     }
 
@@ -45,15 +42,16 @@ namespace Boolean
 
 		m_faces.resize(file.nFaces);
 		int n, ptr = 0, id;
-		size_t* indices = file.indices.get();
+		int* indices = file.indices.get();
 		Triangle* face;
-		size_t triId = 0;
+		int triId = 0;
 		for (int i = 0; i < file.nFaces; i++)
 		{
 			n = indices[ptr++];
 			assert(n == 3);
 			face = new Triangle(triId++);
 			auto tmpIdx = indices + ptr;
+			ptr += n;
 
 			for (int j = 0; j < 3; j++)
 				face->vIds[j] = tmpIdx[j]+offset;
@@ -76,6 +74,33 @@ namespace Boolean
 				convertToCGALPoint<CGALPoint>(memmgr->points[pTri->vIds[1]]), 
 				convertToCGALPoint<CGALPoint>(memmgr->points[pTri->vIds[2]]));
 		}
+	}
+
+	bool MyVertex::findEdge(uint32_t other, uint32_t * result) const
+	{
+		for (auto& item : edges)
+		{
+			auto &e = xedge(item);
+			if (e.ends[0] == other || e.ends[1] == other)
+			{
+				if (result)
+					*result = item;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
+	{
+		FH fh;
+		if (s == ends[0]) fh.orientation = 1;
+		else fh.orientation = -1;
+
+		if (!fhs[0].ptr) fhs[0] = fh;
+		else if (!fhs[1].ptr) fhs[1] = fh;
+		else extrafhs.push_back(fh);
 	}
 }
 
