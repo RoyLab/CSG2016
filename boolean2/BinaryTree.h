@@ -18,7 +18,7 @@ namespace Boolean
 		BiNodeType Type;
 		Relation relation;
 		CSGTreeNode *pLeft, *pRight, *Parent;
-		unsigned long long mark;
+		uint64_t mark;
 
 		MPMesh* pMesh;
 		bool	 bInverse;
@@ -30,7 +30,7 @@ namespace Boolean
 	struct CSGTreeOld
 	{
 		CSGTreeNode* pRoot;
-		std::map<unsigned, CSGTreeNode*> Leaves;
+		std::map<uint32_t, CSGTreeNode*> Leaves;
 
 		CSGTreeOld();
 		~CSGTreeOld();
@@ -45,10 +45,10 @@ namespace Boolean
 	};
 
 	typedef std::list<Branch> TestTree;
-	void GetLeafList(CSGTreeNode* root, std::vector<int>& list);
+	void GetLeafList(CSGTreeNode* root, std::vector<uint32_t>& list);
 	CSGTreeOld* ConvertToPositiveTree(const CSGTreeOld* tree);
-	Relation CompressCSGTree(CSGTreeOld* tree, unsigned Id, Relation rel);
-	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, unsigned nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output);
+	Relation CompressCSGTree(CSGTreeOld* tree, uint32_t Id, Relation rel);
+	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output);
 	CSGTreeNode* GetNextNode(CSGTreeNode* curNode, Relation rel, Relation &output);
 	CSGTreeNode* GetFirstNode(CSGTreeNode* root);
 	inline bool IsLeaf(CSGTreeNode* node) { return !(node->pLeft && node->pRight); }

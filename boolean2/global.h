@@ -15,11 +15,13 @@ namespace Boolean
 	public:
 		virtual bool& inverse() = 0;
 		virtual const bool& inverse() const = 0;
-		virtual size_t id() const = 0;
+		virtual uint32_t id() const = 0;
 	};
     class Octree;
 	class XPlane;
 	class XPoint;
+	class IPolygon;
+	class Triangle;
 	class RegularMesh;
 	class MemoryManager;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "global.h"
+#include "Octree.h"
 
 namespace Boolean
 {

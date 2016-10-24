@@ -1,3 +1,4 @@
+#include "precompile.h"
 #include "adaptive.h"
 
 namespace Boolean

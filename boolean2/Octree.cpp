@@ -1,6 +1,8 @@
+#include "precompile.h"
 #include "Octree.h"
 #include "CGALext.h"
 #include "RegularMesh.h"
+#include "xgeometry.h"
 
 
 namespace Boolean
@@ -15,39 +17,36 @@ namespace Boolean
         m_nMesh = 0;
     }
 
-    Octree::Node* Octree::createRootNode()
+    Octree::Node* Octree::createRootNode(const Bbox_3& bbox)
     {
         Node* root = new Node;
-        CGAL::Bbox_3 tmpBox = mp_meshes[0]->get_bbox();
-
-        for (size_t i = 0; i < m_nMesh; i++)
+        for (uint32_t i = 0; i < m_nMesh; i++)
         {
             auto pcMesh = mp_meshes[i];
-            tmpBox += pcMesh->get_bbox();
+			auto &faces = pcMesh->faces();
 
-            for (auto fItr = pcMesh->facets_begin(); fItr != pcMesh->facets_end(); fItr++)
+			for (auto fPtr : faces)
             {
                 root->triCount++;
                 auto &pTable = root->triTable[i];
                 if (!pTable)
                     pTable = new TriList;
 
-                pTable->push_back(fItr);
+				assert(fPtr->degree() == 3);
+                pTable->push_back(reinterpret_cast<Triangle*>(fPtr));
             }
         }
-
-        root->bbox = enlarge(tmpBox, 1e-5);
         return root;
     }
 
-    void Octree::build(const std::vector<RegularMesh*>& meshList, std::vector<Node*>* isectNodes)
+    void Octree::build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, std::vector<Node*>* isectNodes)
     {
         if (!meshList.size()) throw std::exception("mesh list size 0.");
 
         mp_meshes = meshList.data();
         m_nMesh = meshList.size();
+        mp_root = createRootNode(bbox);
 
-        mp_root = createRootNode();
         build(mp_root, 0, isectNodes);
     }
 
@@ -70,7 +69,7 @@ namespace Boolean
             root->pChildren = new Node[8];
 
             Vector minOffset, maxOffset;
-            Bbox bbox = root->bbox;
+            NodeShape bbox = root->bbox;
             Vector step = (bbox.max() - bbox.min()) * 0.5;
     
             for (unsigned i = 0; i < 8 ; i++)
@@ -85,7 +84,7 @@ namespace Boolean
                     i & 2 ? step[1] : 0,
                     i & 1 ? step[2] : 0);
 
-                pChild->bbox = Bbox(bbox.min() + minOffset, 
+                pChild->bbox = NodeShape(bbox.min() + minOffset,
                     bbox.max() + maxOffset);
 
                 pChild->pParent = root;
@@ -93,7 +92,7 @@ namespace Boolean
 
             for (auto &triTab: root->triTable)
             {
-                size_t meshId = triTab.first;
+                uint32_t meshId = triTab.first;
                 RegularMesh* pMesh = mp_meshes[meshId];
                 TriList &parentMeshes = *triTab.second;
 
@@ -107,9 +106,7 @@ namespace Boolean
                         TriList* triList = nullptr;
                         int isInbox = -1; // -1 no intersection, 1 bbox in box, 0 bbox not in box
 
-                        if (is_inside_box(child.bbox, fh->data->bbox))
-                            isInbox = 1;
-                        else if (CGAL::do_intersect(child.bbox.bbox(), fh->data->triangle))
+                        if (CGAL::do_intersect(child.bbox.bbox(), fh->triangle()))
                             isInbox = 0;
 
                         if (isInbox >= 0)

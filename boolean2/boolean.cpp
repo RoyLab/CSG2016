@@ -24,7 +24,7 @@ extern "C"
 {
 	using namespace Boolean;
 
-	void initContext();
+	void initContext(int precision);
 	void releaseContext();
 
 	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
@@ -58,16 +58,14 @@ extern "C"
 			scale[i] = aabb.max(i) - aabb.min(i);
 		}
 
-		for (int i = 0; i < pMem->points.size(); i++)
+		for (auto &pt: pMem->points)
 		{
-			GS::
+			XR::normalizeCoords(center, scale, pt);
+			GS::fp_filter(reinterpret_cast<double*>(&pt));
 		}
 
 		for (auto mesh : meshes)
-		{
-			mesh->transformCoords(aabb, precision);
 			mesh->prepareBoolean();
-		}
 
 		CSGTree<RegularMesh>* pCsg = new CSGTree<RegularMesh>;
 		pCsg->createCSGTreeFromExpr(expr, meshes.data(), meshes.size());
@@ -75,9 +73,14 @@ extern "C"
 
 		RegularMesh* csgResult = new RegularMesh;
 
-		Octree* pOctree = new Octree(aabb, 1e-3);
+		Octree* pOctree = new Octree();
+		const double padding = 1e-3;
 		std::vector<Octree::Node*> intersectLeaves;
-		pOctree->build(meshes, &intersectLeaves);
+
+		auto cgalbbox = Bbox_3(aabb.xmin(), aabb.ymin(),
+			aabb.zmin(), aabb.xmax(), aabb.ymax(), aabb.zmax());
+		cgalbbox = enlarge(cgalbbox, padding);
+		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
 		doIntersection(meshes, intersectLeaves);
 		doClassification(pCsg, meshes, csgResult);

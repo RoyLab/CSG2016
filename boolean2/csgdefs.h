@@ -62,10 +62,7 @@ namespace Boolean
         case EDGE_2:
             return 2;
         default:
-        {
-            char _errline[20];
             throw std::exception();
-        }
         }
     }
 
@@ -80,10 +77,7 @@ namespace Boolean
         case VER_2:
             return 2;
         default:
-        {
-            char _errline[20];
             throw std::exception();
-        }
         }
     }
 

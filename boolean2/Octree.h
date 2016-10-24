@@ -25,7 +25,7 @@ namespace Boolean
         typedef CGAL::Point_3<Depick> Point;
         typedef CGAL::Vector_3<Depick> Vector;
         typedef CGAL::Iso_cuboid_3<Depick> NodeShape;
-        typedef std::vector<size_t> TriList;
+        typedef std::vector<Triangle*> TriList;
         typedef std::map<uint32_t, TriList*> TriTableT;
 
     public:
@@ -48,15 +48,16 @@ namespace Boolean
         };
 
     public:
-        Octree(){}
+		Octree() {}
         ~Octree(){ release(); }
 
-        void build(const std::vector<RegularMesh*>& meshList, std::vector<Node*>* isectNodes = nullptr);
+        void build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, std::vector<Node*>* isectNodes = nullptr);
+
         void release(); // not release meshlist
         Node* getRoot() const { return mp_root; }
 
     private:
-        Node* createRootNode();
+        Node* createRootNode(const Bbox_3&);
         void build(Node* root, size_t level, std::vector<Node*>* isectNodes = nullptr);
 
 
@@ -64,10 +65,10 @@ namespace Boolean
         Node*					mp_root = nullptr;
 		RegularMesh* const*     mp_meshes = nullptr;
         size_t					m_nMesh = 0;
-
+		
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
         STATIC_PROPERTY(int, MAX_LEVEL);
     };
 
-}// namespace CSG
+}// namespace BOOLEAN
 

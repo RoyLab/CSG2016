@@ -27,6 +27,7 @@
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="intersection.h" />
+    <ClInclude Include="UndirectedGraph.hpp" />
     <ClInclude Include="xmemory.h" />
     <ClInclude Include="Octree.h" />
     <ClInclude Include="offio.h" />
@@ -39,7 +40,9 @@
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
     <ClCompile Include="csg.cpp" />
+    <ClCompile Include="intersection.cpp" />
     <ClCompile Include="Octree.cpp" />
+    <ClCompile Include="preps.cpp" />
     <ClCompile Include="RegularMesh.cpp" />
     <ClCompile Include="xmemory.cpp" />
   </ItemGroup>
@@ -107,7 +110,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>precompile.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -136,7 +139,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>precompile.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>

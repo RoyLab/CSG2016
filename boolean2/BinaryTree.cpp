@@ -7,9 +7,11 @@
 #include "BinaryTree.h"
 
 
+#pragma warning(disable: 4715)
+
 namespace Boolean
 {
-	unsigned long long mark;
+	uint64_t mark;
 
 	CSGTreeNode::CSGTreeNode():
 		relation(REL_UNKNOWN),
@@ -35,7 +37,7 @@ namespace Boolean
         SAFE_DELETE(pRoot);
 	}
 
-	static CSGTreeNode* ConvertToPositiveTree(const CSGTreeNode* root, bool inverse, unsigned level, unsigned& maxLvl)
+	static CSGTreeNode* ConvertToPositiveTree(const CSGTreeNode* root, bool inverse, uint32_t level, uint32_t& maxLvl)
 	{
 		CSGTreeNode* res = new CSGTreeNode;
 		if (root->Type == TYPE_LEAF) // it is a leaf node
@@ -48,7 +50,7 @@ namespace Boolean
 		}
 		else
 		{
-			unsigned Ldepth(0), Rdepth(0);
+			uint32_t Ldepth(0), Rdepth(0);
 			if (root->Type == TYPE_DIFF)
 			{
 				res->Type = TYPE_INTERSECT;
@@ -78,8 +80,8 @@ namespace Boolean
 
 		return res;
 	}
-
-    void GetLeafList(CSGTreeNode* root, std::vector<int>& list)
+	
+    void GetLeafList(CSGTreeNode* root, std::vector<uint32_t>& list)
     {
 		if (root->Type == TYPE_LEAF)
 		{
@@ -115,7 +117,7 @@ namespace Boolean
 	CSGTreeOld* ConvertToPositiveTree(const CSGTreeOld* myTree)
 	{
 		CSGTreeOld* result = new CSGTreeOld;
-		unsigned maxLvl = 0;
+		uint32_t maxLvl = 0;
 		result->pRoot = ConvertToPositiveTree(myTree->pRoot, false, 0, maxLvl);
 		GetLeafList(result);
 		return result;
@@ -163,7 +165,7 @@ namespace Boolean
 		return pRes;
 	}
 
-	static Relation CompressCSGTreeWithInside(CSGTreeOld* tree, unsigned Id)
+	static Relation CompressCSGTreeWithInside(CSGTreeOld* tree, uint32_t Id)
 	{
 		auto leaf = tree->Leaves[Id];
 
@@ -243,7 +245,7 @@ namespace Boolean
 		return REL_UNKNOWN;
 	}
 
-	static Relation CompressCSGTreeWithOutside(CSGTreeOld* tree, unsigned Id)
+	static Relation CompressCSGTreeWithOutside(CSGTreeOld* tree, uint32_t Id)
 	{
 		auto leaf = tree->Leaves[Id];
 		CSGTreeNode *curPtr = leaf, *parent = leaf->Parent;
@@ -322,7 +324,7 @@ namespace Boolean
 		return REL_UNKNOWN;
 	}
 	
-	static Relation CompressCSGTreeWithSame(CSGTreeOld* tree, unsigned Id)
+	static Relation CompressCSGTreeWithSame(CSGTreeOld* tree, uint32_t Id)
 	{
 		auto leaf = tree->Leaves[Id];
 		CSGTreeNode *curPtr = leaf, *parent = leaf->Parent, *neib;
@@ -362,7 +364,7 @@ namespace Boolean
 		return REL_NOT_AVAILABLE;
 	}
 
-	static Relation CompressCSGTreeWithOppo(CSGTreeOld* tree, unsigned Id)
+	static Relation CompressCSGTreeWithOppo(CSGTreeOld* tree, uint32_t Id)
 	{
 		auto leaf = tree->Leaves[Id];
 		CSGTreeNode *curPtr = leaf, *parent = leaf->Parent, *neib;
@@ -402,7 +404,7 @@ namespace Boolean
 		return REL_NOT_AVAILABLE;
 	}
 
-	Relation CompressCSGTree(CSGTreeOld* tree, unsigned Id, Relation rel)
+	Relation CompressCSGTree(CSGTreeOld* tree, uint32_t Id, Relation rel)
 	{
 		// T∩N⇒N,  F∪N⇒N, F∩N⇒F, and T∪N⇒T
 		if (tree->Leaves.find(Id) == tree->Leaves.end())
@@ -546,9 +548,9 @@ namespace Boolean
 	}
 
 
-	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, unsigned nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output)
+	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output)
 	{
-		for (unsigned i = 0; i < nMesh; i++)
+		for (uint32_t i = 0; i < nMesh; i++)
         {
             if (leaves[i])
 			    leaves[i]->relation = tab[i];

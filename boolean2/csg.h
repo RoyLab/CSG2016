@@ -77,8 +77,8 @@ namespace Boolean
 
         SampleIndicatorVector(){}
 
-        virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
-        virtual const Indicator& operator[](size_t meshId) const
+        virtual Indicator& operator[](int meshId) { return data[meshId]; }
+        virtual const Indicator& operator[](int meshId) const
         {
             auto res = data.find(meshId);
             if (res == data.end())

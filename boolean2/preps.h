@@ -3,40 +3,49 @@
 
 namespace Boolean
 {
-    class XPlane
-    {
-    public:
-        XPlane();
-        XPlane(Real *);
-        XPlane(Real, Real, Real, Real);
+	class XPlaneBase
+	{
+	public:
+		XPlaneBase();
+		XPlaneBase(Real *);
+		XPlaneBase(Real, Real, Real, Real);
 
-        template <class PointT>
-        XPlane(const PointT &p, const PointT&, const PointT& r);
+		template <class PointT>
+		XPlaneBase(const PointT &p, const PointT&, const PointT& r);
 
 		const Real& a() const { return m_data[0]; }
 		const Real& b() const { return m_data[1]; }
 		const Real& c() const { return m_data[2]; }
 		const Real& d() const { return m_data[3]; }
-		
-    protected:
-        Real m_data[4];
-    };
 
-    class XPoint
-    {
-    public:
-        XPoint();
+		const Real* data() const { return m_data; }
+	protected:
+		Real m_data[4];
+	};
 
-    protected:
-        size_t planeIds[3];
-    };
-	
-	template <class T>
-
-	template <class PointT, class ForwardIterator>
-	void normalizeAndFilter(typename PointT::Scalar* c, typename PointT::Scalar* d,
-		ForwardIterator begin, ForwardIterator end)
+	class XPlane
 	{
+	public:
+		XPlane() : id(0) {}
+		XPlane(int i) : id(i) {}
+		XPlane(int i, bool inv) : id(inv?i:-i) {}
 
-	}
+		const XPlaneBase& base() const;
+		bool isInverse() const { return id < 0; }
+		void inverse() { id = -id; }
+		XPlane opposite() const { return XPlane(-id); }
+
+		const Real* data() const { return base().data(); }
+	protected:
+		int id; // id = (realId+1) * sign
+	};
+
+	class XPoint
+	{
+	public:
+		XPoint();
+
+	protected:
+		XPlane m_planes[3];
+	};
 }

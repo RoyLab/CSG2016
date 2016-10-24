@@ -1,6 +1,9 @@
 #pragma once
 #include <assert.h>
 #include <math.h>
+#include <string.h>
+
+#pragma warning(disable: 4101)
 
 /* On some machines, the exact arithmetic routines might be defeated by the  */
 /*   use of internal extended precision floating-point registers.  Sometimes */
@@ -14,7 +17,10 @@
 #define INEXACT                          /* Nothing */
 /* #define INEXACT volatile */
 
-#define REAL double                      /* float or double */
+#define REAL double                      /* float or REAL */
+
+extern REAL FP_FACTOR;
+
 
 /* Which of the following two methods of finding the absolute values is      */
 /*   fastest is compiler-dependent.  A few compilers can inline and optimize */
@@ -458,25 +464,25 @@ namespace GS
 	  return hindex;
 	}
 
-# define FP_FILTER(x, factor) (round((x) * (factor)) / (factor))
+# define FP_FILTER(x, factor) (round((x) * (FP_FACTOR)) / (FP_FACTOR))
 
-    inline REAL fp_filter(REAL x, REAL factor)
+    inline REAL fp_filter(REAL x)
 	{
 		assert((x < -1.0) == (x > 1.0));
-        return round(x * factor) / factor;
+        return round(x * FP_FACTOR) / FP_FACTOR;
 	}
 
-    inline void fp_filter(REAL* v, REAL factor)
+    inline void fp_filter(REAL* v)
 	{
 		assert((v[0] < -1.0) == (v[0] > 1.0));
 		assert((v[1] < -1.0) == (v[1] > 1.0));
 		assert((v[2] < -1.0) == (v[2] > 1.0));
 
         for (int i = 0; i < 3; i++)
-			v[i] = fp_filter(v[i], factor);
+			v[i] = fp_filter(v[i]);
 	}
 
-	inline REAL inexactDet3x3(const REAL** m)
+	inline REAL inexactDet3x3(const REAL(*m)[3])
 	{
 		// non-robust
 		return 
@@ -485,7 +491,7 @@ namespace GS
 			m[2][0]*(m[0][1]*m[1][2] - m[0][2]*m[1][1]);
 	}
 
-	inline int exactDot3Sign(const REAL* v1, const REAL* v2, double* res)
+	inline REAL exactDot3Sign(const REAL* v1, const REAL* v2, REAL* res)
 	{
 		REAL Declare_Var, Declare_VarEX, x[2], y[2], z[2], k[4], m[6];
 		Two_Product(v1[0], v2[0], x[1], x[0]);
@@ -496,11 +502,11 @@ namespace GS
 		Four_Two_Sum(k[3], k[2], k[1], k[0], z[1], z[0], 
 			m[5], m[4], m[3], m[2], m[1], m[0]);
 
-        return compress(6, m, res);
+        return estimate(6, m);
 	}
 
 
-    inline REAL adaptivePointClassify(const REAL*  normal, double distance, const REAL*  point)
+    inline REAL adaptivePointClassify(const REAL*  normal, REAL distance, const REAL*  point)
     {
 		REAL Declare_Var, Declare_VarEX, xe, ye, ze, x[2], y[2], z[2], k[4], m[6];
 		Two_Product(normal[0], point[0], x[1], x[0]);
@@ -597,7 +603,7 @@ namespace GS
 		}
 	}
 
-	inline double exactDet2x2Sign(double m00, double m01, double m10, double m11)
+	inline REAL exactDet2x2Sign(REAL m00, REAL m01, REAL m10, REAL m11)
 	{
 		REAL Declare_Var, Declare_VarEX, xe, ye, ze, x[2], y[2], z[2], k[4];
 		Two_Product(m00, m11, x[1], x[0]);
@@ -608,7 +614,7 @@ namespace GS
 		return estimate(4, k);
 	}
 
-	inline double adaptiveDet2x2Sign(double m00, double m01, double m10, double m11)
+	inline REAL adaptiveDet2x2Sign(REAL m00, REAL m01, REAL m10, REAL m11)
 	{
 		REAL x1 = m00 * m11;
 		REAL x2 = m10 * m01;
@@ -662,18 +668,18 @@ namespace GS
 		}
 	}
 
-	inline double exactDet2x2Sign(const double2x2 &mat)
+	inline REAL exactDet2x2Sign(const REAL(*mat)[2])
 	{
 		return exactDet2x2Sign(
 			mat[0][0], mat[0][1], mat[1][0], mat[1][1]);
 	}
 
-	inline double adaptiveDet2x2Sign(const double2x2 &mat)
+	inline REAL adaptiveDet2x2Sign(const REAL(*mat)[2])
 	{
 		return adaptiveDet2x2Sign(
 			mat[0][0], mat[0][1], mat[1][0], mat[1][1]);
 	}
-	inline double inexactDet3x3(const double3x3& m, double& err)
+	inline REAL inexactDet3x3(const REAL(*m)[3], REAL& err)
 	{
 		// non-robust
 		return 
@@ -682,7 +688,7 @@ namespace GS
 			m[2][0]*(m[0][1]*m[1][2] - m[0][2]*m[1][1]);
 	}
 
-	inline void exactDet2x2Sign(double m00, double m01, double m10, double m11, double* k)
+	inline void exactDet2x2Sign(REAL m00, REAL m01, REAL m10, REAL m11, REAL* k)
 	{
 		REAL Declare_Var, Declare_VarEX, xe, ye, ze, x[2], y[2], z[2];
 		Two_Product(m00, m11, x[1], x[0]);
@@ -691,7 +697,7 @@ namespace GS
 		Two_Two_Diff(x[1], x[0], y[1], y[0], k[3], k[2], k[1], k[0]);
 	}
 
-	inline double exactDet3x3Sign(const double3x3& mat, int *klen = NULL, double* k = NULL)
+	inline REAL exactDet3x3Sign(const REAL(*mat)[3], int *klen = NULL, REAL* k = NULL)
 	{
 		REAL Declare_Var, Declare_VarEX, det2x2[12], det2x3[24];
 		exactDet2x2Sign(mat[1][1], mat[1][2], mat[2][1], mat[2][2], det2x2);
@@ -717,7 +723,8 @@ namespace GS
 		return estimate(lb, sumb);
 	}
 
-	inline double adaptiveDet3x3Sign(const double3x3& mat)
+	template <class MatrixT>
+	inline REAL adaptiveDet3x3Sign(const MatrixT mat)
 	{
 		REAL v[6], w[3], w2[3];
 		
@@ -802,7 +809,7 @@ namespace GS
 		}
 	}
 
-	inline void getElement(const double4x4& src, double3x3& dest, 
+	inline void getElement(const REAL(*src)[4], REAL(*dest)[3],
 		int r1, int r2, int r3, int c1, int c2, int c3)
 	{
 		dest[0][0] = src[r1][c1];
@@ -818,11 +825,11 @@ namespace GS
 		dest[2][2] = src[r3][c3];
 	}
 
-	inline double exactDet4x4Sign(const double4x4& mat)
+	inline REAL exactDet4x4Sign(const REAL(*mat)[4])
 	{
 		REAL sum[96];
 		int xa, xb, xc, xd;
-		double3x3 tmp;
+		REAL tmp[3][3];
 		getElement(mat, tmp, 1, 2, 3, 1, 2, 3);
 		exactDet3x3Sign(tmp, &xa, sum);
 
@@ -853,7 +860,7 @@ namespace GS
 		return det3[lz-1];
 	}
 
-	inline double adaptiveDet4x4Sign(const double4x4 &mat)
+	inline REAL adaptiveDet4x4Sign(const REAL (*mat) [4])
 	{
 	//mark1:
 		REAL det2x2[12], det2x2a[12], det2x2b[12], e[12];

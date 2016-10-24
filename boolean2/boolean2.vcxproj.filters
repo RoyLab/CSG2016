@@ -53,6 +53,9 @@
     <ClInclude Include="adaptive.h">
       <Filter>Source Files\csg</Filter>
     </ClInclude>
+    <ClInclude Include="UndirectedGraph.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boolean.cpp">
@@ -70,9 +73,17 @@
     <ClCompile Include="RegularMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="xmemory.cpp" />
     <ClCompile Include="adaptive.cpp">
       <Filter>Source Files\csg</Filter>
+    </ClCompile>
+    <ClCompile Include="xmemory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="intersection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="preps.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
