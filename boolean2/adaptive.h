@@ -264,7 +264,7 @@
 
 namespace Boolean
 {
-	extern REAL FP_FACTOR;
+	extern uint64_t FP_MASK;
 
 	extern REAL splitter;     /* = 2^ceiling(p / 2) + 1.  Used to split floats in half. */
 	extern REAL epsilon;                /* = 2^(-p).  Used to estimate roundoff errors. */
@@ -462,12 +462,10 @@ namespace Boolean
 	  return hindex;
 	}
 
-# define FP_FILTER(x, factor) (round((x) * (FP_FACTOR)) / (FP_FACTOR))
-
-    inline REAL fp_filter(REAL x)
+    inline void fp_filter(REAL& x)
 	{
 		assert((x < -1.0) == (x > 1.0));
-        return round(x * FP_FACTOR) / FP_FACTOR;
+		*((uint64_t*)&x) &= FP_MASK;
 	}
 
     inline void fp_filter(REAL* v)
@@ -477,7 +475,7 @@ namespace Boolean
 		assert((v[2] < -1.0) == (v[2] > 1.0));
 
         for (int i = 0; i < 3; i++)
-			v[i] = fp_filter(v[i]);
+			fp_filter(v[i]);
 	}
 
 	inline REAL inexactDet3x3(const REAL(*m)[3])

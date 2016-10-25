@@ -20,6 +20,7 @@ namespace Boolean
     Octree::Node* Octree::createRootNode(const Bbox_3& bbox)
     {
         Node* root = new Node;
+		root->bbox = bbox;
         for (uint32_t i = 0; i < m_nMesh; i++)
         {
             auto pcMesh = mp_meshes[i];

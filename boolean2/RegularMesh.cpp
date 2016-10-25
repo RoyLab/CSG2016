@@ -41,7 +41,7 @@ namespace Boolean
 		int offset = memmgr->insertVertices(pPts, pPts + file.nVertices);
 
 		m_faces.resize(file.nFaces);
-		int n, ptr = 0, id;
+		int n, ptr = 0;
 		int* indices = file.indices.get();
 		Triangle* face;
 		int triId = 0;
@@ -56,9 +56,9 @@ namespace Boolean
 			for (int j = 0; j < 3; j++)
 				face->vIds[j] = tmpIdx[j]+offset;
 
-			face->eIds[2] = memmgr->getEdgeId(tmpIdx[0], tmpIdx[1], face);
-			face->eIds[0] = memmgr->getEdgeId(tmpIdx[1], tmpIdx[2], face);
-			face->eIds[1] = memmgr->getEdgeId(tmpIdx[2], tmpIdx[0], face);
+			face->eIds[2] = memmgr->getEdgeId(face->vIds[0], face->vIds[1], face);
+			face->eIds[0] = memmgr->getEdgeId(face->vIds[1], face->vIds[2], face);
+			face->eIds[1] = memmgr->getEdgeId(face->vIds[2], face->vIds[0], face);
 
 			m_faces[i] = face;
 		}
@@ -94,13 +94,16 @@ namespace Boolean
 
 	void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
 	{
-		FH fh;
-		if (s == ends[0]) fh.orientation = 1;
-		else fh.orientation = -1;
+		FH fh( 1, fPtr );
+		if (s != ends[0]) fh.orientation = -1;
 
 		if (!fhs[0].ptr) fhs[0] = fh;
 		else if (!fhs[1].ptr) fhs[1] = fh;
-		else extrafhs.push_back(fh);
+		else
+		{
+			assert(0);
+			extrafhs.push_back(fh);
+		}
 	}
 }
 

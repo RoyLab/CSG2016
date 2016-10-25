@@ -79,8 +79,7 @@ extern "C"
 		const double padding = 1e-3;
 		std::vector<Octree::Node*> intersectLeaves;
 
-		auto cgalbbox = Bbox_3(aabb.xmin(), aabb.ymin(),
-			aabb.zmin(), aabb.xmax(), aabb.ymax(), aabb.zmax());
+		auto cgalbbox = Bbox_3(-1, -1, -1, 1, 1, 1);
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 

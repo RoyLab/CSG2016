@@ -23,6 +23,8 @@ namespace Boolean
 
     struct FH
     {
+		FH() {}
+		FH(int o, IPolygon* p) : orientation(o), ptr(p) {}
         int orientation;
         IPolygon* ptr = nullptr;
     };
