@@ -19,6 +19,7 @@ namespace Boolean
         std::list<uint32_t> edges;
 
 		bool findEdge(uint32_t other, uint32_t* result = nullptr) const;
+		Oriented_side orientation(const XPlane&) const;
     };
 
     struct FH
@@ -31,6 +32,24 @@ namespace Boolean
         
     struct MyEdge
     {
+		class ConstFaceIterator
+		{
+		public:
+					ConstFaceIterator(const MyEdge& edge) :
+				m_edge(edge), stage(0) {}
+
+			ConstFaceIterator& operator++();
+			ConstFaceIterator& operator++(int);
+			operator bool() const;
+			
+			const IPolygon* ptr() const;
+
+		private:
+			const MyEdge& m_edge;
+			int stage;
+			std::list<FH>::const_iterator eItr;
+		};
+
 		MyEdge(uint32_t a, uint32_t b)
 		{ ends[0] = a; ends[1] = b; }
 
@@ -38,8 +57,7 @@ namespace Boolean
 
         FH fhs[2];
 		std::list<FH> extrafhs;
-
-        InsctData* inscts = nullptr;
+		InsctData<EdgePBI>* inscts = nullptr;
 
 		~MyEdge() { SAFE_DELETE(inscts); }
 		void addAjacentFace(uint32_t s, uint32_t e, IPolygon* fPtr);
@@ -63,10 +81,25 @@ namespace Boolean
     {
 		friend class RegularMesh;
     public:
-		Triangle(size_t i): IPolygon(3, i) {}
-        bool collide(const CGAL::Iso_cuboid_3<Depick>& cube) const;
+		InsctData<FacePBI>* inscts = nullptr;
+
+		Triangle(int i): IPolygon(3, i) {}
+		~Triangle() { SAFE_DELETE(inscts); }
+
+		// access
 		const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
+		XPlane supportingPlane() const { return sPlane; }
+		CGALPoint& point(int i) const;
+		MyEdge& edge(int i) const;
+		uint32_t edgeId(int i) const;
+
+		// search
+		int findVertex(const XPoint& pt, PosTag tag) const;
+
+		// manipulate
+		void calcSupportingPlane();
+		void calcBoundingPlane();
 
     protected:
 		CGALTriangle cgalTri;
@@ -75,9 +108,6 @@ namespace Boolean
 
 		XPlane sPlane;
 		XPlane bPlanes[3];
-        InsctData* inscts = nullptr;
-
-		~Triangle() { SAFE_DELETE(inscts); }
 	};
 
     class SubPolygon : public IPolygon

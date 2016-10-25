@@ -125,6 +125,13 @@ namespace Boolean
         REL_NOT_AVAILABLE = -1 // (0xffffffff)
     };
 
+	enum Oriented_side
+	{
+		ON_NEGATIVE_SIDE = -1, 
+		ON_ORIENTED_BOUNDARY = 0,
+		ON_POSITIVE_SIDE = 1
+	};
+
     inline void inverseRelation(Relation& rel)
     {
         switch (rel)

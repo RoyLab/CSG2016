@@ -19,6 +19,7 @@ namespace Boolean
 	};
     class Octree;
 	class XPlane;
+	class XLine;
 	class XPoint;
 	class IPolygon;
 	class Triangle;

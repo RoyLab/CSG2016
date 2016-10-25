@@ -83,7 +83,7 @@ extern "C"
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
-		//doIntersection(meshes, intersectLeaves);
+		doIntersection(meshes, intersectLeaves);
 		//doClassification(pCsg, meshes, csgResult);
 
 		//csgResult->invCoords(aabb);

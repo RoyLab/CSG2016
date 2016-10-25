@@ -1,29 +1,63 @@
 #pragma once
 #include <vector>
+#include <list>
 #include "global.h"
+#include "preps.h"
 #include "Octree.h"
 
 namespace Boolean
 {
+	struct NeighborInfo
+	{
+		enum Type {Vertex, Edge, Face};
+
+		Type type;
+		union
+		{
+			int neighborEdgeId; // >0 is fid, < 0 is eid, offset = 1
+			Triangle* pTrangle;
+		};
+		uint32_t neighborMeshId;
+	};
+
     struct PBIRep
     {
+		XPlane pends[2];
+		uint32_t ends[2];
 
+		std::list<NeighborInfo> neighbor;
+
+		virtual ~PBIRep() {}
     };
 
+	typedef PBIRep EdgePBI;
+
+	struct FacePBI: public PBIRep
+	{
+		XPlane vertPlane;
+	};
+
+	template <class PBI>
     class InsctData
     {
     public:
-        typedef std::list<PBIRep> Data;
+		typedef std::list<PBI> PBIList;
+		typedef std::list<uint32_t> VertexList;
 
-        void refine();
-        void isRefined() const;
-        Data& data() { return inscts; }
-        const Data& data() const { return inscts; }
+		void refine();
+		bool isRefined() const;
+
+		PBIList& pbis() { return inscts; }
+        const PBIList& pbis() const { return inscts; }
+
 
     protected:
-        bool        bRefined = false;
-        Data        inscts;
+        bool		bRefined = false;
+
+	public:
+		PBIList		inscts;
+		VertexList  points;
     };
 
-    void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves);
+    void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&);
 }
