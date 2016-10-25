@@ -17,8 +17,7 @@
 #include "RegularMesh.h"
 #include "Octree.h"
 #include "csg.h"
-#include "xmemory.h"
-#include "xgeometry.h"
+#include "intersection.h"
 
 extern "C"
 {
@@ -63,7 +62,7 @@ extern "C"
 		for (auto &pt: pMem->points)
 		{
 			XR::normalizeCoords(center, scale, pt);
-			fp_filter(reinterpret_cast<double*>(&pt));
+			fp_filter(reinterpret_cast<Real*>(&pt));
 		}
 
 		for (auto mesh : meshes)

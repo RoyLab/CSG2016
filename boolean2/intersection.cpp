@@ -278,17 +278,39 @@ namespace Boolean
 		result.tagB[1] = Bcmp <= 0 ? tagB[1] : defaultTag[1];
 		result.B = Bcmp <= 0 ? posB[1] : posB[0];
 
+        if (line.linearOrderNoCheck(result.A, result.B) == 0)
+            return INTERSECT_ON_POINT;
+
+        assert(line.linearOrderNoCheck(result.A, result.B) > 0);
 		return INTERSECT_ON_LINE;
 	}
 
 	uint32_t addAndMerge(Triangle* fh[2], XPoint& pt, PosTag tag[2])
 	{
-		//auto pMem = MemoryManager::getInstance();
-		//pMem->
-		//int id[2];
-		//id[0] = fh0->findVertex(insctRes.A, insctRes.tagA[0]);
-		//id[1] = fh1->findVertex(insctRes.A, insctRes.tagA[1]);
-		return 0;
+		auto pMem = MemoryManager::getInstance();
+		int id[2];
+        uint32_t *slots[2];
+		id[0] = fh[0]->findVertex(pt, tag[0], slots[0]);
+		id[1] = fh[1]->findVertex(pt, tag[1], slots[1]);
+
+        if (id[0] == id[1])
+        {
+            if (id[0] < 0)
+            {
+                // add new
+                uint32_t vid = pMem->insertVertex(pt);
+                *(slots[0]) = *(slots[1]) = vid;
+                return vid;
+            }
+            else return id[0];
+        }
+        else
+        {
+            uint32_t vid = std::min(id[0], id[1]);
+            if (vid < 0) vid = id[0] < 0 ? id[1] : id[0];
+            *(slots[0]) = *(slots[1]) = vid;
+            return vid;
+        }
 	}
 
 	bool insctTest(Triangle* fh0, Triangle* fh1, TriIdSet* overlaps, uint32_t meshId[2])

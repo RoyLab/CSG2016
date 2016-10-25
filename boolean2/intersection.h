@@ -4,6 +4,7 @@
 #include "global.h"
 #include "preps.h"
 #include "Octree.h"
+#include "xmemory.h"
 
 namespace Boolean
 {
@@ -47,9 +48,7 @@ namespace Boolean
 		void refine();
 		bool isRefined() const;
 
-		PBIList& pbis() { return inscts; }
-        const PBIList& pbis() const { return inscts; }
-
+        uint32_t* point(const XPoint&);
 
     protected:
         bool		bRefined = false;
@@ -60,4 +59,17 @@ namespace Boolean
     };
 
     void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&);
+
+    template<class PBI>
+    inline uint32_t * InsctData<PBI>::point(const XPoint &p)
+    {
+        for (auto itr = points.begin(); itr != points.end(); itr++)
+        {
+            if (xvertex(*itr) == p)
+                return &*itr;
+        }
+
+        points.push_back(-1);
+        return &points.back();
+    }
 }

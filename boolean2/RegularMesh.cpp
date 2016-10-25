@@ -5,6 +5,7 @@
 #include "RegularMesh.h"
 #include "xmemory.h"
 #include "offio.h"
+#include "intersection.h"
 
 namespace Boolean
 {
@@ -88,11 +89,23 @@ namespace Boolean
 				return true;
 			}
 		}
-
 		return false;
 	}
 
-	void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
+    bool MyVertex::operator==(const XPoint & p) const
+    {
+        if (isPlaneRep())
+            return xcppoint(id()) == p;
+        else
+            return p == xcpoint(id());
+    }
+
+    MyEdge::~MyEdge()
+    {
+        SAFE_DELETE(inscts);
+    }
+
+    void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
 	{
 		FH fh( 1, fPtr );
 		if (s != ends[0]) fh.orientation = -1;
@@ -105,5 +118,96 @@ namespace Boolean
 			extrafhs.push_back(fh);
 		}
 	}
+
+    Triangle::~Triangle()
+    {
+        SAFE_DELETE(inscts);
+    }
+
+    cyPointT & Triangle::point(int i) const
+    {
+        return xpoint(i);
+    }
+
+    MyEdge & Triangle::edge(int i) const
+    {
+        return xedge(eIds[i]);
+    }
+
+    int Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    {
+        InsctData<EdgePBI> **is;
+        switch (tag)
+        {
+        case INNER:
+            if (!inscts) inscts = new InsctData<FacePBI>;
+            slot = inscts->point(pt);
+            return *slot;
+        case EDGE_0:
+            is = &xedge(eIds[0]).inscts;
+            if (!*is) *is = new InsctData<EdgePBI>;
+            slot = (*is)->point(pt);
+            return *slot;
+        case EDGE_1:
+            is = &xedge(eIds[1]).inscts;
+            if (!*is) *is = new InsctData<EdgePBI>;
+            slot = (*is)->point(pt);
+            return *slot;
+        case EDGE_2:
+            is = &xedge(eIds[2]).inscts;
+            if (!*is) *is = new InsctData<EdgePBI>;
+            slot = (*is)->point(pt);
+            return *slot;
+        case VER_0:
+            slot = &vIds[0];
+            return *slot;
+        case VER_1:
+            slot = &vIds[1];
+            return *slot;
+        case VER_2:
+            slot = &vIds[2];
+            return *slot;
+        default:
+            assert(0);
+            break;
+        }
+        return -1;
+    }
+
+    void Triangle::calcSupportingPlane()
+    {
+        if (!sPlane.isValid())
+            sPlane = XPlane(xcpoint(vIds[0]), xcpoint(vIds[0]), xcpoint(vIds[0]));
+    }
+
+    void Triangle::calcBoundingPlane()
+    {
+        if (!bPlanes[0].isValid())
+        {
+            assert(sPlane.isValid());
+            const cyPointT* tmp = 
+                reinterpret_cast<const cyPointT*>(sPlane.normal());
+            auto normal = *tmp / tmp->Length() * 0.1;
+            fp_filter(reinterpret_cast<Real*>(&normal));
+
+            auto& p = xpoint(vIds[0]);
+            auto& q = xpoint(vIds[1]);
+            auto& r = xpoint(vIds[2]);
+
+            bPlanes[0] = XPlane(q, normal, r - q);
+            bPlanes[1] = XPlane(r, normal, p - r);
+            bPlanes[2] = XPlane(p, normal, q - p);
+
+            assert(sPlane.has_on(p));
+            assert(sPlane.has_on(q));
+            assert(sPlane.has_on(r));
+            assert(bPlanes[0].has_on(q));
+            assert(bPlanes[0].has_on(r));
+            assert(bPlanes[1].has_on(r));
+            assert(bPlanes[1].has_on(p));
+            assert(bPlanes[2].has_on(p));
+            assert(bPlanes[2].has_on(q));
+        }
+    }
 }
 

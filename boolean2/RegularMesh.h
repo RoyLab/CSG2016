@@ -4,65 +4,11 @@
 
 #include "global.h"
 #include "preps.h"
-#include "intersection.h"
 #include "offio.h"
+#include "xmemory.h"
 
 namespace Boolean
 {
-	typedef Depick CGALKernel;
-	typedef typename CGALKernel::Triangle_3 CGALTriangle;
-	typedef typename CGALKernel::Point_3 CGALPoint;
-
-    struct MyVertex
-    {
-		int rep; // positive is v-base, negative is p-base
-        std::list<uint32_t> edges;
-
-		bool findEdge(uint32_t other, uint32_t* result = nullptr) const;
-		Oriented_side orientation(const XPlane&) const;
-    };
-
-    struct FH
-    {
-		FH() {}
-		FH(int o, IPolygon* p) : orientation(o), ptr(p) {}
-        int orientation;
-        IPolygon* ptr = nullptr;
-    };
-        
-    struct MyEdge
-    {
-		class ConstFaceIterator
-		{
-		public:
-					ConstFaceIterator(const MyEdge& edge) :
-				m_edge(edge), stage(0) {}
-
-			ConstFaceIterator& operator++();
-			ConstFaceIterator& operator++(int);
-			operator bool() const;
-			
-			const IPolygon* ptr() const;
-
-		private:
-			const MyEdge& m_edge;
-			int stage;
-			std::list<FH>::const_iterator eItr;
-		};
-
-		MyEdge(uint32_t a, uint32_t b)
-		{ ends[0] = a; ends[1] = b; }
-
-		uint32_t ends[2];
-
-        FH fhs[2];
-		std::list<FH> extrafhs;
-		InsctData<EdgePBI>* inscts = nullptr;
-
-		~MyEdge() { SAFE_DELETE(inscts); }
-		void addAjacentFace(uint32_t s, uint32_t e, IPolygon* fPtr);
-    };
-
     class IPolygon
     {
     public:
@@ -84,18 +30,18 @@ namespace Boolean
 		InsctData<FacePBI>* inscts = nullptr;
 
 		Triangle(int i): IPolygon(3, i) {}
-		~Triangle() { SAFE_DELETE(inscts); }
+        ~Triangle();
 
 		// access
 		const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
 		XPlane supportingPlane() const { return sPlane; }
-		CGALPoint& point(int i) const;
-		MyEdge& edge(int i) const;
-		uint32_t edgeId(int i) const;
+        cyPointT& point(int i) const;
+        MyEdge& edge(int i) const;
+        uint32_t edgeId(int i) const { return eIds[i]; }
 
 		// search
-		int findVertex(const XPoint& pt, PosTag tag) const;
+		int findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
 
 		// manipulate
 		void calcSupportingPlane();
@@ -103,8 +49,8 @@ namespace Boolean
 
     protected:
 		CGALTriangle cgalTri;
-        size_t eIds[3];
-        size_t vIds[3];
+        uint32_t eIds[3];
+        uint32_t vIds[3];
 
 		XPlane sPlane;
 		XPlane bPlanes[3];

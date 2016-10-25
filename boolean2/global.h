@@ -25,4 +25,9 @@ namespace Boolean
 	class Triangle;
 	class RegularMesh;
 	class MemoryManager;
+
+    struct FacePBI;
+    struct PBIRep;
+    typedef PBIRep EdgePBI;
+    template <class PBI> class InsctData;
 }

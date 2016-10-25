@@ -856,7 +856,8 @@ namespace Boolean
 		return det3[lz-1];
 	}
 
-	inline REAL adaptiveDet4x4Sign(const REAL (*mat) [4])
+    template <class MatrixT>
+    inline REAL adaptiveDet4x4Sign(const MatrixT mat)
 	{
 	//mark1:
 		REAL det2x2[12], det2x2a[12], det2x2b[12], e[12];

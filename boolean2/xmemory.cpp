@@ -10,7 +10,7 @@ namespace Boolean
 		static MemoryManager mgr;
 		return &mgr;
 	}
-	int MemoryManager::insertVertices(VPoint * begin, VPoint * end)
+    uint32_t MemoryManager::insertVertices(VPoint * begin, VPoint * end)
 	{
 		int offset = points.size();
 		int n = end - begin;
@@ -19,12 +19,19 @@ namespace Boolean
 		vertices.resize(vertices.size() + n);
 
 		for (int i = 0; i < n; i++)
-			vertices[offset + i].rep = offset + i + 1;
+			vertices[offset + i].setAsVRep(offset + i);
 
 		return offset;
 	}
 
-	uint32_t MemoryManager::getEdgeId(uint32_t a, uint32_t b, IPolygon * facePtr)
+    uint32_t MemoryManager::insertVertex(XPoint & pt)
+    {
+        ppoints.push_back(pt);
+
+        return ppoints.size() - 1;
+    }
+
+    uint32_t MemoryManager::getEdgeId(uint32_t a, uint32_t b, IPolygon * facePtr)
 	{
 		assert(a < xvertices().size());
 		MyVertex& one = xvertex(a);
