@@ -23,13 +23,14 @@ extern "C"
 {
 	using namespace Boolean;
 
-	void initContext(int precision);
+	void initContext();
 	void releaseContext();
 
 	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
-		const int precision = 16;
-		initContext(precision);
+        const double dieta = 1;
+        const int precision = exactinit(dieta);
+        initContext();
 
         test1();
         test2();
@@ -100,9 +101,8 @@ extern "C"
 	}
 
 
-	void initContext(int precision)
+	void initContext()
 	{
-		exactinit(precision);
 	}
 
 	void releaseContext()

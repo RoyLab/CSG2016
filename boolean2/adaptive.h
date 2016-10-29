@@ -264,14 +264,14 @@
 
 namespace Boolean
 {
-	extern uint64_t FP_MASK;
+	extern REAL FP_FACTOR, FP_EDGE_FACTOR, FP_EDGE_CHECK;
 
 	extern REAL splitter;     /* = 2^ceiling(p / 2) + 1.  Used to split floats in half. */
 	extern REAL epsilon;                /* = 2^(-p).  Used to estimate roundoff errors. */
 	extern REAL err3dot, err2x2, 
 		err3x3A0, err3x3A1, err3x3A2, err3x3B1, err3x3B2,
 		err4x4A0, err4x4A1, err4x4A2, err4x4A3, err4x4B;
-	void exactinit(size_t precision);
+    uint32_t exactinit(double dieta);
 
 	/*****************************************************************************/
 	/*                                                                           */
@@ -462,11 +462,22 @@ namespace Boolean
 	  return hindex;
 	}
 
+    inline void fp_filter(REAL& x, REAL factor)
+    {
+        x = std::round(x * factor) / factor;
+    }
+
     inline void fp_filter(REAL& x)
-	{
-		assert((x < -1.0) == (x > 1.0));
-		*((uint64_t*)&x) &= FP_MASK;
-	}
+    {
+        assert((x < -1.0) == (x > 1.0));
+        fp_filter(x, FP_FACTOR);
+    }
+
+    inline void fp_filter_edge(REAL& x)
+    {
+        assert((x < -1.0) == (x > 1.0));
+        fp_filter(x, FP_EDGE_FACTOR);
+    }
 
     inline void fp_filter(REAL* v)
 	{
@@ -477,6 +488,33 @@ namespace Boolean
         for (int i = 0; i < 3; i++)
 			fp_filter(v[i]);
 	}
+
+    inline void fp_filter_edge(REAL* v)
+    {
+        assert((v[0] < -1.0) == (v[0] > 1.0));
+        assert((v[1] < -1.0) == (v[1] > 1.0));
+        assert((v[2] < -1.0) == (v[2] > 1.0));
+
+        for (int i = 0; i < 3; i++)
+            fp_filter_edge(v[i]);
+    }
+
+    inline bool fp_filter_check(REAL x, REAL factor)
+    {
+        REAL x2 = x;
+        fp_filter(x2, factor);
+        return x2 == x;
+    }
+
+    inline bool fp_filter_check(const REAL* v, REAL factor)
+    {
+        for (int i = 0; i < 3; i++)
+            if (!fp_filter_check(v[i], factor))
+                return false;
+
+        return true;
+    }
+
 
 	inline REAL inexactDet3x3(const REAL(*m)[3])
 	{

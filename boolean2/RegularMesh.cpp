@@ -126,7 +126,7 @@ namespace Boolean
 
     cyPointT & Triangle::point(int i) const
     {
-        return xpoint(i);
+        return xpoint(vIds[i]);
     }
 
     MyEdge & Triangle::edge(int i) const
@@ -193,7 +193,7 @@ namespace Boolean
             const cyPointT* tmp = 
                 reinterpret_cast<const cyPointT*>(sPlane.normal());
             auto normal = *tmp / tmp->Length() * 0.1;
-            fp_filter(reinterpret_cast<Real*>(&normal));
+            fp_filter_edge(reinterpret_cast<Real*>(&normal));
 
             auto& p = xpoint(vIds[0]);
             auto& q = xpoint(vIds[1]);

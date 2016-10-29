@@ -5,15 +5,19 @@ namespace Boolean
 {
 	REAL splitter;     /* = 2^ceiling(p / 2) + 1.  Used to split floats in half. */
 	REAL epsilon;                /* = 2^(-p).  Used to estimate roundoff errors. */
-	uint64_t FP_MASK;
+    REAL FP_FACTOR, FP_EDGE_FACTOR, FP_EDGE_CHECK;
 
 	REAL err3dot, err2x2, err3x3A0, err3x3A1, err3x3A2,
 		err3x3B1, err3x3B2, err4x4A0, err4x4A1, err4x4A2, err4x4A3
 		, err4x4B;
 
-	void exactinit(size_t precision)
+	uint32_t exactinit(double dieta)
 	{
-		FP_MASK = (uint64_t(-1) << (53-precision));
+        uint32_t precision = static_cast<uint32_t>((53 - 3 + dieta * 2) / 3);
+        FP_FACTOR = std::pow(2, precision - 1);
+        double edge = precision + 1 - dieta;
+        FP_EDGE_FACTOR = std::pow(2, int(floor(edge)) - 1);
+        FP_EDGE_CHECK = std::pow(2, int(ceil(edge)) - 1);
 
 		REAL half;
 		REAL check, lastcheck;
@@ -55,5 +59,6 @@ namespace Boolean
 		err4x4A3 = epsilon * epsilon * (1.0 + 16.0 * epsilon);
 
 		err4x4B = epsilon * epsilon * (1.0 + 16.0 * epsilon);
+        return precision;
 	}
 }

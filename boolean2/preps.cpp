@@ -14,6 +14,9 @@ namespace Boolean
         assert(has_on(p));
         assert(has_on(q));
         assert(has_on(r));
+#ifdef PREP_DEBUG_INFO
+        debug();
+#endif
     }
 
     const XPlaneBase & XPlane::base() const
@@ -39,9 +42,7 @@ namespace Boolean
 
     Oriented_side XPlane::orientation(const cyPointT &p) const
     {
-        assert((*((uint64_t*)&p) & (~FP_MASK)) == 0);
-        assert((*((uint64_t*)&p+1) & (~FP_MASK)) == 0);
-        assert((*((uint64_t*)&p+2) & (~FP_MASK)) == 0);
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&p), FP_FACTOR));
 
         const cyPointT* thiz = reinterpret_cast<const cyPointT*>(data());
         double res = thiz->Dot(p);
@@ -56,6 +57,9 @@ namespace Boolean
         xplanes().emplace_back();
         xplanes().back().setFromPEE(p, e0, e1);
         setId(xplanes().size() - 1);
+#ifdef PREP_DEBUG_INFO
+        debug();
+#endif
     }
 
     int XLine::linearOrderNoCheck(const XPlane & a, const XPlane & b)
@@ -115,6 +119,9 @@ namespace Boolean
 
     void XPlaneBase::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
     {
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&e0), FP_EDGE_CHECK));
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&e1), FP_EDGE_CHECK));
+
         cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
         *thiz = (e0).Cross(e1);
         m_data[3] = -thiz->Dot(p);

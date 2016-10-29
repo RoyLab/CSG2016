@@ -222,6 +222,10 @@ namespace Boolean
 		//std::swap(tagA[0], tagB[0]);
 		//std::swap(posA[0], posB[0]);
 
+        //CGAL::Plane_3<Depeck> pl;
+        //CGAL::Triangle_3<Depeck> trr;
+        //CGAL::intersection(pl, trr);
+
 		// 规定cross(n0, n1)为正方向
 		sign = compute_intervals_isectline(db, *t[1], tagA[1], tagB[1], posA[1], posB[1]);
 
@@ -235,8 +239,8 @@ namespace Boolean
 		//line.makePositive(posB[0]);
 		//line.makePositive(posB[1]);
 
-		assert(line.linearOrderNoCheck(posA[0], posB[0]) >= 0);
-		assert(line.linearOrderNoCheck(posA[1], posB[1]) >= 0);
+		assert(line.linearOrder(posA[0], posB[0]) >= 0);
+		assert(line.linearOrder(posA[1], posB[1]) >= 0);
 
 		int cmpA0B1 = line.linearOrderNoCheck(posA[0], posB[1]);
 		if (cmpA0B1 < 0) return NOT_INTERSECT;
@@ -454,8 +458,11 @@ namespace Boolean
 
 							antiOverlapSet->insert(triIdPair);
 
-							if (insctTest(fh0, fh1, antiOverlapSet, meshId))
+                            if (insctTest(fh0, fh1, antiOverlapSet, meshId))
+                            {
+                                assert(CGAL::do_intersect(fh0->triangle(), fh1->triangle()));
 								adjGraph->setValue(meshId[0], meshId[1], true);
+                            }
 						}
 					}
 				}

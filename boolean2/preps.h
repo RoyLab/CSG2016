@@ -33,12 +33,26 @@ namespace Boolean
 	class XPlane
 	{
 	public:
-		XPlane() : id(0) {}
-		XPlane(int i) : id(i) {}
-		XPlane(int i, bool inv) : id(inv?i:-i) {}
+		XPlane() : id(0) {
+#ifdef PREP_DEBUG_INFO
+            m_data = nullptr;
+#endif
+        }
+		XPlane(int i) : id(i) {
+#ifdef PREP_DEBUG_INFO
+            debug();
+#endif  
+        }
+		XPlane(int i, bool inv) : id(inv?i:-i) {
+#ifdef PREP_DEBUG_INFO
+            debug();
+#endif
+        }
         XPlane(const cyPointT& p, const cyPointT& q, const cyPointT& r);
 
-
+#ifdef PREP_DEBUG_INFO
+        void debug() { m_data = data(); }
+#endif
 		bool isInverse() const { return id < 0; }
 		void inverse() { id = -id; }
 		XPlane opposite() const { return XPlane(-id); }
@@ -58,6 +72,10 @@ namespace Boolean
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
     protected:
 		int id; // id = (realId+1) * sign
+
+#ifdef PREP_DEBUG_INFO
+        const Real* m_data;
+#endif
 	};
 
 
@@ -69,6 +87,7 @@ namespace Boolean
 			m_planes{ a, b } {
 #ifdef PREP_DEBUG_INFO
             vec3_mul_cross(normal, a.data(), b.data());
+            vec3_norm(normal, normal);
 #endif
         }
 
