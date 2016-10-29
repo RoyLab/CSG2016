@@ -88,5 +88,6 @@
     <ClCompile Include="offio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="testcase.cpp" />
   </ItemGroup>
 </Project>

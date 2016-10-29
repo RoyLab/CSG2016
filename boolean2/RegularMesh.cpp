@@ -177,7 +177,12 @@ namespace Boolean
     void Triangle::calcSupportingPlane()
     {
         if (!sPlane.isValid())
-            sPlane = XPlane(xcpoint(vIds[0]), xcpoint(vIds[0]), xcpoint(vIds[0]));
+        {
+            sPlane = XPlane(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2]));
+            assert(sPlane.has_on(xcpoint(vIds[0])));
+            assert(sPlane.has_on(xcpoint(vIds[1])));
+            assert(sPlane.has_on(xcpoint(vIds[2])));
+        }
     }
 
     void Triangle::calcBoundingPlane()
@@ -194,9 +199,19 @@ namespace Boolean
             auto& q = xpoint(vIds[1]);
             auto& r = xpoint(vIds[2]);
 
-            bPlanes[0] = XPlane(q, normal, r - q);
-            bPlanes[1] = XPlane(r, normal, p - r);
-            bPlanes[2] = XPlane(p, normal, q - p);
+            bPlanes[0].setFromPEE(q, normal, r - q);
+            bPlanes[1].setFromPEE(r, normal, p - r);
+            bPlanes[2].setFromPEE(p, normal, q - p);
+
+            assert(bPlanes[0].orientation(p) == ON_POSITIVE_SIDE);
+            assert(bPlanes[0].orientation(q) == ON_ORIENTED_BOUNDARY);
+            assert(bPlanes[0].orientation(r) == ON_ORIENTED_BOUNDARY);
+            assert(bPlanes[1].orientation(q) == ON_POSITIVE_SIDE);
+            assert(bPlanes[1].orientation(p) == ON_ORIENTED_BOUNDARY);
+            assert(bPlanes[1].orientation(r) == ON_ORIENTED_BOUNDARY);
+            assert(bPlanes[2].orientation(r) == ON_POSITIVE_SIDE);
+            assert(bPlanes[2].orientation(p) == ON_ORIENTED_BOUNDARY);
+            assert(bPlanes[2].orientation(q) == ON_ORIENTED_BOUNDARY);
 
             assert(sPlane.has_on(p));
             assert(sPlane.has_on(q));

@@ -1,6 +1,11 @@
 #pragma once
+#define PREP_DEBUG_INFO
+#ifdef PREP_DEBUG_INFO
+#include <CGAL/intersection_3.h>
+#endif
 #include "global.h"
 #include "adaptive.h"
+
 
 namespace Boolean
 {
@@ -47,7 +52,7 @@ namespace Boolean
 		// predicates
 		Oriented_side orientation(const XPoint&) const;
 		Oriented_side orientation(const cyPointT&) const;
-        bool has_on(const cyPointT& p) { return orientation(p) == REL_ON_BOUNDARY; }
+        bool has_on(const cyPointT& p) { return orientation(p) == ON_ORIENTED_BOUNDARY; }
 
         void setId(int i) { assert(i >= 0); id = i + 1; }
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
@@ -61,13 +66,21 @@ namespace Boolean
 	public:
 		XLine() {}
 		XLine(const XPlane& a, const XPlane& b) :
-			m_planes{ a, b } {}
+			m_planes{ a, b } {
+#ifdef PREP_DEBUG_INFO
+            vec3_mul_cross(normal, a.data(), b.data());
+#endif
+        }
 
 		// @return 1 a->b, 0 a=b, -1 b->a
 		int linearOrder(const XPlane& a, const XPlane& b);
 		// @return 1 a->b, 0 a=b, -1 b->a
 		int linearOrderNoCheck(const XPlane& a, const XPlane& b);
 		void makePositive(XPlane& input);
+#ifdef PREP_DEBUG_INFO
+    protected:
+        vec3 normal;
+#endif
 	protected:
 		XPlane m_planes[2];
 	};
@@ -77,12 +90,30 @@ namespace Boolean
 	public:
 		XPoint() {}
 		XPoint(const XPlane& a, const XPlane& b, const XPlane& c):
-			m_planes{ a, b, c } {}
+			m_planes{ a, b, c } {
+#ifdef PREP_DEBUG_INFO
+            typedef CGAL::Plane_3<Depick> CGALPLane;
+            typedef CGAL::Point_3<Depick> point;
+            CGALPLane p[3] = { {plane(0).data()[0], plane(0).data()[1], plane(0).data()[2], plane(0).data()[3] },
+            { plane(1).data()[0], plane(1).data()[1], plane(1).data()[2], plane(1).data()[3] },
+            { plane(2).data()[0], plane(2).data()[1], plane(2).data()[2], plane(2).data()[3] } };
+            auto result = CGAL::intersection(p[0], p[1], p[2]);
+            const point* res = boost::get<point>(&*result);
+            coord[0] = res->x();
+            coord[1] = res->y();
+            coord[2] = res->z();
+#endif
+        }
 
         XPlane& plane(int i) { return m_planes[i]; }
         const XPlane& plane(int i) const { return m_planes[i]; }
         bool operator==(const XPoint& p) const;
         bool operator==(const cyPointT& p) const;
+
+#ifdef PREP_DEBUG_INFO
+    protected:
+        vec3 coord;
+#endif
 
 	protected:
 		XPlane m_planes[3];
@@ -90,10 +121,10 @@ namespace Boolean
 
 
 
-    static inline void makePositive(const XPlane& p, const XPlane& q, XPlane& input)
-    {
-        const Real* mat[3] = { p.data(), q.data(), input.data() };
-        if (adaptiveDet3x3Sign(mat) < 0.0)
-            input.inverse();
-    }
+    //static inline void makePositive(const XPlane& p, const XPlane& q, XPlane& input)
+    //{
+    //    const Real* mat[3] = { p.data(), q.data(), input.data() };
+    //    if (adaptiveDet3x3Sign(mat) < 0.0)
+    //        input.inverse();
+    //}
 }

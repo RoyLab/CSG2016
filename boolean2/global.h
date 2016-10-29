@@ -2,6 +2,7 @@
 #include <cstdint>
 #include "csgdefs.h"
 #include "xgeometry.h"
+#include "CGALext.h"
 
 typedef double Real;
 

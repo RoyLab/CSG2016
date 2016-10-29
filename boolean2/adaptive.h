@@ -693,7 +693,8 @@ namespace Boolean
 		Two_Two_Diff(x[1], x[0], y[1], y[0], k[3], k[2], k[1], k[0]);
 	}
 
-	inline REAL exactDet3x3Sign(const REAL(*mat)[3], int *klen = NULL, REAL* k = NULL)
+    template <class MatrixT>
+    inline REAL exactDet3x3Sign(const MatrixT& mat, int *klen = NULL, REAL* k = NULL)
 	{
 		REAL Declare_Var, Declare_VarEX, det2x2[12], det2x3[24];
 		exactDet2x2Sign(mat[1][1], mat[1][2], mat[2][1], mat[2][2], det2x2);
@@ -720,7 +721,7 @@ namespace Boolean
 	}
 
 	template <class MatrixT>
-	inline REAL adaptiveDet3x3Sign(const MatrixT mat)
+	inline REAL adaptiveDet3x3Sign(const MatrixT& mat)
 	{
 		REAL v[6], w[3], w2[3];
 		
@@ -857,7 +858,7 @@ namespace Boolean
 	}
 
     template <class MatrixT>
-    inline REAL adaptiveDet4x4Sign(const MatrixT mat)
+    inline REAL adaptiveDet4x4Sign(const MatrixT& mat)
 	{
 	//mark1:
 		REAL det2x2[12], det2x2a[12], det2x2b[12], e[12];

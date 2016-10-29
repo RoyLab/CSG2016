@@ -136,20 +136,20 @@ namespace Boolean
 			}
 
 			int posId = posCount[0];
-			int idA = (posId + 2) % 3;
-			int idB = (posId + 1) % 3;
-			posA = pr.boundingPlane(idA);
-			posB = pr.boundingPlane(idB);
+			int idA = (posId + 1) % 3;
+			int idB = (posId + 2) % 3;
+			posA = pr.boundingPlane(idB);
+			posB = pr.boundingPlane(idA);
 
 			if (idA == zeroCount[0])
 			{
-				tagA = edge_tag(idA);
-				tagB = vertex_tag(idA);
+				tagA = vertex_tag(idA);
+				tagB = edge_tag(idA);
 			}
 			else
 			{
-				tagB = edge_tag(idA);
-				tagA = vertex_tag(idA);
+				tagA = edge_tag(idB);
+				tagB = vertex_tag(idB);
 			}
 			return INTERSECT_ON_LINE;
 		}
@@ -225,13 +225,18 @@ namespace Boolean
 		// 规定cross(n0, n1)为正方向
 		sign = compute_intervals_isectline(db, *t[1], tagA[1], tagB[1], posA[1], posB[1]);
 
-		line.makePositive(posA[0]);
-		line.makePositive(posA[1]);
-		line.makePositive(posB[0]);
-		line.makePositive(posB[1]);
+        line.linearOrderNoCheck(posA[1], posB[1]);
 
-		assert(line.linearOrder(posA[0], posB[0]) >= 0);
-		assert(line.linearOrder(posA[1], posB[1]) >= 0);
+        posB[0].inverse();
+        posB[1].inverse();
+
+		//line.makePositive(posA[0]);
+		//line.makePositive(posA[1]);
+		//line.makePositive(posB[0]);
+		//line.makePositive(posB[1]);
+
+		assert(line.linearOrderNoCheck(posA[0], posB[0]) >= 0);
+		assert(line.linearOrderNoCheck(posA[1], posB[1]) >= 0);
 
 		int cmpA0B1 = line.linearOrderNoCheck(posA[0], posB[1]);
 		if (cmpA0B1 < 0) return NOT_INTERSECT;

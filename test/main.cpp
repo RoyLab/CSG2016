@@ -9,8 +9,8 @@ int main()
     names.push_back("../../models/ball2.off");
 
     std::string expr("0+1");
-	test2(names, expr, expr);
-    //std::cout << "This is the end!" << std::endl;
+
+	test(names, expr, expr);
     system("pause");
     return 0;
 }

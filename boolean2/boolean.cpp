@@ -26,10 +26,15 @@ extern "C"
 	void initContext(int precision);
 	void releaseContext();
 
-	XRWY_DLL void test2(std::vector<std::string>& names, std::string& expr, const std::string& output)
+	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
-		const int precision = 20;
+		const int precision = 16;
 		initContext(precision);
+
+        test1();
+        test2();
+        test3();
+        test4();
 
 		std::vector<RegularMesh*> meshList(names.size());
 		for (int i = 0; i < names.size(); i++)

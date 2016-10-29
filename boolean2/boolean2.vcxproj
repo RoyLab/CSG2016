@@ -45,6 +45,7 @@
     <ClCompile Include="offio.cpp" />
     <ClCompile Include="preps.cpp" />
     <ClCompile Include="RegularMesh.cpp" />
+    <ClCompile Include="testcase.cpp" />
     <ClCompile Include="xmemory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -116,7 +117,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\3rdparty\lib\$(Platform);$(BOOST_INCLUDEDIR)\lib64-msvc-14.0</AdditionalLibraryDirectories>
-      <AdditionalDependencies>fade2D_vc12_$(Configuration).lib;libgmp-10.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>fade2D_vc12_$(Configuration).lib;libgmp-10.lib;libmpfr-4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -147,7 +148,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>..\3rdparty\lib\$(Platform);$(BOOST_INCLUDEDIR)\lib64-msvc-14.0</AdditionalLibraryDirectories>
-      <AdditionalDependencies>fade2D_vc12_$(Configuration).lib;libgmp-10.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>fade2D_vc12_$(Configuration).lib;libgmp-10.lib;libmpfr-4.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
