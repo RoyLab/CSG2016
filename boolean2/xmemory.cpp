@@ -28,7 +28,11 @@ namespace Boolean
     uint32_t MemoryManager::insertVertex(XPoint & pt)
     {
         ppoints.push_back(pt);
-        return ppoints.size() - 1;
+        int vId =  ppoints.size() - 1;
+        MyVertex ver;
+        ver.setAsPRep(vId);
+        vertices.push_back(ver);
+        return vertices.size() - 1;
     }
 
     uint32_t MemoryManager::getEdgeId(uint32_t a, uint32_t b, IPolygon * facePtr)
@@ -52,5 +56,19 @@ namespace Boolean
         }
         xedge(target).addAjacentFace(a, b, facePtr);
         return target;
+    }
+
+    void MemoryManager::outputIntersection(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
+    {
+        std::ofstream file(fileName);
+
+        for (auto& p : ppoints)
+        {
+            auto p2 = p.toVertexBased();
+            XR::normalizeCoords(center, scale, p2);
+            file << p2.x << ' ' << p2.y << ' ' << p2.z << std::endl;
+        }
+
+        file.close();
     }
 }

@@ -8,7 +8,7 @@
 
 namespace Boolean
 {
-	struct NeighborInfo
+    struct NeighborInfo
 	{
 		enum Type {Vertex, Edge, Face};
 
@@ -69,7 +69,7 @@ namespace Boolean
                 return &*itr;
         }
 
-        points.push_back(-1);
+        points.push_back(INVALID_UINT32);
         return &points.back();
     }
 }

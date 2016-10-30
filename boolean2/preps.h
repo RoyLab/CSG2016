@@ -104,6 +104,21 @@ namespace Boolean
 		XPlane m_planes[2];
 	};
 
+
+    template <class K>
+    CGAL::Point_3<K> convertToPoint(const XPlane& a, const XPlane& b, const XPlane& c)
+    {
+        typedef CGAL::Plane_3<K> CGALPLane;
+        typedef CGAL::Point_3<K> point;
+        CGALPLane p[3] = { { a.data()[0], a.data()[1], a.data()[2], a.data()[3] },
+        { b.data()[0], b.data()[1], b.data()[2], b.data()[3] },
+        { c.data()[0], c.data()[1], c.data()[2], c.data()[3] } };
+        auto result = CGAL::intersection(p[0], p[1], p[2]);
+        const point* res = boost::get<point>(&*result);
+        return *res;
+    }
+
+
 	class XPoint
 	{
 	public:
@@ -111,16 +126,10 @@ namespace Boolean
 		XPoint(const XPlane& a, const XPlane& b, const XPlane& c):
 			m_planes{ a, b, c } {
 #ifdef PREP_DEBUG_INFO
-            typedef CGAL::Plane_3<Depick> CGALPLane;
-            typedef CGAL::Point_3<Depick> point;
-            CGALPLane p[3] = { {plane(0).data()[0], plane(0).data()[1], plane(0).data()[2], plane(0).data()[3] },
-            { plane(1).data()[0], plane(1).data()[1], plane(1).data()[2], plane(1).data()[3] },
-            { plane(2).data()[0], plane(2).data()[1], plane(2).data()[2], plane(2).data()[3] } };
-            auto result = CGAL::intersection(p[0], p[1], p[2]);
-            const point* res = boost::get<point>(&*result);
-            coord[0] = res->x();
-            coord[1] = res->y();
-            coord[2] = res->z();
+            auto res = convertToPoint<Depick>(a, b, c);
+            coord[0] = res.x();
+            coord[1] = res.y();
+            coord[2] = res.z();
 #endif
         }
 
@@ -128,6 +137,12 @@ namespace Boolean
         const XPlane& plane(int i) const { return m_planes[i]; }
         bool operator==(const XPoint& p) const;
         bool operator==(const cyPointT& p) const;
+
+        cyPointT toVertexBased() const 
+        { 
+            auto tmp = convertToPoint<Depick>(m_planes[0], m_planes[1], m_planes[2]);
+            return cyPointT(tmp.x(), tmp.y(), tmp.z());
+        }
 
 #ifdef PREP_DEBUG_INFO
     protected:
@@ -137,8 +152,6 @@ namespace Boolean
 	protected:
 		XPlane m_planes[3];
 	};
-
-
 
     //static inline void makePositive(const XPlane& p, const XPlane& q, XPlane& input)
     //{

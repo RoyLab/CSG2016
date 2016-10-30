@@ -256,9 +256,9 @@ namespace Boolean
 		if (cmpA1B0 < 0) return NOT_INTERSECT;
 		if (cmpA1B0 == 0)
 		{
-			result.tagA[0] = result.tagB[0] = tagA[0];
-			result.tagA[1] = result.tagB[1] = tagB[1];
-			result.A = result.B = posA[0]; // or posB[1]
+			result.tagA[0] = result.tagB[0] = tagB[0];
+			result.tagA[1] = result.tagB[1] = tagA[1];
+			result.A = result.B = posA[1]; // or posB[0]
 			return INTERSECT_ON_POINT;
 		}
 
@@ -297,18 +297,21 @@ namespace Boolean
 	uint32_t addAndMerge(Triangle* fh[2], XPoint& pt, PosTag tag[2])
 	{
 		auto pMem = MemoryManager::getInstance();
-		int id[2];
+		uint32_t id[2];
         uint32_t *slots[2];
 		id[0] = fh[0]->findVertex(pt, tag[0], slots[0]);
 		id[1] = fh[1]->findVertex(pt, tag[1], slots[1]);
 
         if (id[0] == id[1])
         {
-            if (id[0] < 0)
+            if (id[0] == INVALID_UINT32)
             {
                 // add new
                 uint32_t vid = pMem->insertVertex(pt);
                 *(slots[0]) = *(slots[1]) = vid;
+#ifdef PREP_DEBUG_INFO
+                xvertex(vid).refcount += 2;
+#endif
                 return vid;
             }
             else return id[0];
@@ -316,7 +319,13 @@ namespace Boolean
         else
         {
             uint32_t vid = std::min(id[0], id[1]);
-            if (vid < 0) vid = id[0] < 0 ? id[1] : id[0];
+#ifdef PREP_DEBUG_INFO
+            xvertex(vid).refcount += 2;
+            if (id[0] != INVALID_UINT32)
+                xvertex(id[0]).refcount --;
+            if (id[1] != INVALID_UINT32)
+                xvertex(id[1]).refcount --;
+#endif
             *(slots[0]) = *(slots[1]) = vid;
             return vid;
         }

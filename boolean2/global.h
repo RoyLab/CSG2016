@@ -31,4 +31,6 @@ namespace Boolean
     struct PBIRep;
     typedef PBIRep EdgePBI;
     template <class PBI> class InsctData;
+
+    const uint32_t INVALID_UINT32 = uint32_t(-1);
 }

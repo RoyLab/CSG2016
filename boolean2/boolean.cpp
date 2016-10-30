@@ -93,9 +93,10 @@ extern "C"
 
 		//csgResult->invCoords(aabb);
 		//return csgResult;
+        pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
-		//SAFE_DELETE(pCsg);
-		//SAFE_DELETE(pOctree);
+		SAFE_DELETE(pCsg);
+		SAFE_DELETE(pOctree);
 
 		return csgResult;
 	}

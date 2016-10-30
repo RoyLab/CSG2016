@@ -92,6 +92,18 @@ namespace Boolean
 		return false;
 	}
 
+    Oriented_side MyVertex::orientation(const XPlane & p) const
+    {
+        if (rep > 0)
+        {
+            return p.orientation(xpoint(rep - 1));
+        }
+        else
+        {
+            return p.orientation(xppoint((-rep) - 1));
+        }
+    }
+
     bool MyVertex::operator==(const XPoint & p) const
     {
         if (isPlaneRep())
@@ -134,7 +146,7 @@ namespace Boolean
         return xedge(eIds[i]);
     }
 
-    int Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    uint32_t Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
     {
         InsctData<EdgePBI> **is;
         switch (tag)
@@ -169,9 +181,8 @@ namespace Boolean
             return *slot;
         default:
             assert(0);
-            break;
+            return -1;
         }
-        return -1;
     }
 
     void Triangle::calcSupportingPlane()

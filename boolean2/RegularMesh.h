@@ -41,7 +41,7 @@ namespace Boolean
         uint32_t edgeId(int i) const { return eIds[i]; }
 
 		// search
-		int findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
+        uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
 
 		// manipulate
 		void calcSupportingPlane();
