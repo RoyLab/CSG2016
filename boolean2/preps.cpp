@@ -62,7 +62,7 @@ namespace Boolean
 #endif
     }
 
-    int XLine::linearOrderNoCheck(const XPlane & a, const XPlane & b)
+    int XLine::linearOrderNoCheck(const XPlane & a, const XPlane & b) const
     {
         const Real* mat[4] = { m_planes[0].data(),
             m_planes[1].data(), b.data(), a.data() };
@@ -78,7 +78,7 @@ namespace Boolean
         return 0;
     }
 
-    int XLine::linearOrder(const XPlane & a, const XPlane & b)
+    int XLine::linearOrder(const XPlane & a, const XPlane & b) const 
     {
         auto a2 = a, b2 = b;
         makePositive(a2);
@@ -100,7 +100,7 @@ namespace Boolean
         return 0;
     }
 
-    void XLine::makePositive(XPlane & input)
+    void XLine::makePositive(XPlane & input) const
 	{
         Real res = sign(m_planes[0], m_planes[1], input);
         if (res < 0) input.inverse();

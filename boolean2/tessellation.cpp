@@ -8,16 +8,83 @@
 
 namespace Boolean
 {
-    void InsctData<EdgePBI>::refine()
+    struct PlaneVertex
+    {
+        XPlane plane;
+        MyVertex::Index id;
+    };
+
+    struct LinOrderObj
+    {
+        bool operator()(const PlaneVertex& a, const PlaneVertex& b) const
+        {
+            return line.linearOrder(a.plane, b.plane) > 0;
+        }
+
+        XLine line;
+    };
+
+    void InsctData<EdgePBI>::refine(void* pData)
     {
         if (isRefined()) return;
+
+        std::vector<PlaneVertex> seqs(points.size());
+        std::map<MyVertex::Index, XPlane> v2p;
+        for (auto& set : inscts)
+        {
+            for (auto &pbi : set.second)
+            {
+                v2p[pbi.ends[0]] = pbi.pends[0];
+                v2p[pbi.ends[1]] = pbi.pends[1];
+            }
+        }
+
+        LinOrderObj orderObj = { *(XLine*)(pData) };
+        int i = 0;
+        for (auto &pair : v2p)
+        {
+            seqs[i].id = pair.first;
+            seqs[i].plane = pair.second;
+            i++;
+        }
+
+        std::sort(seqs.begin(), seqs.end(), orderObj);
+        std::vector<EdgePBI> newPbi(points.size() + 1);
+        std::map<MyVertex::Index, uint32_t> idmap;
+        for (int i = 0; i < seqs.size(); i++)
+        {
+            idmap[seqs[i].id] = i;
+            newPbi[i].ends[0] = seqs[i].id;
+            newPbi[i+1].ends[1] = seqs[i].id;
+            newPbi[i].pends[0] = seqs[i].plane;
+            newPbi[i + 1].pends[1] = seqs[i].plane;
+        }
+
+        for (auto& set : inscts)
+        {
+            for (auto &pbi : set.second)
+            {
+                assert(idmap.find(pbi.ends[0]) != idmap.end());
+                assert(idmap.find(pbi.ends[1]) != idmap.end());
+
+                uint32_t start = idmap[pbi.ends[0]];
+                uint32_t last = idmap[pbi.ends[1]];
+
+                assert(start < last);
+                for (int i = start; i < last; i++)
+                    newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
+            }
+        }
+        inscts.clear();
+        for (int i = 0; i < newPbi.size(); i++)
+            inscts[INVALID_UINT32].push_back(newPbi[i]);
 
         bRefined = true;
     }
 
-    void InsctData<FacePBI>::refine()
+    void InsctData<FacePBI>::refine(void* pData)
     {
-        if (isRefined()) return;
+        if (isRefined() || inscts.size() < 2) return;
 
         bRefined = true;
     }
@@ -106,37 +173,43 @@ namespace Boolean
                 int i0 = 0, i1 = 1;
                 if (ires < 0) std::swap(i0, i1);
 
-                for (auto &ePBI : e.inscts->inscts)
+                for (auto &set : e.inscts->inscts)
                 {
-                    assert(m_nodes.find(ePBI.ends[0]) != m_nodes.end());
-                    assert(m_nodes.find(ePBI.ends[1]) != m_nodes.end());
+                    for (auto& ePBI : set.second)
+                    {
+                        assert(m_nodes.find(ePBI.ends[0]) != m_nodes.end());
+                        assert(m_nodes.find(ePBI.ends[1]) != m_nodes.end());
 
-                    edge.v[i0] = m_nodes.find(ePBI.ends[0]);
-                    edge.v[i1] = m_nodes.find(ePBI.ends[1]);
-                    m_edges.push_back(edge);
+                        edge.v[i0] = m_nodes.find(ePBI.ends[0]);
+                        edge.v[i1] = m_nodes.find(ePBI.ends[1]);
+                        m_edges.push_back(edge);
 
-                    assert(edge.v[0] != m_nodes.end());
-                    assert(edge.v[1] != m_nodes.end());
+                        assert(edge.v[0] != m_nodes.end());
+                        assert(edge.v[1] != m_nodes.end());
 
-                    edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
-                    edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                        edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
+                        edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                    }
                 }
             }
 
             edge.dir = D_NODIR;
-            for (auto &fPBI : tri->inscts->inscts)
+            for (auto &set : tri->inscts->inscts)
             {
-                assert(m_nodes.find(fPBI.ends[0]) != m_nodes.end());
-                assert(m_nodes.find(fPBI.ends[1]) != m_nodes.end());
+                for (auto& fPBI : set.second)
+                {
+                    assert(m_nodes.find(fPBI.ends[0]) != m_nodes.end());
+                    assert(m_nodes.find(fPBI.ends[1]) != m_nodes.end());
 
-                edge.v[0] = m_nodes.find(fPBI.ends[0]);
-                edge.v[1] = m_nodes.find(fPBI.ends[1]);
-                edge.prep = fPBI.vertPlane;
-                assert(edge.checkPlaneOrientation(tri));
+                    edge.v[0] = m_nodes.find(fPBI.ends[0]);
+                    edge.v[1] = m_nodes.find(fPBI.ends[1]);
+                    edge.prep = fPBI.vertPlane;
+                    assert(edge.checkPlaneOrientation(tri));
 
-                m_edges.push_back(edge);
-                edge.v[0]->second.edges.push_back(m_edges.size() - 1);
-                edge.v[1]->second.edges.push_back(m_edges.size() - 1);
+                    m_edges.push_back(edge);
+                    edge.v[0]->second.edges.push_back(m_edges.size() - 1);
+                    edge.v[1]->second.edges.push_back(m_edges.size() - 1);
+                }
             }
         }
 
@@ -255,11 +328,19 @@ namespace Boolean
         {
             assert(pTri->isAdded4Tess());
             if (pTri->inscts)
-                pTri->inscts->refine();
+                pTri->inscts->refine((void*)&pTri->supportingPlane());
 
             for (int i = 0; i < 3; i++)
-                if (pTri->edge(i).inscts)
-                    pTri->edge(i).inscts->refine();
+            {
+                XLine l;
+                if (pTri->edge(i).ends[0] != pTri->vertexId((i+1)%3))
+                    l = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
+                else
+                    l = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
+
+                 if (pTri->edge(i).inscts)
+                    pTri->edge(i).inscts->refine((void*)&l);
+            }
 
             TessGraph tg(pTri);
             tg.tessellate();

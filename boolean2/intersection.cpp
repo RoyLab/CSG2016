@@ -215,16 +215,11 @@ namespace Boolean
 
 		XLine line(t[0]->supportingPlane(), t[1]->supportingPlane());
 
-		// 规定cross(n1, n0)为正方向
-		//sign = compute_intervals_isectline(da, *t[0], tagA[0], tagB[0], posA[0], posB[0]);
-		sign = compute_intervals_isectline(da, *t[0], tagB[0], tagA[0], posB[0], posA[0]);
 		//// 统一正方向cross(n0, n1)
-		//std::swap(tagA[0], tagB[0]);
-		//std::swap(posA[0], posB[0]);
 
-        //CGAL::Plane_3<Depeck> pl;
-        //CGAL::Triangle_3<Depeck> trr;
-        //CGAL::intersection(pl, trr);
+		//sign = compute_intervals_isectline(da, *t[0], tagA[0], tagB[0], posA[0], posB[0]);
+		// 规定cross(n1, n0)为正方向, 所以反过来传参数
+		sign = compute_intervals_isectline(da, *t[0], tagB[0], tagA[0], posB[0], posA[0]);
 
 		// 规定cross(n0, n1)为正方向
 		sign = compute_intervals_isectline(db, *t[1], tagA[1], tagB[1], posA[1], posB[1]);
@@ -233,11 +228,6 @@ namespace Boolean
 
         posB[0].inverse();
         posB[1].inverse();
-
-		//line.makePositive(posA[0]);
-		//line.makePositive(posA[1]);
-		//line.makePositive(posB[0]);
-		//line.makePositive(posB[1]);
 
 		assert(line.linearOrder(posA[0], posB[0]) >= 0);
 		assert(line.linearOrder(posA[1], posB[1]) >= 0);
@@ -339,9 +329,9 @@ namespace Boolean
 		/* 统一正方向cross(n0, n1) */
 		Triangle* t[2] = { fh0, fh1};
 		TriTriInsctResult insctRes;
-		Sign sign = tri_tri_intersect(t, insctRes);
+		Sign sres = tri_tri_intersect(t, insctRes);
 
-		if (sign == NOT_INTERSECT || sign == COPLANAR)
+		if (sres == NOT_INTERSECT || sres == COPLANAR)
 			return false;
 
         fh0->addTo(intersectTriangles());
@@ -350,7 +340,7 @@ namespace Boolean
 		uint32_t v[2];
 		XPoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);
 		v[0] = addAndMerge(t, A, insctRes.tagA);
-		if (sign != INTERSECT_ON_POINT)
+		if (sres != INTERSECT_ON_POINT)
 		{
 			XPoint B(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.B);
 			v[1] = addAndMerge(t, B, insctRes.tagB);
@@ -389,30 +379,59 @@ namespace Boolean
 				if (eId[i] > -1)
 				{
 					EdgePBI epbi;
-					epbi.pends[0] = insctRes.A;
-					epbi.pends[1] = insctRes.B;
-					epbi.ends[0] = v[0];
-					epbi.ends[1] = v[1];
-					epbi.neighbor.push_back(ninfo);
+                    if (sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), insctRes.A) < 0)
+                    {
+                        epbi.pends[0] = insctRes.B.opposite();
+                        epbi.pends[1] = insctRes.A.opposite();
+                        epbi.ends[0] = v[1];
+                        epbi.ends[1] = v[0];
+                    }
+                    else
+                    {
+                        epbi.pends[0] = insctRes.A;
+                        epbi.pends[1] = insctRes.B;
+                        epbi.ends[0] = v[0];
+                        epbi.ends[1] = v[1];
+                    }
+                    epbi.neighbor.push_back(ninfo);
+
+                    assert(sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), epbi.pends[0]) > 0);
+                    assert(sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), epbi.pends[1]) > 0);
+                    assert(XLine(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i])).linearOrder(epbi.pends[0], epbi.pends[1]) > 0);
 
 					MyEdge* edge = &t[i]->edge(eId[i]);
 					if (!edge->inscts)
 						edge->inscts = new InsctData<EdgePBI>;
-					edge->inscts->inscts.push_back(epbi);
+					edge->inscts->inscts[meshId[i]].push_back(epbi);
 				}
 				else
 				{
 					FacePBI fpbi;
 					fpbi.vertPlane = t[i2]->supportingPlane();
-					fpbi.pends[0] = insctRes.A;
-					fpbi.pends[1] = insctRes.B;
-					fpbi.ends[0] = v[0];
-					fpbi.ends[1] = v[1];
+                    if (sign(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
+                    {
+                        fpbi.pends[1] = insctRes.B.opposite();
+                        fpbi.pends[0] = insctRes.A.opposite();
+                        fpbi.ends[1] = v[1];
+                        fpbi.ends[0] = v[0];
+                    }
+                    else
+                    {
+                        fpbi.pends[1] = insctRes.A;
+                        fpbi.pends[0] = insctRes.B;
+                        fpbi.ends[1] = v[0];
+                        fpbi.ends[0] = v[1];
+                    }
+
 					fpbi.neighbor.push_back(ninfo);
+
+                    assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
+                    assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
+                    assert(XLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
 
 					if (!t[i]->inscts)
 						t[i]->inscts = new InsctData<FacePBI>;
-					t[i]->inscts->inscts.push_back(fpbi);
+					t[i]->inscts->inscts[meshId[i]].push_back(fpbi);
 				}
 			}
 

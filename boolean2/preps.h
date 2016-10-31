@@ -92,10 +92,10 @@ namespace Boolean
         }
 
 		// @return 1 a->b, 0 a=b, -1 b->a
-		int linearOrder(const XPlane& a, const XPlane& b);
+        int linearOrder(const XPlane& a, const XPlane& b) const;
 		// @return 1 a->b, 0 a=b, -1 b->a
-		int linearOrderNoCheck(const XPlane& a, const XPlane& b);
-		void makePositive(XPlane& input);
+		int linearOrderNoCheck(const XPlane& a, const XPlane& b) const;
+        void makePositive(XPlane& input) const;
 #ifdef PREP_DEBUG_INFO
     protected:
         vec3 normal;

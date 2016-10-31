@@ -42,10 +42,10 @@ namespace Boolean
     class InsctData
     {
     public:
-		typedef std::list<PBI> PBIList;
-		typedef std::list<uint32_t> VertexList;
+		typedef std::map<uint32_t, std::list<PBI>> PBIList;
+		typedef std::list<MyVertex::Index> VertexList;
 
-		void refine();
+		void refine(void* pData);
         bool isRefined() const { return bRefined; }
         uint32_t* point(const XPoint&);
 
