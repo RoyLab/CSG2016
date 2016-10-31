@@ -71,4 +71,63 @@ namespace Boolean
 
         file.close();
     }
+
+    MyEdge::ConstFaceIterator & MyEdge::ConstFaceIterator::operator++()
+    {
+        if (stage == -1) throw std::exception();
+
+        if (stage < 2) ++stage;
+        else
+        {
+            if (stage == 2)
+            {
+                if (m_edge.extrafhs.empty())
+                {
+                    stage = -1;
+                    return *this;
+                }
+
+                ++stage;
+                eItr = m_edge.extrafhs.begin();
+            }
+            else
+            {
+                if (eItr != m_edge.extrafhs.end())
+                    ++eItr;
+                else
+                    stage = -1;
+            }
+        }
+        return *this;
+    }
+
+    MyEdge::FaceIterator & MyEdge::FaceIterator::operator++()
+    {
+        if (stage == -1) throw std::exception();
+
+        if (stage < 2) ++stage;
+        else
+        {
+            if (stage == 2)
+            {
+                if (m_edge.extrafhs.empty())
+                {
+                    stage = -1;
+                    return *this;
+                }
+
+                ++stage;
+                eItr = m_edge.extrafhs.begin();
+            }
+            else
+            {
+                if (eItr != m_edge.extrafhs.end())
+                    ++eItr;
+                else
+                    stage = -1;
+            }
+        }
+        return *this;
+    }
+
 }

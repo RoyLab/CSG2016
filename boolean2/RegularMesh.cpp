@@ -119,17 +119,50 @@ namespace Boolean
 
     void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
 	{
-		FH fh( 1, fPtr );
-		if (s != ends[0]) fh.orientation = -1;
+        int ori = 1;
+		if (s != ends[0]) ori = -1;
 
-		if (!fhs[0].ptr) fhs[0] = fh;
-		else if (!fhs[1].ptr) fhs[1] = fh;
-		else
-		{
-			assert(0);
-			extrafhs.push_back(fh);
-		}
+        FaceIterator itr(*this);
+        while (itr)
+        {
+            if (!itr.face())
+            {
+                itr.faceHandle().ptr = fPtr;
+                itr.faceHandle().orientation = ori;
+                return;
+            }
+            ++itr;
+        }
+
+        assert(0);
+        extrafhs.push_back(FH{ ori, fPtr });
 	}
+
+    int MyEdge::faceOrientation(const IPolygon * ptr) const
+    {
+        if (fhs[0].ptr == ptr) return fhs[0].orientation;
+        if (fhs[1].ptr == ptr) return fhs[1].orientation;
+
+        for (auto& fh : extrafhs)
+            if (fh.ptr == ptr) return fh.orientation;
+
+        return 0;
+    }
+
+    bool MyEdge::remove(const IPolygon *ptr)
+    {
+        FaceIterator itr(*this);
+        while (itr)
+        {
+            if (itr.face() == ptr)
+            {
+                itr.faceHandle().ptr = nullptr;
+                return true;
+            }
+            ++itr;
+        }
+        return false;
+    }
 
     Triangle::~Triangle()
     {

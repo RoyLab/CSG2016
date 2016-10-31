@@ -89,5 +89,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="testcase.cpp" />
+    <ClCompile Include="tessellation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

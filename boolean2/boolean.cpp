@@ -89,7 +89,8 @@ extern "C"
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
 		doIntersection(meshes, intersectLeaves);
-		//doClassification(pCsg, meshes, csgResult);
+        tessellation(meshes);
+        //doClassification(pOctree, pCsg, meshes, csgResult);
 
 		//csgResult->invCoords(aabb);
 		//return csgResult;

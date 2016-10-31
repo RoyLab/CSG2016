@@ -45,6 +45,7 @@
     <ClCompile Include="offio.cpp" />
     <ClCompile Include="preps.cpp" />
     <ClCompile Include="RegularMesh.cpp" />
+    <ClCompile Include="tessellation.cpp" />
     <ClCompile Include="testcase.cpp" />
     <ClCompile Include="xmemory.cpp" />
   </ItemGroup>

@@ -39,6 +39,7 @@ namespace Boolean
         cyPointT& point(int i) const;
         MyEdge& edge(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
+        uint32_t vertexId(int i) const { return vIds[i]; }
 
 		// search
         uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
@@ -46,6 +47,11 @@ namespace Boolean
 		// manipulate
 		void calcSupportingPlane();
 		void calcBoundingPlane();
+        template <class Container>
+        void addTo(Container& c);
+
+        // state
+        bool isAdded4Tess() const { return added; }
 
     protected:
 		CGALTriangle cgalTri;
@@ -54,11 +60,21 @@ namespace Boolean
 
 		XPlane sPlane;
 		XPlane bPlanes[3];
+
+        bool added = false;
 	};
 
     class SubPolygon : public IPolygon
     {
+    public:
+        SubPolygon(uint32_t d, uint32_t i = uint32_t(-1)): IPolygon(d, i) {}
 
+        template <class ForwardIterator>
+        void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
+
+    protected:
+        std::vector<MyEdge::Index> eIds;
+        std::vector<MyVertex::Index> vIds;
     };
 
 	class RegularMesh:
@@ -94,4 +110,30 @@ namespace Boolean
         //Bbox_3& bbox();
 		void prepareBoolean();
 	};
+
+    template<class Container>
+    inline void Triangle::addTo(Container & c)
+    {
+        if (isAdded4Tess())
+            return;
+
+        c.push_back(this);
+        added = true;
+    }
+
+    template<class ForwardIterator>
+    inline void SubPolygon::constructFromVertexList(const ForwardIterator & a, const ForwardIterator & b)
+    {
+        ForwardIterator itr = a;
+        MyVertex::Index v0, v1;
+        auto pMem = MemoryManager::getInstance();
+
+        for (int i = 0; i < degree(); i++)
+        {
+            v0 = *itr; ++itr;
+            v1 = *itr;
+            vIds[i] = v0;
+            eIds[i] = pMem->getEdgeId(v0, v1, this);
+        }
+    }
 }

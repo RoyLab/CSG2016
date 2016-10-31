@@ -15,3 +15,9 @@ extern "C"
     XRWY_DLL void test4();
 }
 
+namespace Boolean
+{
+    void tessellation(std::vector<Boolean::RegularMesh*>& meshes);
+    void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG, std::vector<RegularMesh*>& meshes, RegularMesh*);
+}
+

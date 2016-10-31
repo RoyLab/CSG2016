@@ -102,13 +102,7 @@ namespace Boolean
 
     void XLine::makePositive(XPlane & input)
 	{
-		const Real* mat[3] = { m_planes[0].data(), m_planes[1].data(), input.data() };
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact3x3(mat);
-#else
-        Real res = adaptiveDet3x3Sign(mat);
-#endif
-        res *= m_planes[0].signd() * m_planes[1].signd() * input.signd();
+        Real res = sign(m_planes[0], m_planes[1], input);
         if (res < 0) input.inverse();
 	}
 
@@ -140,5 +134,16 @@ namespace Boolean
             && plane(1).orientation(p) == ON_ORIENTED_BOUNDARY
             && plane(2).orientation(p) == ON_ORIENTED_BOUNDARY;
 
+    }
+    Real sign(const XPlane & p, const XPlane & q, const XPlane & input)
+    {
+        const Real* mat[3] = { p.data(), q.data(), input.data() };
+#ifdef USE_CGAL_PREDICATES
+        Real res = cgalExact3x3(mat);
+#else
+        Real res = adaptiveDet3x3Sign(mat);
+#endif
+        res *= p.signd() * q.signd() * input.signd();
+        return res;
     }
 }

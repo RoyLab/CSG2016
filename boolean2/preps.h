@@ -153,10 +153,5 @@ namespace Boolean
 		XPlane m_planes[3];
 	};
 
-    //static inline void makePositive(const XPlane& p, const XPlane& q, XPlane& input)
-    //{
-    //    const Real* mat[3] = { p.data(), q.data(), input.data() };
-    //    if (adaptiveDet3x3Sign(mat) < 0.0)
-    //        input.inverse();
-    //}
+    Real sign(const XPlane& p, const XPlane& q, const XPlane& input);
 }

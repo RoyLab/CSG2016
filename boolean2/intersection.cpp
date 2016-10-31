@@ -344,6 +344,9 @@ namespace Boolean
 		if (sign == NOT_INTERSECT || sign == COPLANAR)
 			return false;
 
+        fh0->addTo(intersectTriangles());
+        fh1->addTo(intersectTriangles());
+
 		uint32_t v[2];
 		XPoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);
 		v[0] = addAndMerge(t, A, insctRes.tagA);

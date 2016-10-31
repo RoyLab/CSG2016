@@ -46,8 +46,7 @@ namespace Boolean
 		typedef std::list<uint32_t> VertexList;
 
 		void refine();
-		bool isRefined() const;
-
+        bool isRefined() const { return bRefined; }
         uint32_t* point(const XPoint&);
 
     protected:
