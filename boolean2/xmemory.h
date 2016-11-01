@@ -31,6 +31,10 @@ namespace Boolean
         bool isPlaneRep() const { return rep < 0; }
         uint32_t id() const { assert(rep);  return std::abs(rep) - 1; }
         bool operator==(const XPoint& p) const;
+        bool isValid() const { return rep; }
+
+        const XPoint& ppoint() const;
+        const cyPointT& point() const;
     };
 
     struct FH

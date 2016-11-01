@@ -112,6 +112,22 @@ namespace Boolean
             return p == xcpoint(id());
     }
 
+    const XPoint & MyVertex::ppoint() const
+    {
+        if (!isValid() || !isPlaneRep())
+            throw std::exception();
+
+        return xppoint(id());
+    }
+
+    const cyPointT & MyVertex::point() const
+    {
+        if (!isValid() || isPlaneRep())
+            throw std::exception();
+
+        return xpoint(id());
+    }
+
     MyEdge::~MyEdge()
     {
         SAFE_DELETE(inscts);

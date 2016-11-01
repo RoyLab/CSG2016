@@ -5,6 +5,7 @@
 #include "RegularMesh.h"
 #include "intersection.h"
 #include "XStruct.hpp"
+#include "XException.hpp"
 
 namespace Boolean
 {
@@ -14,11 +15,59 @@ namespace Boolean
         MyVertex::Index id;
     };
 
+    struct EdgeAuxiliaryStructure
+    {
+        MyVertex::Index start, end;
+        XLine line;
+    };
+
+    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b)
+    {
+        int type = 0;
+        if (a.isPlaneRep()) type += 1;
+        if (b.isPlaneRep()) type += 2;
+
+        switch (type)
+        {
+        case 0:
+            return l.linearOrder(a.point(), b.point()) > 0;
+        case 1:
+            return l.pickPositiveVertical(a.ppoint())
+                .orientation(b.point()) == ON_POSITIVE_SIDE;
+        case 2:
+            return l.pickPositiveVertical(b.ppoint())
+                .orientation(a.point()) == ON_NEGATIVE_SIDE;
+        case 3:
+            return l.linearOrder(a.ppoint(), b.ppoint()) > 0;
+        default:
+            throw std::exception();
+        }
+        return 0;
+    }
+
+
     struct LinOrderObj
     {
         bool operator()(const PlaneVertex& a, const PlaneVertex& b) const
         {
-            return line.linearOrder(a.plane, b.plane) > 0;
+            int type = 0;
+            if (xvertex(a.id).isPlaneRep()) type += 1;
+            if (xvertex(b.id).isPlaneRep()) type += 2;
+
+            switch (type)
+            {
+            case 0:
+                return line.linearOrder(xvertex(a.id).point(),
+                    xvertex(b.id).point()) > 0;
+            case 1:
+                return a.plane.orientation(xvertex(b.id).point()) == ON_POSITIVE_SIDE;
+            case 2:
+                return b.plane.orientation(xvertex(a.id).point()) == ON_NEGATIVE_SIDE;
+            case 3:
+                return line.linearOrder(a.plane, b.plane) > 0;
+            default:
+                throw std::exception();
+            }
         }
 
         XLine line;
@@ -29,6 +78,10 @@ namespace Boolean
         if (isRefined()) return;
 
         std::vector<PlaneVertex> seqs(points.size());
+        auto vItr = points.begin();
+        for (int i = 0; i < points.size(); i++, vItr++)
+            seqs[i].id = *vItr;
+
         std::map<MyVertex::Index, XPlane> v2p;
         for (auto& set : inscts)
         {
@@ -39,26 +92,49 @@ namespace Boolean
             }
         }
 
-        LinOrderObj orderObj = { *(XLine*)(pData) };
-        int i = 0;
-        for (auto &pair : v2p)
+        EdgeAuxiliaryStructure data = *(EdgeAuxiliaryStructure*)(pData);
+        // assign each vertex a plane and the corresponding id
+        for (int i = 0; i < points.size(); i++)
         {
-            seqs[i].id = pair.first;
-            seqs[i].plane = pair.second;
-            i++;
+            auto res0 = v2p.find(seqs[i].id);
+            if (res0 == v2p.end())
+            {
+                // some vertex cannot be assigned a valid plane
+                // therefore we should find it manually from Plane Triples
+                auto &vRef = xvertex(seqs[i].id);
+                if (vRef.isPlaneRep())
+                {
+                    auto& xpointRef = vRef.ppoint();
+                    for (int j = 0; j < 3; j++)
+                    {
+                        Real fres = data.line.dot(xpointRef.plane(j));
+                        if (fres == Real(0)) continue;
+
+                        if (fres > 0)
+                            seqs[i].plane = xpointRef.plane(j);
+                        else if (fres < 0)
+                            seqs[i].plane = xpointRef.plane(j).opposite();
+                        break;
+                    }
+                }
+            }
+            else seqs[i].plane = res0->second;
         }
 
+        LinOrderObj orderObj = { data.line };
         std::sort(seqs.begin(), seqs.end(), orderObj);
         std::vector<EdgePBI> newPbi(points.size() + 1);
         std::map<MyVertex::Index, uint32_t> idmap;
         for (int i = 0; i < seqs.size(); i++)
         {
             idmap[seqs[i].id] = i;
-            newPbi[i].ends[0] = seqs[i].id;
-            newPbi[i+1].ends[1] = seqs[i].id;
-            newPbi[i].pends[0] = seqs[i].plane;
-            newPbi[i + 1].pends[1] = seqs[i].plane;
+            newPbi[i].ends[1] = seqs[i].id;
+            newPbi[i+1].ends[0] = seqs[i].id;
+            newPbi[i].pends[1] = seqs[i].plane;
+            newPbi[i + 1].pends[0] = seqs[i].plane;
         }
+        newPbi[0].ends[0] = data.start;
+        newPbi[points.size()].ends[1] = data.end;
 
         for (auto& set : inscts)
         {
@@ -72,12 +148,15 @@ namespace Boolean
 
                 assert(start < last);
                 for (int i = start; i < last; i++)
+                {
                     newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
+                }
             }
         }
         inscts.clear();
+        auto& slot = inscts[INVALID_UINT32];
         for (int i = 0; i < newPbi.size(); i++)
-            inscts[INVALID_UINT32].push_back(newPbi[i]);
+            slot.push_back(newPbi[i]);
 
         bRefined = true;
     }
@@ -87,6 +166,7 @@ namespace Boolean
         if (isRefined() || inscts.size() < 2) return;
 
         bRefined = true;
+        throw XR::NotImplementedException();
     }
 
     namespace
@@ -164,9 +244,17 @@ namespace Boolean
             {
                 auto& e = tri->edge(i);
                 edge.prep = tri->boundingPlane(i);
-                assert(edge.checkPlaneOrientation(tri));
 
-                if (!e.inscts) continue;
+                if (!e.inscts)
+                {
+                    //assert(m_nodes.find(e.ends[0]) != m_nodes.end());
+                    //assert(m_nodes.find(e.ends[1]) != m_nodes.end());
+                    //edge.v[0] = m_nodes.find(e.ends[0]);
+                    //edge.v[1] = m_nodes.find(e.ends[1]);
+                    //m_edges.push_back(edge);
+
+                    continue;
+                }
 
                 int ires = e.faceOrientation(tri);
                 assert(ires != 0);
@@ -182,6 +270,8 @@ namespace Boolean
 
                         edge.v[i0] = m_nodes.find(ePBI.ends[0]);
                         edge.v[i1] = m_nodes.find(ePBI.ends[1]);
+                        assert(edge.checkPlaneOrientation(tri));
+
                         m_edges.push_back(edge);
 
                         assert(edge.v[0] != m_nodes.end());
@@ -318,6 +408,15 @@ namespace Boolean
             }
             return INVALID_INDEX;
         }
+        bool TessGraph::Edge::checkPlaneOrientation(const Triangle *pTri)
+        {
+            XLine line(pTri->supportingPlane(), prep);
+            if (linearOrder(line, xvertex(v[0]->first),
+                xvertex(v[1]->first)) > 0)
+                return true;
+
+            return false;
+        }
 }
 
     void tessellation(std::vector<RegularMesh*>& meshes)
@@ -332,14 +431,14 @@ namespace Boolean
 
             for (int i = 0; i < 3; i++)
             {
-                XLine l;
+                EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
                 if (pTri->edge(i).ends[0] != pTri->vertexId((i+1)%3))
-                    l = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
+                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
                 else
-                    l = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
+                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
 
                  if (pTri->edge(i).inscts)
-                    pTri->edge(i).inscts->refine((void*)&l);
+                    pTri->edge(i).inscts->refine((void*)&data);
             }
 
             TessGraph tg(pTri);

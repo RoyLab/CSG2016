@@ -93,9 +93,13 @@ namespace Boolean
 
 		// @return 1 a->b, 0 a=b, -1 b->a
         int linearOrder(const XPlane& a, const XPlane& b) const;
-		// @return 1 a->b, 0 a=b, -1 b->a
 		int linearOrderNoCheck(const XPlane& a, const XPlane& b) const;
+        int linearOrder(const XPoint& a, const XPoint& b) const;
+        int linearOrder(const cyPointT& a, const cyPointT& b) const;
         void makePositive(XPlane& input) const;
+        Real dot(const XPlane&) const;
+        XPlane pickPositiveVertical(const XPoint& p) const;
+
 #ifdef PREP_DEBUG_INFO
     protected:
         vec3 normal;

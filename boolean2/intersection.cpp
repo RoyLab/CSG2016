@@ -410,17 +410,17 @@ namespace Boolean
 					fpbi.vertPlane = t[i2]->supportingPlane();
                     if (sign(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
                     {
-                        fpbi.pends[1] = insctRes.B.opposite();
-                        fpbi.pends[0] = insctRes.A.opposite();
-                        fpbi.ends[1] = v[1];
-                        fpbi.ends[0] = v[0];
+                        fpbi.pends[0] = insctRes.B.opposite();
+                        fpbi.pends[1] = insctRes.A.opposite();
+                        fpbi.ends[0] = v[1];
+                        fpbi.ends[1] = v[0];
                     }
                     else
                     {
-                        fpbi.pends[1] = insctRes.A;
-                        fpbi.pends[0] = insctRes.B;
-                        fpbi.ends[1] = v[0];
-                        fpbi.ends[0] = v[1];
+                        fpbi.pends[0] = insctRes.A;
+                        fpbi.pends[1] = insctRes.B;
+                        fpbi.ends[0] = v[0];
+                        fpbi.ends[1] = v[1];
                     }
 
 					fpbi.neighbor.push_back(ninfo);

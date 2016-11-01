@@ -128,7 +128,7 @@ namespace Boolean
         MyVertex::Index v0, v1;
         auto pMem = MemoryManager::getInstance();
 
-        for (int i = 0; i < degree(); i++)
+        for (uint32_t i = 0; i < degree(); i++)
         {
             v0 = *itr; ++itr;
             v1 = *itr;
