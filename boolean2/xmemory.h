@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
+#include <macros.h>
 #include "preps.h"
+#include "global.h"
 
 namespace Boolean
 {
@@ -125,7 +127,8 @@ namespace Boolean
 
         std::vector<VPoint>	points;
         std::vector<XPoint>	ppoints;
-        std::vector<Triangle*> insctTris;
+        ExternPtr std::vector<Triangle*> insctTris;
+        std::vector<SubPolygon*> subpolys;
 
     public:
         ~MemoryManager() {}
@@ -134,6 +137,7 @@ namespace Boolean
         uint32_t insertVertices(VPoint* begin, VPoint* end);
         uint32_t insertVertex(XPoint& pt);
         uint32_t getEdgeId(uint32_t a, uint32_t b, IPolygon* facePtr);
+        void addSubPolygon(SubPolygon* poly) { subpolys.push_back(poly); }
 
         void outputIntersection(const std::string&, const cyPointT&, const cyPointT&);
 

@@ -88,8 +88,13 @@
     <ClCompile Include="offio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="testcase.cpp" />
     <ClCompile Include="tessellation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="precompile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="testcase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

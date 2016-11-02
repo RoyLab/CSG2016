@@ -76,9 +76,9 @@ namespace Boolean
     {
         if (stage == -1) throw std::exception();
 
-        if (stage < 2) ++stage;
-        else
+        if (stage < 2)
         {
+            ++stage;
             if (stage == 2)
             {
                 if (m_edge.extrafhs.empty())
@@ -86,17 +86,14 @@ namespace Boolean
                     stage = -1;
                     return *this;
                 }
-
-                ++stage;
-                eItr = m_edge.extrafhs.begin();
+                else eItr = m_edge.extrafhs.begin();
             }
-            else
-            {
-                if (eItr != m_edge.extrafhs.end())
-                    ++eItr;
-                else
-                    stage = -1;
-            }
+        }
+        else
+        {
+            ++eItr;
+            if (eItr == m_edge.extrafhs.end())
+                stage = -1;
         }
         return *this;
     }
@@ -105,9 +102,9 @@ namespace Boolean
     {
         if (stage == -1) throw std::exception();
 
-        if (stage < 2) ++stage;
-        else
+        if (stage < 2)
         {
+            ++stage;
             if (stage == 2)
             {
                 if (m_edge.extrafhs.empty())
@@ -115,17 +112,14 @@ namespace Boolean
                     stage = -1;
                     return *this;
                 }
-
-                ++stage;
-                eItr = m_edge.extrafhs.begin();
+                else eItr = m_edge.extrafhs.begin();
             }
-            else
-            {
-                if (eItr != m_edge.extrafhs.end())
-                    ++eItr;
-                else
-                    stage = -1;
-            }
+        }
+        else
+        {
+            ++eItr;
+            if (eItr == m_edge.extrafhs.end())
+                stage = -1;
         }
         return *this;
     }

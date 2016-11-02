@@ -139,7 +139,7 @@ namespace Boolean
 		if (s != ends[0]) ori = -1;
 
         FaceIterator itr(*this);
-        while (itr)
+        for (; itr; ++itr)
         {
             if (!itr.face())
             {
@@ -147,10 +147,9 @@ namespace Boolean
                 itr.faceHandle().orientation = ori;
                 return;
             }
-            ++itr;
         }
 
-        assert(0);
+        //assert(0);
         extrafhs.push_back(FH{ ori, fPtr });
 	}
 

@@ -24,6 +24,7 @@ namespace Boolean
 	class XPoint;
 	class IPolygon;
 	class Triangle;
+    class SubPolygon;
 	class RegularMesh;
 	class MemoryManager;
 

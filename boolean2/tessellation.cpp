@@ -200,8 +200,8 @@ namespace Boolean
 
                 bool checkPlaneOrientation(const Triangle*);
             };
-
-            struct SortObject
+        public:
+            struct SortObject /// clockwise
             {
                 bool operator() (EdgeIndex i, EdgeIndex j);
                 const TessGraph* pTG;
@@ -243,23 +243,26 @@ namespace Boolean
             for (int i = 0; i < 3; i++)
             {
                 auto& e = tri->edge(i);
-                edge.prep = tri->boundingPlane(i);
-
-                if (!e.inscts)
-                {
-                    //assert(m_nodes.find(e.ends[0]) != m_nodes.end());
-                    //assert(m_nodes.find(e.ends[1]) != m_nodes.end());
-                    //edge.v[0] = m_nodes.find(e.ends[0]);
-                    //edge.v[1] = m_nodes.find(e.ends[1]);
-                    //m_edges.push_back(edge);
-
-                    continue;
-                }
+                edge.prep = tri->boundingPlane(i).opposite();
 
                 int ires = e.faceOrientation(tri);
                 assert(ires != 0);
                 int i0 = 0, i1 = 1;
                 if (ires < 0) std::swap(i0, i1);
+
+                if (!e.inscts)
+                {
+                    assert(m_nodes.find(e.ends[0]) != m_nodes.end());
+                    assert(m_nodes.find(e.ends[1]) != m_nodes.end());
+                    edge.v[i0] = m_nodes.find(e.ends[0]);
+                    edge.v[i1] = m_nodes.find(e.ends[1]);
+                    m_edges.push_back(edge);
+
+                    edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
+                    edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+
+                    continue;
+                }
 
                 for (auto &set : e.inscts->inscts)
                 {
@@ -303,6 +306,16 @@ namespace Boolean
             }
         }
 
+        bool checkSeq(std::vector<uint32_t>& vec, TessGraph::SortObject& sortObj)
+        {
+            for (int i = 1; i < vec.size(); i++)
+            {
+                if (!sortObj(vec[i - 1], vec[i]) && sortObj(vec[i], vec[i-1]))
+                      return false;
+            }
+            return true;
+        }
+
         void TessGraph::tessellate()
         {
             // sort all node by circular order
@@ -312,14 +325,7 @@ namespace Boolean
                 auto &node = nPair.second;
                 sortObj.node = nPair.first;
                 std::quicksort(node.edges.begin(), node.edges.end(), sortObj);
-                assert([&](std::vector<uint32_t>& vec)->bool {
-                    for (int i = 1; i < vec.size(); i++)
-                    {
-                        if (!sortObj(vec[i - 1], vec[i]))
-                            return false;
-                    }
-                    return true;
-                }(node.edges));
+                assert(checkSeq(node.edges, sortObj));
             }
 
             // remove the original 
@@ -335,7 +341,6 @@ namespace Boolean
             std::vector<uint32_t> loop;
             edgeStack.push(0);
             cend = m_edges[0].v[1];
-            chead = m_edges[0].v[0];
             auto pMem = MemoryManager::getInstance();
 
             while (!edgeStack.empty())
@@ -353,13 +358,14 @@ namespace Boolean
                 assert(eRef.dir != D_NODIR);
 
                 loop.clear();
-                loop.push_back((eRef.dir == D_SEQ) ? eRef.v[1]->first : eRef.v[0]->first);
+                loop.push_back((eRef.dir == D_SEQ) ? eRef.v[0]->first : eRef.v[1]->first);
 
+                chead = (eRef.dir == D_SEQ) ? eRef.v[0] : eRef.v[1];
                 cend = (eRef.dir == D_SEQ) ? eRef.v[1] : eRef.v[0];
                 while (cend != chead)
                 {
-                    EdgeIndex newEId = cend->second.findnext(cedge);
-                    Edge& newEdge = m_edges[newEId];
+                    cedge = cend->second.findnext(cedge);
+                    Edge& newEdge = m_edges[cedge];
 
                     Direction dir = D_SEQ;
                     if (newEdge.v[0] != cend)
@@ -369,19 +375,25 @@ namespace Boolean
                     newEdge.dir = Direction(newEdge.dir - dir);
                     loop.push_back(cend->first);
 
+                    auto& eRef = m_edges[cedge];
+                    cend = (dir == D_SEQ) ? newEdge.v[1] : newEdge.v[0];
+
                     if (newEdge.dir != D_NAN)
-                        edgeStack.push(newEId);
+                        edgeStack.push(cedge);
                 }
 
                 // add subpolygon
                 const uint32_t n = loop.size();
                 SubPolygon *spoly = new SubPolygon(n);
                 spoly->constructFromVertexList(loop.begin(), loop.end());
+                pMem->addSubPolygon(spoly);
             }
         }
 
         bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
         {
+            if (i == j) return false;
+
             auto &ei = pTG->m_edges[i];
             auto &ej = pTG->m_edges[j];
 
@@ -395,7 +407,7 @@ namespace Boolean
                 ep[1].inverse();
 
             Real res = sign(sp, ep[0], ep[1]);
-            assert(res != Real(0));
+            //assert(res != Real(0));
             return res < Real(0);
         }
 

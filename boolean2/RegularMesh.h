@@ -67,7 +67,8 @@ namespace Boolean
     class SubPolygon : public IPolygon
     {
     public:
-        SubPolygon(uint32_t d, uint32_t i = uint32_t(-1)): IPolygon(d, i) {}
+        SubPolygon(uint32_t d, uint32_t i = uint32_t(-1)): 
+            IPolygon(d, i),  eIds(d), vIds(d) {}
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
@@ -131,7 +132,11 @@ namespace Boolean
         for (uint32_t i = 0; i < degree(); i++)
         {
             v0 = *itr; ++itr;
-            v1 = *itr;
+            if (itr != b)
+                v1 = *itr;
+            else
+                v1 = *a;
+
             vIds[i] = v0;
             eIds[i] = pMem->getEdgeId(v0, v1, this);
         }
