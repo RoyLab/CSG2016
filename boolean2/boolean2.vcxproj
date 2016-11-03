@@ -39,6 +39,7 @@
     <ClCompile Include="adaptive.cpp" />
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
+    <ClCompile Include="classify.cpp" />
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="intersection.cpp" />
     <ClCompile Include="Octree.cpp" />

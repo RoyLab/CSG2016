@@ -9,6 +9,7 @@
 #include <CGAL/bounding_box.h>
 
 #include <macros.h>
+#include <XTimer.hpp>
 #include "global.h"
 #include "adaptive.h"
 #include "CGALext.h"
@@ -19,12 +20,20 @@
 #include "csg.h"
 #include "intersection.h"
 
+
+namespace Boolean
+{
+    void tessellation(std::vector<Boolean::RegularMesh*>& meshes);
+    void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG, std::vector<RegularMesh*>& meshes, RegularMesh*, uint32_t* extremes);
+
+    void initContext() {}
+    void releaseContext() {}
+}
+
+
 extern "C"
 {
 	using namespace Boolean;
-
-	void initContext();
-	void releaseContext();
 
 	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
@@ -43,8 +52,9 @@ extern "C"
 			meshList[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
 		}
 
+        XTim
 		RegularMesh* result = solveCSG(expr, meshList);
-		//RegularMesh::writeFile(*result, output.c_str());
+		RegularMesh::writeFile(*result, output.c_str());
 
 		SAFE_DELETE(result);
 		for (auto mesh : meshList)
@@ -56,7 +66,8 @@ extern "C"
 	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
 		MemoryManager* pMem = MemoryManager::getInstance();
-		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end());
+        MyVertex::Index extremes[6];
+		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), extremes);
 
 		cyPointT center, scale;
 		for (int i = 0; i < 3; i++)
@@ -84,17 +95,20 @@ extern "C"
 		const double padding = 1e-3;
 		std::vector<Octree::Node*> intersectLeaves;
 
-		auto cgalbbox = Bbox_3(-1, -1, -1, 1, 1, 1);
+		auto cgalbbox = Bbox_3(-1,-1,-1, 1, 1, 1);
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
 		doIntersection(meshes, intersectLeaves);
-        tessellation(meshes);
-        //doClassification(pOctree, pCsg, meshes, csgResult);
+        //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
-		//csgResult->invCoords(aabb);
-		//return csgResult;
-        pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
+        tessellation(meshes);
+
+        //meshes[0]->invCoords(center, scale);
+        //RegularMesh::writeFile(*meshes[0], "D:/a.off");
+
+        doClassification(pOctree, pCsg, meshes, csgResult);
+		csgResult->invCoords(center, scale);
 
 		SAFE_DELETE(pCsg);
 		SAFE_DELETE(pOctree);
@@ -103,12 +117,5 @@ extern "C"
 	}
 
 
-	void initContext()
-	{
-	}
-
-	void releaseContext()
-	{
-	}
 
 }

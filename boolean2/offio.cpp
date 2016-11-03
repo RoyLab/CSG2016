@@ -54,5 +54,31 @@ namespace XR
 		return true;
 	}
 
+    bool writeOffFile(const char * fileName, const OffFile &mesh)
+    {
+        std::ofstream f(fileName);
+        if (!f.is_open()) throw std::exception("no file");
+
+        f << "OFF\n";
+        f << mesh.nVertices << ' ' << mesh.nFaces << ' ' << mesh.nEdges << std::endl;
+
+        for (uint32_t i = 0; i < mesh.nVertices; i++)
+            f << mesh.vertices.get()[3*i] << ' ' << mesh.vertices.get()[3*i+1]<<
+            ' ' << mesh.vertices.get()[3*i+2] << std::endl;
+
+        int ptr = 0;
+        for (uint32_t i = 0; i < mesh.nFaces; i++)
+        {
+            int n = mesh.indices.get()[ptr++];
+            f << n;
+            for (int j = 0; j < n; j++)
+                f << ' ' << mesh.indices.get()[ptr++];
+            f << std::endl;
+        }
+
+        f.close();
+        return false;
+    }
+
 }
 

@@ -31,7 +31,61 @@ namespace Boolean
         return result;
     }
 
-	RegularMesh::RegularMesh(const OffFile& file)
+    void RegularMesh::writeFile(const RegularMesh & mesh, const char *fileName)
+    {
+        size_t nVertices = xvertices().size();
+        std::vector<int> idmap(nVertices, -1);
+        uint32_t vCount = 0, fCount = 0;
+        std::vector<Real> vSlot;
+        std::vector<int> iSlot;
+        
+        std::vector<MyVertex::Index> tmp;
+        cyPointT tmpVec;
+        for (auto &face : mesh.faces())
+        {
+            if (!face->isValid()) continue;
+
+            face->getVertices(tmp);
+            iSlot.push_back(face->degree());
+            for (auto idx : tmp)
+            {
+                uint32_t cId = idmap[idx];
+                if (cId == -1)
+                {
+                    cId = idmap[idx] = vCount++;
+                    MyVertex& v = xvertex(idx);
+                    if (v.isPlaneRep())
+                        tmpVec = v.ppoint().toVertexBased();
+                    else
+                        tmpVec = v.point();
+
+                    XR::invCoords(mesh.m_center, mesh.m_scale, tmpVec);
+                    vSlot.insert(vSlot.end(), (Real*)&tmpVec, (Real*)&tmpVec + 3);
+                }
+                iSlot.push_back(cId);
+            }
+            tmp.clear();
+            fCount++;
+        }
+
+        OffFile file;
+        file.nEdges = 0;
+        file.nFaces = fCount;
+        file.nVertices = vCount;
+
+        Real* vtmp = new Real[vSlot.size()];
+        memcpy(vtmp, vSlot.data(), sizeof(Real) * vSlot.size());
+        file.vertices.reset(vtmp);
+
+        int* itmp = new int[iSlot.size()];
+        memcpy(itmp, iSlot.data(), sizeof(int) * iSlot.size());
+        file.indices.reset(itmp);
+        
+        writeOffFile(fileName, file);
+    }
+
+	RegularMesh::RegularMesh(const OffFile& file):
+        m_center(0, 0, 0), m_scale(1, 1, 1)
 	{
 		assert(file.isValid());
 		assert(!memmgr || memmgr == MemoryManager::getInstance());
@@ -194,6 +248,14 @@ namespace Boolean
         return xedge(eIds[i]);
     }
 
+    void Triangle::getVertices(std::vector<MyVertex::Index>& output) const
+    {
+        assert(output.empty());
+        output.resize(3);
+        for (int i = 0; i < 3; i++)
+            output[i] = vIds[i];
+    }
+
     uint32_t Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
     {
         InsctData<EdgePBI> **is;
@@ -282,6 +344,14 @@ namespace Boolean
             assert(bPlanes[2].has_on(p));
             assert(bPlanes[2].has_on(q));
         }
+    }
+
+    void SubPolygon::getVertices(std::vector<MyVertex::Index>& output) const
+    {
+        assert(output.empty());
+        output.resize(degree());
+        for (int i = 0; i < degree(); i++)
+            output[i] = vIds[i];
     }
 }
 

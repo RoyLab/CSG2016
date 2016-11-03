@@ -17,6 +17,8 @@ namespace Boolean
 		virtual ~IPolygon() {}
 		uint32_t degree() const { return m_degree; }
 		uint32_t id() const { return m_id; }
+        virtual bool isValid() const { return true; }
+        virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
 
     protected:
         const uint32_t m_degree;
@@ -40,6 +42,7 @@ namespace Boolean
         MyEdge& edge(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
+        void getVertices(std::vector<MyVertex::Index>&) const;
 
 		// search
         uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
@@ -52,6 +55,8 @@ namespace Boolean
 
         // state
         bool isAdded4Tess() const { return added; }
+        bool isValid() const { return bIsValid; }
+        void invalidate() { bIsValid = false; }
 
     protected:
 		CGALTriangle cgalTri;
@@ -62,6 +67,7 @@ namespace Boolean
 		XPlane bPlanes[3];
 
         bool added = false;
+        bool bIsValid = true;
 	};
 
     class SubPolygon : public IPolygon
@@ -72,6 +78,7 @@ namespace Boolean
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
+        void getVertices(std::vector<MyVertex::Index>&) const;
 
     protected:
         std::vector<MyEdge::Index> eIds;
@@ -89,12 +96,13 @@ namespace Boolean
 		std::vector<FaceT*>  m_faces;
 		uint32_t m_id;
 		bool m_bInverse = false;
+        cyPointT m_center, m_scale;
 
 	public:
 		static RegularMesh* loadFromFile(const char*, uint32_t id);
-		static RegularMesh* writeFile(const RegularMesh& mesh, const char*);
+		static void writeFile(const RegularMesh& mesh, const char*);
 
-		RegularMesh() {}
+		RegularMesh():m_center(0,0,0), m_scale(1,1,1) {}
 		RegularMesh(const XR::OffFile& file); // triangle mesh
 		~RegularMesh() {}
 
@@ -103,12 +111,14 @@ namespace Boolean
 		const bool& inverse() const { return m_bInverse; }
 		uint32_t id() const { return m_id; }
 
+        /// do not actually change te coordinates
+        void invCoords(const cyPointT& c, const cyPointT& s) { m_center = c; m_scale = s; }
+
 		// access
 		std::vector<FaceT*>& faces() { return m_faces; }
 		const std::vector<FaceT*>& faces() const  {return m_faces; }
 
         // geometry info
-        //Bbox_3& bbox();
 		void prepareBoolean();
 	};
 

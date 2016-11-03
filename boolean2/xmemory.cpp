@@ -65,7 +65,7 @@ namespace Boolean
         for (auto& p : ppoints)
         {
             auto p2 = p.toVertexBased();
-            XR::normalizeCoords(center, scale, p2);
+            XR::invCoords(center, scale, p2);
             file << p2.x << ' ' << p2.y << ' ' << p2.z << std::endl;
         }
 

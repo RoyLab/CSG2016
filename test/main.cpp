@@ -10,7 +10,7 @@ int main()
 
     std::string expr("0+1");
 
-	test(names, expr, expr);
+	test(names, expr, "D:/result.off");
     system("pause");
     return 0;
 }

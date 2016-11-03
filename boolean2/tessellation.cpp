@@ -328,7 +328,7 @@ namespace Boolean
                 assert(checkSeq(node.edges, sortObj));
             }
 
-            // remove the original 
+            // remove the original triangle
             bool bRes;
             for (int i = 0; i < 3; i++)
                 bRes = xedge(mp_tri->edgeId(i)).remove(mp_tri);
@@ -455,6 +455,7 @@ namespace Boolean
 
             TessGraph tg(pTri);
             tg.tessellate();
+            pTri->invalidate();
         }
     }
 }
