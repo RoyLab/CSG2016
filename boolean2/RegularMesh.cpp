@@ -26,8 +26,7 @@ namespace Boolean
         OffFile file;
         readOffFile(fileName, file);
 
-		RegularMesh* result = new RegularMesh(file);
-		result->m_id = id;
+		RegularMesh* result = new RegularMesh(file, id);
         return result;
     }
 
@@ -84,8 +83,8 @@ namespace Boolean
         writeOffFile(fileName, file);
     }
 
-	RegularMesh::RegularMesh(const OffFile& file):
-        m_center(0, 0, 0), m_scale(1, 1, 1)
+	RegularMesh::RegularMesh(const OffFile& file, uint32_t id):
+        m_center(0, 0, 0), m_scale(1, 1, 1), m_id(id)
 	{
 		assert(file.isValid());
 		assert(!memmgr || memmgr == MemoryManager::getInstance());
@@ -104,7 +103,7 @@ namespace Boolean
 		{
 			n = indices[ptr++];
 			assert(n == 3);
-			face = new Triangle(triId++);
+			face = new Triangle(id, triId++);
 			auto tmpIdx = indices + ptr;
 			ptr += n;
 
@@ -187,7 +186,7 @@ namespace Boolean
         SAFE_DELETE(inscts);
     }
 
-    void MyEdge::addAjacentFace(uint32_t s, uint32_t e, IPolygon * fPtr)
+    void MyEdge::addAjacentFace(MyVertex::Index s, MyVertex::Index e, IPolygon * fPtr)
 	{
         int ori = 1;
 		if (s != ends[0]) ori = -1;
@@ -231,6 +230,12 @@ namespace Boolean
             ++itr;
         }
         return false;
+    }
+
+    uint32_t MyEdge::faceCount() const
+    {
+
+        return uint32_t();
     }
 
     Triangle::~Triangle()
@@ -350,7 +355,7 @@ namespace Boolean
     {
         assert(output.empty());
         output.resize(degree());
-        for (int i = 0; i < degree(); i++)
+        for (uint32_t i = 0; i < degree(); i++)
             output[i] = vIds[i];
     }
 }

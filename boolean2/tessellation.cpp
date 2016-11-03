@@ -384,7 +384,7 @@ namespace Boolean
 
                 // add subpolygon
                 const uint32_t n = loop.size();
-                SubPolygon *spoly = new SubPolygon(n);
+                SubPolygon *spoly = new SubPolygon(mp_tri->meshId(), n);
                 spoly->constructFromVertexList(loop.begin(), loop.end());
                 pMem->addSubPolygon(spoly);
             }

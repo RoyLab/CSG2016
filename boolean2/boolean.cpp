@@ -10,6 +10,7 @@
 
 #include <macros.h>
 #include <XTimer.hpp>
+#include <xlogger.h>
 #include "global.h"
 #include "adaptive.h"
 #include "CGALext.h"
@@ -24,7 +25,7 @@
 namespace Boolean
 {
     void tessellation(std::vector<Boolean::RegularMesh*>& meshes);
-    void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG, std::vector<RegularMesh*>& meshes, RegularMesh*, uint32_t* extremes);
+    void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, MyVertex::Index);
 
     void initContext() {}
     void releaseContext() {}
@@ -52,8 +53,10 @@ extern "C"
 			meshList[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
 		}
 
-        XTim
+        XTIMER_HELPER(setClock("main"));
 		RegularMesh* result = solveCSG(expr, meshList);
+        XLOG_INFO << "Overall time: " << XTIMER_HELPER(milliseconds("main")) << " ms";
+
 		RegularMesh::writeFile(*result, output.c_str());
 
 		SAFE_DELETE(result);
@@ -66,14 +69,14 @@ extern "C"
 	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
 		MemoryManager* pMem = MemoryManager::getInstance();
-        MyVertex::Index extremes[6];
-		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), extremes);
+        std::vector<MyVertex::Index> xmins;
+		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), xmins);
 
 		cyPointT center, scale;
 		for (int i = 0; i < 3; i++)
 		{
-			center[i] = (aabb.max(i) + aabb.min(i)) / 2.0;
-			scale[i] = aabb.max(i) - aabb.min(i);
+			center[i] = (aabb.maxVal(i) + aabb.minVal(i)) / 2.0;
+			scale[i] = aabb.maxVal(i) - aabb.minVal(i);
 		}
 
 		for (auto &pt: pMem->points)
@@ -107,7 +110,8 @@ extern "C"
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
 
-        doClassification(pOctree, pCsg, meshes, csgResult);
+        MyVertex::Index seed = pickSeed(xmins);
+        doClassification(pOctree, pCsg, meshes, csgResult, seed);
 		csgResult->invCoords(center, scale);
 
 		SAFE_DELETE(pCsg);

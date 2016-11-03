@@ -33,7 +33,7 @@ namespace Boolean
         bool isPlaneRep() const { return rep < 0; }
         uint32_t id() const { assert(rep);  return std::abs(rep) - 1; }
         bool operator==(const XPoint& p) const;
-        bool isValid() const { return rep; }
+        bool isValid() const { return rep != 0; }
 
         const XPoint& ppoint() const;
         const cyPointT& point() const;
@@ -101,16 +101,16 @@ namespace Boolean
         };
 
     public:
-        MyEdge(uint32_t a, uint32_t b) : ends{ a, b } {}
-
-        uint32_t ends[2];
-
+        MyVertex::Index ends[2];
         InsctData<EdgePBI>* inscts = nullptr;
+        std::vector<NeighborInfo>* neighbor = nullptr;
 
+        MyEdge(MyVertex::Index a, MyVertex::Index b) : ends{ a, b } {}
         ~MyEdge();
-        void addAjacentFace(uint32_t s, uint32_t e, IPolygon* fPtr);
+        void addAjacentFace(MyVertex::Index s, MyVertex::Index e, IPolygon* fPtr);
         int faceOrientation(const IPolygon*) const;
         bool remove(const IPolygon*);
+        uint32_t faceCount() const;
 
     protected:
         FH fhs[2];

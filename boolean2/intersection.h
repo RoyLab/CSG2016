@@ -15,7 +15,7 @@ namespace Boolean
 		Type type;
 		union
 		{
-			int neighborEdgeId; // >0 is fid, < 0 is eid, offset = 1
+			int neighborEdgeId; // >0 is fid, < 0 is eid,  0 is invalid
 			Triangle* pTrangle;
 		};
 		uint32_t neighborMeshId;

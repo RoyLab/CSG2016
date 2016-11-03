@@ -1,76 +1,164 @@
 #include "precompile.h"
 #include <vector>
+#include <memory>
+#include <queue>
 #include "RegularMesh.h"
 #include "Octree.h"
+#include "csg.h"
 
 namespace Boolean
 {
-    void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG, std::vector<RegularMesh*>& meshList, RegularMesh* result, uint32_t* extremes)
+    template <class T> struct AutoPtr : std::shared_ptr<T> {};
+    const int MARK_BEGIN = 0xff; // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作
+    enum Mark { UNVISITED, SEEDED0, SEEDED1, SEEDED2, VISITED };
+
+    struct SSeed
     {
-        assert(extremes);
-        MyVertex::Index seedId = extremes[0];
+        MyEdge::Index edgeId;
+        IPolygon* pFace = nullptr;
+        AutoPtr<IIndicatorVector> eIndicators;
 
+        SSeed() {}
+        SSeed(const SSeed& other) { *this = other; }
+        SSeed& operator=(const SSeed& other);
+    };
+
+    void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
+        std::vector<RegularMesh*>& meshList, RegularMesh* result,
+        MyVertex::Index seedId)
+    {
+        typedef uint32_t MeshId;
+
+        uint32_t nMesh = meshList.size();
+        CSGTreeOld* tree = pCSG->auxiliary();
+        CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
+
+        SSeed tmpSeed;
         MyVertex& seedV = xvertex(seedId);
-        MyEdge& seedE = xedge(*seedV.edges.begin());
+        tmpSeed.edgeId = *seedV.edges.begin();
+        MyEdge& seedE = xedge(tmpSeed.edgeId);
+        tmpSeed.pFace = MyEdge::FaceIterator(seedE).face();
 
-        size_t nMesh = meshList.size();
-        pConstruct = new Delegate<HalfedgeDS>;
+        tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
+        calcEdgeIndicatorByExtremity(seedV, tmpSeed, tmpSeed.eIndicators.get());
 
-        GroupParseInfo infos;
+        MeshId curMeshId;
+        std::queue<IPolygon*> faceQueue;
+        std::queue<SSeed> intraQueue, interQueue;
+        bool added, inverse;
+        Relation relation;
+        TestTree dummyForest;
+        std::vector<Relation> relTab(nMesh);
+        std::vector<MyEdge::Index> edges;
 
-        auto tree = pCsg->auxiliary();
-        infos.curTreeLeaves = new CSGTreeNode*[nMesh];
-
-        for (size_t imesh = 0; imesh < nMesh; imesh++)
+        interQueue.push(tmpSeed);
+        tmpSeed.pFace->mark = SEEDED0;
+        while (!interQueue.empty())
         {
-            SeedInfoWithId idSeed;
-            idSeed.meshId = imesh;
-            createFirstSeed(idSeed);
-            infos.otherMeshSeedQueue.push(idSeed);
+            SSeed curSeed = interQueue.front();
+            interQueue.pop();
 
-            while (!infos.otherMeshSeedQueue.empty())
+            if (curSeed.pFace->mark == VISITED)
+                continue;
+
+            curMeshId = tmpSeed.pFace->meshId();
+            assert(intraQueue.empty());
+            curSeed.pFace->mark = SEEDED1;
+            intraQueue.push(curSeed);
+
+            while (!intraQueue.empty())
             {
-                SeedInfoWithId& curSeed = infos.otherMeshSeedQueue.front();
-                std::vector<int> itstPrims;
-                itstAlg->get_adjGraph()->getIntersectPrimitives(curSeed.meshId, itstPrims);
+                curSeed = intraQueue.front();
+                intraQueue.pop();
 
-                CSGTreeNode* tree0 = copy2(tree->pRoot, infos.curTreeLeaves);
-                for (size_t id = 0; id < nMesh; id++)
-                    infos.curTreeLeaves[id]->relation = static_cast<Relation>(curSeed.indicators->at(id));
+                if (curSeed.pFace->mark == VISITED)
+                    continue;
 
-                for (size_t id : itstPrims)
-                    infos.curTreeLeaves[id]->relation = REL_UNKNOWN;
+                CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
+                calcFaceIndicator(curSeed, relTab);
 
-                Relation meshRel = CompressCSGNodeIteration(tree0);
-                infos.ttree1.reset(tree0);
+                relation = ParsingCSGTree(meshList[curMeshId], relTab.data(), 
+                    nMesh, tree0, curTreeLeaves, dummyForest);
+                assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
 
-                if (meshRel == REL_NOT_AVAILABLE)
+                inverse = meshList[curMeshId]->inverse();
+                added = (relation == REL_SAME);
+
+                faceQueue.push(curSeed.pFace);
+                while (!faceQueue.empty())
                 {
-                    infos.curMeshId = curSeed.meshId;
-                    infos.curMeshSeedQueue.push(curSeed);
-                    curSeed.seedFacet->mark = SEEDED1;
+                    IPolygon* curFace = faceQueue.front();
+                    faceQueue.pop();
+                    if (curFace->mark == VISITED)
+                        continue;
 
-                    while (!infos.curMeshSeedQueue.empty())
+                    curFace->mark = VISITED;
+                    if (added)
                     {
-                        SeedInfo& sndInfo = infos.curMeshSeedQueue.front();
-                        if (sndInfo.seedFacet->mark != VISITED)
+                        result->faces().push_back(curFace);
+                        result->inverseMap.push_back(inverse);
+                    }
+
+                    edges.clear();
+                    curFace->getEdges(edges);
+                    assert(edges.size() == curFace->degree());
+                    for (int i = 0; i < curFace->degree(); i++)
+                    {
+                        MyEdge& curEdge = xedge(edges[i]);
+                        MyEdge::FaceIterator fItr(curEdge);
+                        if (curEdge.neighbor)
                         {
-                            if (sndInfo.seedFacet->isSimple())
-                                floodSimpleGroup(infos, sndInfo);
-                            else
-                                floodComplexGroup(infos, sndInfo);
+                            assert(curEdge.faceCount() >= 4);
+                            for (; fItr; ++fItr)
+                            {
+                                tmpSeed.edgeId = edges[i];
+                                tmpSeed.pFace = fItr.face();
+                                if (fItr.face()->meshId() == curMeshId)
+                                {
+                                    if (fItr.face()->mark < SEEDED1)
+                                    {
+                                        tmpSeed.pFace->mark = SEEDED1;
+                                        intraQueue.push(tmpSeed);
+                                    }
+                                }
+                                else
+                                {
+                                    if (fItr.face()->mark < SEEDED0)
+                                    {
+                                        tmpSeed.pFace->mark = SEEDED0;
+                                        interQueue.push(tmpSeed);
+                                    }
+                                }
+                            }
                         }
-                        infos.curMeshSeedQueue.pop();
+                        else
+                        {
+                            for (; fItr; ++fItr)
+                            {
+                                if (fItr.face()->mark < SEEDED2)
+                                {
+                                    faceQueue.push(fItr.face());
+                                    fItr.face()->mark == SEEDED2;
+                                }
+                            }
+                        }
                     }
                 }
-                infos.otherMeshSeedQueue.pop();
             }
         }
-        csgResult->delegate(*pConstruct);
-        SAFE_DELETE(pConstruct);
-        SAFE_DELETE_ARRAY(infos.curTreeLeaves);
+        SAFE_DELETE_ARRAY(curTreeLeaves);
+    }
 
+    SSeed & SSeed::operator=(const SSeed & other)
+    {
+        edgeId = other.edgeId;
+        pFace = other.pFace;
 
+        if (other.eIndicators->getType() == IIndicatorVector::FULL)
+            eIndicators.reset(new FullIndicatorVector(
+                *reinterpret_cast<FullIndicatorVector*>(other.eIndicators.get())));
+        else eIndicators.reset(new SampleIndicatorVector(
+                *reinterpret_cast<SampleIndicatorVector*>(other.eIndicators.get())));
     }
 
 }

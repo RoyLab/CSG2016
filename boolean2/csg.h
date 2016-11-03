@@ -21,11 +21,14 @@ namespace Boolean
     class IIndicatorVector
     {
     public:
-        virtual Indicator& operator[](size_t meshId) = 0;
-        virtual const Indicator& operator[](size_t meshId) const = 0;
+        enum TYPE {SAMPLE, FULL};
 
-        virtual Indicator& at(size_t meshId) { return operator[](meshId); }
-        virtual const Indicator& at(size_t meshId) const { return operator[](meshId); }
+        virtual Indicator& operator[](uint32_t meshId) = 0;
+        virtual const Indicator& operator[](uint32_t meshId) const = 0;
+        virtual TYPE getType() const = 0;
+
+        virtual Indicator& at(uint32_t meshId) { return operator[](meshId); }
+        virtual const Indicator& at(uint32_t meshId) const { return operator[](meshId); }
         virtual ~IIndicatorVector(){}
     };
 
@@ -42,8 +45,8 @@ namespace Boolean
                 data[i] = REL_UNKNOWN;
         }
 
-        virtual Indicator& operator[](size_t meshId) { return data[meshId]; }
-        virtual const Indicator& operator[](size_t meshId) const { return data[meshId]; }
+        virtual Indicator& operator[](uint32_t meshId) { return data[meshId]; }
+        virtual const Indicator& operator[](uint32_t meshId) const { return data[meshId]; }
 
         template <class Container>
         void fillInSample(SampleIndicatorVector* sample, Container& ids)
@@ -51,6 +54,8 @@ namespace Boolean
             for (int id : ids)
                 data[id] = sample->at(id);
         }
+
+        TYPE getType() const { return FULL; }
 
     private:
         std::vector<Indicator> data;
@@ -77,8 +82,8 @@ namespace Boolean
 
         SampleIndicatorVector(){}
 
-        virtual Indicator& operator[](int meshId) { return data[meshId]; }
-        virtual const Indicator& operator[](int meshId) const
+        virtual Indicator& operator[](uint32_t meshId) { return data[meshId]; }
+        virtual const Indicator& operator[](uint32_t meshId) const
         {
             auto res = data.find(meshId);
             if (res == data.end())
@@ -94,6 +99,8 @@ namespace Boolean
                 if (pair.second == REL_UNKNOWN)
                     ids.push_back(pair.first);
         }
+
+        TYPE getType() const { return SAMPLE; }
 
     private:
         std::map<int, Indicator> data;

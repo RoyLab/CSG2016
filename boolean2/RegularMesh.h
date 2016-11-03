@@ -12,17 +12,25 @@ namespace Boolean
     class IPolygon
     {
     public:
-		IPolygon(uint32_t d, uint32_t i):
-			m_degree(d), m_id(i){}
+        int mark;
+
+    public:
+		IPolygon(uint32_t d, uint32_t i, uint32_t meshId):
+			m_degree(d), m_id(i), m_meshId(meshId) {}
 		virtual ~IPolygon() {}
+
 		uint32_t degree() const { return m_degree; }
 		uint32_t id() const { return m_id; }
+        uint32_t meshId() const { return m_meshId; }
+
         virtual bool isValid() const { return true; }
         virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
+        virtual void getEdges(std::vector<MyEdge::Index>&) const = 0;
 
     protected:
         const uint32_t m_degree;
-		const uint32_t m_id;
+        const uint32_t m_id;
+        const uint32_t m_meshId;
     };
 
     class Triangle : public IPolygon
@@ -31,7 +39,7 @@ namespace Boolean
     public:
 		InsctData<FacePBI>* inscts = nullptr;
 
-		Triangle(int i): IPolygon(3, i) {}
+		Triangle(uint32_t meshId, uint32_t i): IPolygon(3, i, meshId) {}
         ~Triangle();
 
 		// access
@@ -43,6 +51,7 @@ namespace Boolean
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
         void getVertices(std::vector<MyVertex::Index>&) const;
+        void getEdges(std::vector<MyEdge::Index>&) const;
 
 		// search
         uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
@@ -73,12 +82,13 @@ namespace Boolean
     class SubPolygon : public IPolygon
     {
     public:
-        SubPolygon(uint32_t d, uint32_t i = uint32_t(-1)): 
-            IPolygon(d, i),  eIds(d), vIds(d) {}
+        SubPolygon(uint32_t d, uint32_t meshId, uint32_t i = uint32_t(-1)): 
+            IPolygon(d, i, meshId),  eIds(d), vIds(d) {}
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void getVertices(std::vector<MyVertex::Index>&) const;
+        void getEdges(std::vector<MyEdge::Index>&) const;
 
     protected:
         std::vector<MyEdge::Index> eIds;
@@ -90,6 +100,7 @@ namespace Boolean
 	{
 	public:
 		typedef IPolygon FaceT;
+        std::vector<bool> inverseMap;
 
 	protected:
 		static  MemoryManager* memmgr;
@@ -103,7 +114,7 @@ namespace Boolean
 		static void writeFile(const RegularMesh& mesh, const char*);
 
 		RegularMesh():m_center(0,0,0), m_scale(1,1,1) {}
-		RegularMesh(const XR::OffFile& file); // triangle mesh
+		RegularMesh(const XR::OffFile& file, uint32_t meshId); // triangle mesh
 		~RegularMesh() {}
 
         // csg related

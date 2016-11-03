@@ -28,9 +28,11 @@ namespace Boolean
 	class RegularMesh;
 	class MemoryManager;
 
+    struct NeighborInfo;
     struct FacePBI;
     struct PBIRep;
     typedef PBIRep EdgePBI;
+
     template <class PBI> class InsctData;
     template <class Mesh> class CSGTree;
 
