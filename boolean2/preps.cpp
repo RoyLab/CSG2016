@@ -42,14 +42,23 @@ namespace Boolean
 
     Oriented_side XPlane::orientation(const cyPointT &p) const
     {
-        assert(fp_filter_check(reinterpret_cast<const Real*>(&p), FP_FACTOR));
-
-        const cyPointT* thiz = reinterpret_cast<const cyPointT*>(data());
-        double res = thiz->Dot(p);
-        res *= signd();
-        if (res > -data()[3] * signd()) return ON_POSITIVE_SIDE;
-        if (res < -data()[3] * signd()) return ON_NEGATIVE_SIDE;
-        return ON_ORIENTED_BOUNDARY;
+        Oriented_side res = base().orientation(p);
+        if (isInverse())
+        {
+            switch (res)
+            {
+            case ON_NEGATIVE_SIDE:
+                return ON_POSITIVE_SIDE;
+            case ON_ORIENTED_BOUNDARY:
+                return ON_ORIENTED_BOUNDARY;
+            case ON_POSITIVE_SIDE:
+                return ON_NEGATIVE_SIDE;
+            default:
+                break;
+            }
+        }
+        else
+            return res;
     }
 
     void XPlane::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
@@ -180,6 +189,16 @@ namespace Boolean
         cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
         *thiz = (e0).Cross(e1);
         m_data[3] = -thiz->Dot(p);
+    }
+
+    Oriented_side XPlaneBase::orientation(const cyPointT & p) const
+    {
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&p), FP_FACTOR));
+        const cyPointT* thiz = reinterpret_cast<const cyPointT*>(data());
+        double res = thiz->Dot(p);
+        if (res > -data()[3]) return ON_POSITIVE_SIDE;
+        if (res < -data()[3]) return ON_NEGATIVE_SIDE;
+        return ON_ORIENTED_BOUNDARY;
     }
 
     bool XPoint::operator==(const XPoint &p) const

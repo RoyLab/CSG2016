@@ -56,6 +56,7 @@ namespace Boolean
         }
 
         TYPE getType() const { return FULL; }
+        size_t getNumber() const { return data.size(); }
 
     private:
         std::vector<Indicator> data;

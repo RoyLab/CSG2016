@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <queue>
+#include <xlogger.h>
 #include "RegularMesh.h"
 #include "Octree.h"
 #include "csg.h"
@@ -9,8 +10,9 @@
 namespace Boolean
 {
     template <class T> struct AutoPtr : std::shared_ptr<T> {};
-    const int MARK_BEGIN = 0xff; // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作
+    const int MARK_BEGIN = 0xff; // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作????
     enum Mark { UNVISITED, SEEDED0, SEEDED1, SEEDED2, VISITED };
+    typedef uint32_t MeshId;
 
     struct SSeed
     {
@@ -23,11 +25,69 @@ namespace Boolean
         SSeed& operator=(const SSeed& other);
     };
 
+    void calcEdgeIndicator(MyVertex::Index seedVertexId, MyEdge::Index seedEdgeId, 
+        FullIndicatorVector& vInds, FullIndicatorVector& eInds)
+    {
+        for (size_t i = 0; i < vInds.getNumber(); i++)
+            eInds[i] = vInds[i];
+
+        XLOG_ERROR << UNIMPLEMENTED_DECLARATION;
+    }
+
+    void calcEdgeIndicatorByExtremity(MyVertex::Index seedId, SSeed& seed, FullIndicatorVector& inds, size_t nMesh)
+    {
+        FullIndicatorVector vInds(nMesh);
+        MyVertex& seedV = xvertex(seedId);
+        for (int i = 0; i < nMesh; i++)
+            vInds[i] = REL_OUTSIDE;
+
+        for (auto &edgeId : seedV.edges)
+        {
+            MyEdge& eRef = xedge(edgeId);
+            MyVertex& theOther = eRef.theOtherVertex(seedId);
+            if (theOther.isPlaneRep()) continue;
+
+            auto fItr = MyEdge::ConstFaceIterator(eRef);
+            for (; fItr; ++fItr)
+            {
+                if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue;
+                vInds[fItr.face()->meshId()] = REL_ON_BOUNDARY;
+            }
+        }
+
+        bool flag = false;
+        for (auto &edgeId : seedV.edges)
+        {
+            MyEdge& eRef = xedge(edgeId);
+            MyVertex& theOther = eRef.theOtherVertex(seedId);
+
+            auto fItr = MyEdge::FaceIterator(eRef);
+            for (; fItr; ++fItr)
+            {
+                if (fItr.face()->isValid())
+                {
+                    seed.edgeId = edgeId;
+                    seed.pFace = fItr.face();
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag) break;
+        }
+
+        assert(flag);
+        calcEdgeIndicator(seedId, seed.edgeId, vInds, inds);
+    }
+
+    void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab)
+    {
+
+    }
+
     void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
         std::vector<RegularMesh*>& meshList, RegularMesh* result,
         MyVertex::Index seedId)
     {
-        typedef uint32_t MeshId;
 
         uint32_t nMesh = meshList.size();
         CSGTreeOld* tree = pCSG->auxiliary();
@@ -37,10 +97,10 @@ namespace Boolean
         MyVertex& seedV = xvertex(seedId);
         tmpSeed.edgeId = *seedV.edges.begin();
         MyEdge& seedE = xedge(tmpSeed.edgeId);
-        tmpSeed.pFace = MyEdge::FaceIterator(seedE).face();
 
         tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
-        calcEdgeIndicatorByExtremity(seedV, tmpSeed, tmpSeed.eIndicators.get());
+        calcEdgeIndicatorByExtremity(seedId, tmpSeed, 
+            *reinterpret_cast<FullIndicatorVector*>(tmpSeed.eIndicators.get()), nMesh);
 
         MeshId curMeshId;
         std::queue<IPolygon*> faceQueue;

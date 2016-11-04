@@ -18,6 +18,7 @@ namespace Boolean
 
 		XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+        Oriented_side orientation(const cyPointT&) const;
 
 		const Real& a() const { return m_data[0]; }
 		const Real& b() const { return m_data[1]; }

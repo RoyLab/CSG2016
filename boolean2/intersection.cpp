@@ -215,9 +215,7 @@ namespace Boolean
 
 		XLine line(t[0]->supportingPlane(), t[1]->supportingPlane());
 
-		//// 统一正方向cross(n0, n1)
-
-		//sign = compute_intervals_isectline(da, *t[0], tagA[0], tagB[0], posA[0], posB[0]);
+		/// 统一正方向cross(n0, n1)
 		// 规定cross(n1, n0)为正方向, 所以反过来传参数
 		sign = compute_intervals_isectline(da, *t[0], tagB[0], tagA[0], posB[0], posA[0]);
 
@@ -316,6 +314,31 @@ namespace Boolean
             if (id[1] != INVALID_UINT32)
                 xvertex(id[1]).refcount --;
 #endif
+            // PATCH: if vertex coincidence, merging ids is required for both edge and triangle
+            // edges around the vertex also need to be merge
+            if (is_vertex(tag[0]) && is_vertex(tag[1]))
+            {
+                int tobeModify = 0;
+                if (id[0] == vid)
+                    tobeModify = 1;
+                int vTobeMerge = vertex_idx(tag[tobeModify]);
+
+                MyEdge& edge1 = fh[tobeModify]->edge((vTobeMerge+1)%3);
+                MyEdge& edge2 = fh[tobeModify]->edge((vTobeMerge+2)%3);
+
+                edge1.ends[0] == *slots[tobeModify] ? edge1.ends[0] = vid : edge1.ends[1] = vid;
+                edge2.ends[0] == *slots[tobeModify] ? edge2.ends[0] = vid : edge2.ends[1] = vid;
+
+                MyVertex& vRef = xvertex(*slots[(tobeModify+1)%2]), 
+                    &vMerge = xvertex(*slots[tobeModify]);
+
+                if (!vMerge.edges.empty())
+                {
+                    vRef.edges.insert(vRef.edges.end(), vMerge.edges.begin(), vMerge.edges.end());
+                    vMerge.edges.clear();
+                }
+            }
+
             *(slots[0]) = *(slots[1]) = vid;
             return vid;
         }
@@ -348,17 +371,6 @@ namespace Boolean
 			int eId[2] = { -1, -1 };
 			for (int i = 0; i < 2; i++)
 				is_same_edge(insctRes.tagA[i], insctRes.tagB[i], eId[i]);
-
-			// seems the overlap will be removed by 
-			//const MyEdge& on = t[i]->edge(eId);
-			//MyEdge::ConstFaceIterator itr(on);
-			//IndexPair triIdPair;
-			//uint32_t triId[2] = {}
-			//for (; itr; itr++)
-			//{
-			//		MakeIndex(triId, triIdPair);
-			//	overlaps->insert(triIdPair);
-			//}
 
 			NeighborInfo ninfo;
 			for (int i = 0; i < 2; i++)
@@ -434,7 +446,6 @@ namespace Boolean
 					t[i]->inscts->inscts[meshId[i]].push_back(fpbi);
 				}
 			}
-
 		}
 		return true;
 	}

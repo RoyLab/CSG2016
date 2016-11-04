@@ -12,6 +12,7 @@ namespace Boolean
     class IPolygon
     {
     public:
+        enum TYPE {TRIANGLE, SUBPOLYGON};
         int mark;
 
     public:
@@ -26,6 +27,7 @@ namespace Boolean
         virtual bool isValid() const { return true; }
         virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
         virtual void getEdges(std::vector<MyEdge::Index>&) const = 0;
+        virtual TYPE getType() const = 0;
 
     protected:
         const uint32_t m_degree;
@@ -66,6 +68,7 @@ namespace Boolean
         bool isAdded4Tess() const { return added; }
         bool isValid() const { return bIsValid; }
         void invalidate() { bIsValid = false; }
+        TYPE getType() const { return TRIANGLE; }
 
     protected:
 		CGALTriangle cgalTri;
@@ -89,6 +92,11 @@ namespace Boolean
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void getVertices(std::vector<MyVertex::Index>&) const;
         void getEdges(std::vector<MyEdge::Index>&) const;
+        TYPE getType() const { return SUBPOLYGON; }
+
+        MyEdge& edge(int i) const;
+        uint32_t edgeId(int i) const { return eIds[i]; }
+        uint32_t vertexId(int i) const { return vIds[i]; }
 
     protected:
         std::vector<MyEdge::Index> eIds;
@@ -111,7 +119,7 @@ namespace Boolean
 
 	public:
 		static RegularMesh* loadFromFile(const char*, uint32_t id);
-		static void writeFile(const RegularMesh& mesh, const char*);
+		static void writeFile(RegularMesh& mesh, const char*);
 
 		RegularMesh():m_center(0,0,0), m_scale(1,1,1) {}
 		RegularMesh(const XR::OffFile& file, uint32_t meshId); // triangle mesh

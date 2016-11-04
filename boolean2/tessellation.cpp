@@ -194,6 +194,7 @@ namespace Boolean
                 NodeMap::iterator v[2];
                 Direction dir;
                 XPlane prep;
+                ExternPtr PBIRep* pbi = nullptr;
 
                 VertexIndex startVertex() const { return v[0]->first; }
                 VertexIndex endVertex() const { return v[1]->first; }
@@ -275,6 +276,7 @@ namespace Boolean
                         edge.v[i1] = m_nodes.find(ePBI.ends[1]);
                         assert(edge.checkPlaneOrientation(tri));
 
+                        edge.pbi = &ePBI;
                         m_edges.push_back(edge);
 
                         assert(edge.v[0] != m_nodes.end());
@@ -299,6 +301,7 @@ namespace Boolean
                     edge.prep = fPBI.vertPlane;
                     assert(edge.checkPlaneOrientation(tri));
 
+                    edge.pbi = &fPBI;
                     m_edges.push_back(edge);
                     edge.v[0]->second.edges.push_back(m_edges.size() - 1);
                     edge.v[1]->second.edges.push_back(m_edges.size() - 1);
@@ -328,17 +331,13 @@ namespace Boolean
                 assert(checkSeq(node.edges, sortObj));
             }
 
-            // remove the original triangle
-            bool bRes;
-            for (int i = 0; i < 3; i++)
-                bRes = xedge(mp_tri->edgeId(i)).remove(mp_tri);
-
             // tessellate
             typedef uint32_t VeretxIndex;
             NodeMap::iterator chead, cend;
             EdgeIndex cedge;
             std::stack<EdgeIndex> edgeStack;
             std::vector<uint32_t> loop;
+            std::vector<EdgeIndex> loopEdge;
             edgeStack.push(0);
             cend = m_edges[0].v[1];
             auto pMem = MemoryManager::getInstance();
@@ -358,7 +357,9 @@ namespace Boolean
                 assert(eRef.dir != D_NODIR);
 
                 loop.clear();
+                loopEdge.clear();
                 loop.push_back((eRef.dir == D_SEQ) ? eRef.v[0]->first : eRef.v[1]->first);
+                loopEdge.push_back(cedge);
 
                 chead = (eRef.dir == D_SEQ) ? eRef.v[0] : eRef.v[1];
                 cend = (eRef.dir == D_SEQ) ? eRef.v[1] : eRef.v[0];
@@ -374,6 +375,7 @@ namespace Boolean
                     assert(newEdge.dir & dir);
                     newEdge.dir = Direction(newEdge.dir - dir);
                     loop.push_back(cend->first);
+                    loopEdge.push_back(cedge);
 
                     auto& eRef = m_edges[cedge];
                     cend = (dir == D_SEQ) ? newEdge.v[1] : newEdge.v[0];
@@ -386,6 +388,17 @@ namespace Boolean
                 const uint32_t n = loop.size();
                 SubPolygon *spoly = new SubPolygon(mp_tri->meshId(), n);
                 spoly->constructFromVertexList(loop.begin(), loop.end());
+                for (uint32_t i = 0; i < n; i++)
+                {
+                    auto& nSourse = m_edges[loopEdge[i]].pbi->neighbor;
+                    if (!nSourse.empty())
+                    {
+                        auto &nTarget = spoly->edge(i).neighbor;
+                        if (!nTarget)
+                            nTarget = new std::vector<NeighborInfo>;
+                        nTarget->insert(nTarget->end(), nSourse.begin(), nSourse.end());
+                    }
+                }
                 pMem->addSubPolygon(spoly);
             }
         }

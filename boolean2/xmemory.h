@@ -109,8 +109,10 @@ namespace Boolean
         ~MyEdge();
         void addAjacentFace(MyVertex::Index s, MyVertex::Index e, IPolygon* fPtr);
         int faceOrientation(const IPolygon*) const;
-        bool remove(const IPolygon*);
+        bool remove(const IPolygon*); // BUG: vertex √ª¥¶¿Ì
         uint32_t faceCount() const;
+        MyVertex::Index theOtherVId(MyVertex::Index thiz) const;
+        MyVertex& theOtherVertex(MyVertex::Index thiz) const;
 
     protected:
         FH fhs[2];
@@ -138,7 +140,6 @@ namespace Boolean
         uint32_t insertVertex(XPoint& pt);
         uint32_t getEdgeId(uint32_t a, uint32_t b, IPolygon* facePtr);
         void addSubPolygon(SubPolygon* poly) { subpolys.push_back(poly); }
-
         void outputIntersection(const std::string&, const cyPointT&, const cyPointT&);
 
     private:

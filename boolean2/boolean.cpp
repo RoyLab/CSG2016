@@ -29,6 +29,68 @@ namespace Boolean
 
     void initContext() {}
     void releaseContext() {}
+
+    bool collinear(const cyPointT& a, const cyPointT& b, const cyPointT& c)
+    {
+        cyPointT e[2] = { c - a, c - b };
+        cyPointT n = e[0].Cross(e[1]);
+        return n.x == 0 && n.y == 0 && n.z == 0;
+    }
+
+    MyVertex::Index pickSeed(std::vector<MyVertex::Index>& seed)
+    {
+        cyPointT basePoint[2];
+        for (uint32_t i = 0; i < seed.size(); i++)
+        {
+            MyVertex& vRef = xvertex(seed[i]);
+            basePoint[0] = vRef.point();
+            auto eItr = vRef.edges.begin();
+
+            MyVertex::Index base[2];
+            MyEdge& edge = xedge(*eItr++);
+            MyVertex::Index theother =
+                edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+            base[0] = theother;
+            basePoint[1] = xvertex(base[0]).point();
+
+            while (1)
+            {
+                MyEdge& edge = xedge(*eItr++);
+                MyVertex::Index theother =
+                    edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+
+                if (theother != base[0] && !collinear(basePoint[0], basePoint[1], xvertex(theother).point()))
+                {
+                    base[1] = theother;
+                    break;
+                }
+            }
+
+            assert(!xvertex(base[0]).isPlaneRep());
+            assert(!xvertex(base[1]).isPlaneRep());
+            assert(eItr != vRef.edges.end());
+
+            XPlaneBase pbase(basePoint[0], basePoint[1], xvertex(base[1]).point());
+            bool got = false;
+            while (eItr != vRef.edges.end())
+            {
+                MyEdge& edge = xedge(*eItr++);
+                MyVertex::Index theother =
+                    edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+                MyVertex& vRef2 = xvertex(theother);
+                if (!vRef2.isPlaneRep() && pbase.orientation(vRef2.point()) != ON_ORIENTED_BOUNDARY)
+                {
+                    got = true;
+                    break;
+                }
+            }
+
+            if (got)
+                return seed[i];
+        }
+        assert(0);
+        return INVALID_UINT32;
+    }
 }
 
 
@@ -103,6 +165,7 @@ extern "C"
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
 
 		doIntersection(meshes, intersectLeaves);
+        MyVertex::Index seed = pickSeed(xmins);
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
         tessellation(meshes);
@@ -110,7 +173,6 @@ extern "C"
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
 
-        MyVertex::Index seed = pickSeed(xmins);
         doClassification(pOctree, pCsg, meshes, csgResult, seed);
 		csgResult->invCoords(center, scale);
 

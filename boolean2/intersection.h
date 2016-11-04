@@ -26,7 +26,7 @@ namespace Boolean
 		XPlane pends[2];
 		uint32_t ends[2];
 
-		std::list<NeighborInfo> neighbor;
+		std::vector<NeighborInfo> neighbor;
 
 		virtual ~PBIRep() {}
     };

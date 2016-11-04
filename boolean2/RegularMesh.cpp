@@ -30,18 +30,22 @@ namespace Boolean
         return result;
     }
 
-    void RegularMesh::writeFile(const RegularMesh & mesh, const char *fileName)
+    void RegularMesh::writeFile(RegularMesh & mesh, const char *fileName)
     {
+        if (mesh.inverseMap.empty())
+            mesh.inverseMap.resize(mesh.m_faces.size(), false);
+
         size_t nVertices = xvertices().size();
         std::vector<int> idmap(nVertices, -1);
         uint32_t vCount = 0, fCount = 0;
         std::vector<Real> vSlot;
         std::vector<int> iSlot;
         
-        std::vector<MyVertex::Index> tmp;
+        std::vector<MyVertex::Index> tmp, iSlotBuffer;
         cyPointT tmpVec;
-        for (auto &face : mesh.faces())
+        for (int i = 0; i < mesh.faces().size(); i++)
         {
+            IPolygon* face = mesh.faces()[i];
             if (!face->isValid()) continue;
 
             face->getVertices(tmp);
@@ -61,9 +65,14 @@ namespace Boolean
                     XR::invCoords(mesh.m_center, mesh.m_scale, tmpVec);
                     vSlot.insert(vSlot.end(), (Real*)&tmpVec, (Real*)&tmpVec + 3);
                 }
-                iSlot.push_back(cId);
+                iSlotBuffer.push_back(cId);
             }
-            tmp.clear();
+            if (mesh.inverseMap[i])
+                iSlot.insert(iSlot.end(), iSlotBuffer.rbegin(), iSlotBuffer.rend());
+            else
+                iSlot.insert(iSlot.end(), iSlotBuffer.begin(), iSlotBuffer.end());
+
+            tmp.clear(); iSlotBuffer.clear();
             fCount++;
         }
 
@@ -238,6 +247,24 @@ namespace Boolean
         return uint32_t();
     }
 
+    MyVertex & MyEdge::theOtherVertex(MyVertex::Index thiz) const
+    {
+        return xvertex(theOtherVId(thiz));
+    }
+
+    MyVertex::Index MyEdge::theOtherVId(MyVertex::Index thiz) const
+    {
+        if (ends[0] == thiz)
+        {
+            return ends[1];
+        }
+        else
+        {
+            assert(ends[1] == thiz);
+            return ends[0];
+        }
+    }
+
     Triangle::~Triangle()
     {
         SAFE_DELETE(inscts);
@@ -357,6 +384,10 @@ namespace Boolean
         output.resize(degree());
         for (uint32_t i = 0; i < degree(); i++)
             output[i] = vIds[i];
+    }
+    MyEdge & SubPolygon::edge(int i) const
+    {
+        return xedge(edgeId(i));
     }
 }
 
