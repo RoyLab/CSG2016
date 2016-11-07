@@ -388,6 +388,8 @@ namespace Boolean
                 const uint32_t n = loop.size();
                 SubPolygon *spoly = new SubPolygon(mp_tri->meshId(), n);
                 spoly->constructFromVertexList(loop.begin(), loop.end());
+
+                // add neighborInfo
                 for (uint32_t i = 0; i < n; i++)
                 {
                     auto& nSourse = m_edges[loopEdge[i]].pbi->neighbor;
@@ -399,6 +401,8 @@ namespace Boolean
                         nTarget->insert(nTarget->end(), nSourse.begin(), nSourse.end());
                     }
                 }
+                 
+                spoly->sPlane = mp_tri->supportingPlane();
                 pMem->addSubPolygon(spoly);
             }
         }

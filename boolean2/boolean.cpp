@@ -1,6 +1,6 @@
 #include "precompile.h"
 #define XRWY_EXPORTS
-
+#define XTIMER_INSTANCE
 #include <string>
 #include <vector>
 #include <fstream>

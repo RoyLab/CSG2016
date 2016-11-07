@@ -5,11 +5,12 @@
 
 #include <macros.h>
 #include "global.h"
+#include "RegularMesh.h"
 
 namespace Boolean
 {
 
-	typedef ICSGMesh MPMesh;
+	typedef RegularMesh MPMesh;
 
 	typedef CSGNodeOp BiNodeType;
 

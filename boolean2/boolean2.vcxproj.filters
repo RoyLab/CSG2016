@@ -56,6 +56,9 @@
     <ClInclude Include="UndirectedGraph.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="BSP.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="boolean.cpp">
@@ -98,6 +101,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="classify.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BSP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

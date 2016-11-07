@@ -19,6 +19,7 @@ namespace Boolean
 		virtual uint32_t id() const = 0;
 	};
     class Octree;
+    class BSPTree;
 	class XPlane;
 	class XLine;
 	class XPoint;

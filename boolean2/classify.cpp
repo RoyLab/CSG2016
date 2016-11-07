@@ -2,10 +2,14 @@
 #include <vector>
 #include <memory>
 #include <queue>
+#include <map>
+#include <set>
 #include <xlogger.h>
 #include "RegularMesh.h"
 #include "Octree.h"
+#include "intersection.h"
 #include "csg.h"
+#include "BSP.h"
 
 namespace Boolean
 {
@@ -14,6 +18,7 @@ namespace Boolean
     enum Mark { UNVISITED, SEEDED0, SEEDED1, SEEDED2, VISITED };
     typedef uint32_t MeshId;
 
+    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
     struct SSeed
     {
         MyEdge::Index edgeId;
@@ -24,6 +29,13 @@ namespace Boolean
         SSeed(const SSeed& other) { *this = other; }
         SSeed& operator=(const SSeed& other);
     };
+
+    Oriented_side orientation(const XPlane& p, const MyVertex& v)
+    {
+        if (v.isPlaneRep())
+            return p.orientation(v.ppoint());
+        else return p.orientation(v.point());
+    }
 
     void calcEdgeIndicator(MyVertex::Index seedVertexId, MyEdge::Index seedEdgeId, 
         FullIndicatorVector& vInds, FullIndicatorVector& eInds)
@@ -79,9 +91,140 @@ namespace Boolean
         calcEdgeIndicator(seedId, seed.edgeId, vInds, inds);
     }
 
+    Relation vRelation2fRelation(Oriented_side rel, XPlane& testPlane, XPlane& refPlane)
+    {
+        if (rel == ON_POSITIVE_SIDE)
+        return REL_OUTSIDE;
+        else if (rel == ON_NEGATIVE_SIDE)
+            return REL_INSIDE;
+        else
+        {
+            const Real* dataA = testPlane.data();
+            const Real* dataB = refPlane.data();
+
+            if (dataA[0] * dataB[0] > 0 || dataA[1] * dataB[1] > 0
+                || dataA[1] * dataB[1] > 0)
+                return REL_SAME;
+            else
+                return REL_OPPOSITE;
+        }
+    }
+
     void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab)
     {
+        MyEdge& edge = xedge(seed.edgeId);
+        IPolygon* polygon = seed.pFace;
+        assert(edge.neighbor);
 
+        int edgeIndexInFace = -1;
+        for (size_t i = 0; i < polygon->degree(); i++)
+        {
+            if (polygon->edgeId(i) == seed.edgeId)
+            {
+                edgeIndexInFace = i;
+                break;
+            }
+        }
+        assert(edgeIndexInFace != -1);
+        MyVertex::Index vIdInPlane = polygon->vertexId((edgeIndexInFace + 2) % polygon->degree());
+
+        // find a bounding plane
+        if (!edge.noOverlapNeighbor)
+        {
+            edge.noOverlapNeighbor = true;
+            std::set<MeshId> meshSets;
+            std::vector<NeighborInfo> newNeighbor;
+            for (auto &neigh : *edge.neighbor)
+            {
+                if (meshSets.find(neigh.neighborMeshId) == meshSets.end())
+                {
+                    newNeighbor.push_back(neigh);
+                    meshSets.insert(neigh.neighborEdgeId);
+                }
+            }
+            edge.neighbor->swap(newNeighbor);
+        }
+
+        XPlane boundPlane;
+        bool flag = false;
+        for (auto &neigh : *edge.neighbor)
+        {
+            if (neigh.type == NeighborInfo::Edge)
+            {
+                for (auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId));
+                    fItr; fItr.incrementToTriangle())
+                {
+                    boundPlane = ((Triangle*)fItr.face())->supportingPlane();
+                    if (orientation(boundPlane, xvertex(vIdInPlane)) == ON_ORIENTED_BOUNDARY)
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                assert(neigh.type == NeighborInfo::Face);
+                boundPlane = neigh.pTrangle->supportingPlane();
+                if (orientation(boundPlane, xvertex(vIdInPlane)) == ON_ORIENTED_BOUNDARY)
+                    break;
+            }
+            if (flag) break;
+        }
+
+        assert(boundPlane.isValid());
+
+        // correct the direction of bounding plane
+        XLine edgeLine(polygon->supportingPlane(), boundPlane);
+        if (linearOrder(edgeLine, xvertex(polygon->vertexId(edgeIndexInFace + 1) % polygon->degree()),
+            xvertex(polygon->vertexId(edgeIndexInFace))) < 0)
+            boundPlane.inverse();
+
+        // pick a correct rep vertex
+        MyVertex::Index repVertexId;
+        for (size_t i = 0; i < polygon->degree(); i++)
+        {
+            if (orientation(boundPlane, xvertex(polygon->vertexId(i))) == ON_POSITIVE_SIDE)
+            {
+                repVertexId = polygon->vertexId(i);
+                break;
+            }
+        }
+        MyVertex& repVertex = xvertex(repVertexId);
+
+        // copy the relation
+        const size_t nMesh = ((FullIndicatorVector*)seed.eIndicators.get())->getNumber();
+        for (size_t i = 0; i < nMesh; i++)
+            relTab[i] = (Relation)seed.eIndicators.get()->at(i);
+
+        // correct the relation
+        for (auto &neigh: *edge.neighbor)
+        {
+            Oriented_side side;
+
+            if (neigh.type == NeighborInfo::Edge)
+            {
+                std::vector<IPolygon*> faces;
+                auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId));
+                for (; fItr; fItr.incrementToTriangle())
+                    faces.push_back(fItr.face());
+
+                BSPTree bsp; XPlane bspPlane;
+                bsp.buildNoCross(faces);
+                side = bsp.classify(repVertex, &bspPlane);
+
+                relTab[neigh.neighborMeshId] = vRelation2fRelation(side,
+                    bspPlane, polygon->supportingPlane());
+            }
+            else
+            {
+                assert(neigh.type == NeighborInfo::Face);
+                Oriented_side side = orientation(neigh.pTrangle->supportingPlane(), repVertex);
+
+                relTab[neigh.neighborMeshId] = vRelation2fRelation(side,
+                    neigh.pTrangle->supportingPlane(), polygon->supportingPlane());
+            }
+        }
     }
 
     void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
@@ -198,7 +341,7 @@ namespace Boolean
                                 if (fItr.face()->mark < SEEDED2)
                                 {
                                     faceQueue.push(fItr.face());
-                                    fItr.face()->mark == SEEDED2;
+                                    fItr.face()->mark = SEEDED2;
                                 }
                             }
                         }
@@ -219,6 +362,8 @@ namespace Boolean
                 *reinterpret_cast<FullIndicatorVector*>(other.eIndicators.get())));
         else eIndicators.reset(new SampleIndicatorVector(
                 *reinterpret_cast<SampleIndicatorVector*>(other.eIndicators.get())));
+
+        return *this;
     }
 
 }

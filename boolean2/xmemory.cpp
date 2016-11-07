@@ -124,4 +124,12 @@ namespace Boolean
         return *this;
     }
 
+    MyEdge::FaceIterator & MyEdge::FaceIterator::incrementToTriangle()
+    {
+        do {
+        ++*this;
+        } while (*this && face()->getType() != IPolygon::TRIANGLE);
+        return *this;
+    }
+
 }

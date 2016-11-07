@@ -83,6 +83,7 @@ namespace Boolean
                 m_edge(edge), stage(0) {}
 
             FaceIterator& operator++();
+            FaceIterator& incrementToTriangle();
 
             operator bool() const { return stage != -1; }
             FH& faceHandle() const
@@ -104,6 +105,7 @@ namespace Boolean
         MyVertex::Index ends[2];
         InsctData<EdgePBI>* inscts = nullptr;
         std::vector<NeighborInfo>* neighbor = nullptr;
+        bool noOverlapNeighbor = false;
 
         MyEdge(MyVertex::Index a, MyVertex::Index b) : ends{ a, b } {}
         ~MyEdge();

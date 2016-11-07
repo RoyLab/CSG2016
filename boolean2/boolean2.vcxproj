@@ -22,6 +22,7 @@
     <ClInclude Include="adaptive.h" />
     <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="boolean.h" />
+    <ClInclude Include="BSP.h" />
     <ClInclude Include="CGALext.h" />
     <ClInclude Include="csg.h" />
     <ClInclude Include="csgdefs.h" />
@@ -39,6 +40,7 @@
     <ClCompile Include="adaptive.cpp" />
     <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="boolean.cpp" />
+    <ClCompile Include="BSP.cpp" />
     <ClCompile Include="classify.cpp" />
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="intersection.cpp" />

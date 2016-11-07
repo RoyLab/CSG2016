@@ -45,6 +45,9 @@ namespace Boolean
                 data[i] = REL_UNKNOWN;
         }
 
+        FullIndicatorVector(const FullIndicatorVector& other):
+            data(other.data){}
+
         virtual Indicator& operator[](uint32_t meshId) { return data[meshId]; }
         virtual const Indicator& operator[](uint32_t meshId) const { return data[meshId]; }
 
@@ -66,6 +69,8 @@ namespace Boolean
         public IIndicatorVector
     {
     public:
+        SampleIndicatorVector(const SampleIndicatorVector& other) :
+            data(other.data) {}
 
         template <class Container>
         SampleIndicatorVector(FullIndicatorVector& full, Container& ids)
@@ -75,7 +80,7 @@ namespace Boolean
         }
 
         template <class Container>
-        SampleIndicatorVector(Container& ids)
+        SampleIndicatorVector(Container& ids, int nouse)
         {
             for (int id : ids)
                 data[id] = REL_UNKNOWN;

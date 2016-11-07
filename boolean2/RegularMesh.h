@@ -29,6 +29,13 @@ namespace Boolean
         virtual void getEdges(std::vector<MyEdge::Index>&) const = 0;
         virtual TYPE getType() const = 0;
 
+        virtual MyEdge& edge(int i) const;
+        virtual uint32_t edgeId(int i) const = 0;
+        virtual MyVertex& vertex(int i)const;
+        virtual uint32_t vertexId(int i)const = 0;
+
+        XPlane supportingPlane() const { return sPlane; }
+        XPlane sPlane;
     protected:
         const uint32_t m_degree;
         const uint32_t m_id;
@@ -47,9 +54,7 @@ namespace Boolean
 		// access
 		const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
-		XPlane supportingPlane() const { return sPlane; }
         cyPointT& point(int i) const;
-        MyEdge& edge(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
         void getVertices(std::vector<MyVertex::Index>&) const;
@@ -94,7 +99,6 @@ namespace Boolean
         void getEdges(std::vector<MyEdge::Index>&) const;
         TYPE getType() const { return SUBPOLYGON; }
 
-        MyEdge& edge(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
 

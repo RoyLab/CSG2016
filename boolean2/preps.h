@@ -66,7 +66,7 @@ namespace Boolean
 
 		// predicates
 		Oriented_side orientation(const XPoint&) const;
-		Oriented_side orientation(const cyPointT&) const;
+        Oriented_side orientation(const cyPointT&) const;
         bool has_on(const cyPointT& p) { return orientation(p) == ON_ORIENTED_BOUNDARY; }
 
         void setId(int i) { assert(i >= 0); id = i + 1; }

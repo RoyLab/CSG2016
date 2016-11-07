@@ -275,11 +275,6 @@ namespace Boolean
         return xpoint(vIds[i]);
     }
 
-    MyEdge & Triangle::edge(int i) const
-    {
-        return xedge(eIds[i]);
-    }
-
     void Triangle::getVertices(std::vector<MyVertex::Index>& output) const
     {
         assert(output.empty());
@@ -385,9 +380,15 @@ namespace Boolean
         for (uint32_t i = 0; i < degree(); i++)
             output[i] = vIds[i];
     }
-    MyEdge & SubPolygon::edge(int i) const
+
+    MyEdge & IPolygon::edge(int i) const
     {
         return xedge(edgeId(i));
+    }
+
+    MyVertex& IPolygon::vertex(int i) const
+    {
+        return xvertex(vertexId(i));
     }
 }
 
