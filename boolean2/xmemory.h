@@ -146,6 +146,7 @@ namespace Boolean
 
     private:
         MemoryManager() {}
+        static MemoryManager mgr;
     };
 
     inline const MyEdge& xcedge(uint32_t id) { return MemoryManager::getInstance()->edges[id]; }

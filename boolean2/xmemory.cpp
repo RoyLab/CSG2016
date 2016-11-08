@@ -5,9 +5,10 @@
 
 namespace Boolean
 {
+    MemoryManager MemoryManager::mgr;
+
     MemoryManager * MemoryManager::getInstance()
     {
-        static MemoryManager mgr;
         return &mgr;
     }
 
@@ -47,7 +48,7 @@ namespace Boolean
         {
             MyVertex& theother = xvertex(b);
             assert(!theother.findEdge(a));
-
+            
             target = edges.size();
             edges.emplace_back(a, b);
 

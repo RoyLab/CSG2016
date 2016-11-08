@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <memory>
 #include "csgdefs.h"
 #include "xgeometry.h"
 #include "CGALext.h"
@@ -38,5 +39,6 @@ namespace Boolean
     template <class Mesh> class CSGTree;
 
 
+    template <class T> struct AutoPtr : std::shared_ptr<T> {};
     const uint32_t INVALID_UINT32 = uint32_t(-1);
 }

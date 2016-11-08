@@ -27,18 +27,25 @@ namespace Boolean
         if (a.isPlaneRep()) type += 1;
         if (b.isPlaneRep()) type += 2;
 
+        Oriented_side side;
         switch (type)
         {
         case 0:
-            return l.linearOrder(a.point(), b.point()) > 0;
+            return l.linearOrder(a.point(), b.point());
         case 1:
-            return l.pickPositiveVertical(a.ppoint())
-                .orientation(b.point()) == ON_POSITIVE_SIDE;
+            side = l.pickPositiveVertical(a.ppoint())
+                .orientation(b.point());
+            if (side == ON_POSITIVE_SIDE) return 1;
+            else if (side == ON_NEGATIVE_SIDE) return -1;
+            else return 0;
         case 2:
-            return l.pickPositiveVertical(b.ppoint())
-                .orientation(a.point()) == ON_NEGATIVE_SIDE;
+            side = l.pickPositiveVertical(b.ppoint())
+                .orientation(a.point());
+            if (side == ON_NEGATIVE_SIDE) return 1;
+            else if (side == ON_POSITIVE_SIDE) return -1;
+            else return 0;
         case 3:
-            return l.linearOrder(a.ppoint(), b.ppoint()) > 0;
+            return l.linearOrder(a.ppoint(), b.ppoint());
         default:
             throw std::exception();
         }
@@ -287,6 +294,8 @@ namespace Boolean
                     }
                 }
             }
+
+            if (!tri->inscts) return;
 
             edge.dir = D_NODIR;
             for (auto &set : tri->inscts->inscts)

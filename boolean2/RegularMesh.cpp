@@ -192,7 +192,8 @@ namespace Boolean
 
     MyEdge::~MyEdge()
     {
-        SAFE_DELETE(inscts);
+        //SAFE_DELETE(inscts);
+        //SAFE_DELETE(neighbor);
     }
 
     void MyEdge::addAjacentFace(MyVertex::Index s, MyVertex::Index e, IPolygon * fPtr)
