@@ -172,8 +172,7 @@ namespace Boolean
             else if (fres < 0)
                 return p.plane(j).opposite();
         }
-        throw std::exception();
-        return XPlane();
+        throw std::exception("cannnot find a proper plane");
     }
 
     XPlaneBase::XPlaneBase(const cyPointT &p, const cyPointT &q, const cyPointT & r)

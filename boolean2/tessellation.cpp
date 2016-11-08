@@ -392,9 +392,10 @@ namespace Boolean
                 // add neighborInfo
                 for (uint32_t i = 0; i < n; i++)
                 {
-                    auto& nSourse = m_edges[loopEdge[i]].pbi->neighbor;
-                    if (!nSourse.empty())
+                    auto* pbi = m_edges[loopEdge[i]].pbi;
+                    if (pbi && !pbi->neighbor.empty())
                     {
+                        auto &nSourse = pbi->neighbor;
                         auto &nTarget = spoly->edge(i).neighbor;
                         if (!nTarget)
                             nTarget = new std::vector<NeighborInfo>;

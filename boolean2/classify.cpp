@@ -110,12 +110,33 @@ namespace Boolean
         }
     }
 
+    MyVertex::Index findAnotherVertex(const IPolygon* poly, MyEdge::Index id)
+    {
+        if (poly->getType() == IPolygon::TRIANGLE)
+        {
+            return poly->vertexId(id);
+        }
+        else
+        {
+            assert(poly->getType() == IPolygon::SUBPOLYGON);
+            return poly->vertexId((id+2)%poly->degree());
+        }
+    }
+
     void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab)
     {
         MyEdge& edge = xedge(seed.edgeId);
         IPolygon* polygon = seed.pFace;
-        assert(edge.neighbor);
 
+        // copy the relation
+        const size_t nMesh = ((FullIndicatorVector*)seed.eIndicators.get())->getNumber();
+        for (size_t i = 0; i < nMesh; i++)
+            relTab[i] = (Relation)seed.eIndicators.get()->at(i);
+
+        if (!edge.neighbor || edge.neighbor->empty()) return;
+
+
+        // find init point
         int edgeIndexInFace = -1;
         for (size_t i = 0; i < polygon->degree(); i++)
         {
@@ -126,7 +147,7 @@ namespace Boolean
             }
         }
         assert(edgeIndexInFace != -1);
-        MyVertex::Index vIdInPlane = polygon->vertexId((edgeIndexInFace + 2) % polygon->degree());
+        MyVertex::Index vIdInPlane = findAnotherVertex(polygon, edgeIndexInFace);
 
         // find a bounding plane
         if (!edge.noOverlapNeighbor)
@@ -139,7 +160,7 @@ namespace Boolean
                 if (meshSets.find(neigh.neighborMeshId) == meshSets.end())
                 {
                     newNeighbor.push_back(neigh);
-                    meshSets.insert(neigh.neighborEdgeId);
+                    meshSets.insert(neigh.neighborMeshId);
                 }
             }
             edge.neighbor->swap(newNeighbor);
@@ -155,7 +176,7 @@ namespace Boolean
                     fItr; fItr.incrementToTriangle())
                 {
                     boundPlane = ((Triangle*)fItr.face())->supportingPlane();
-                    if (orientation(boundPlane, xvertex(vIdInPlane)) == ON_ORIENTED_BOUNDARY)
+                    if (orientation(boundPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
                     {
                         flag = true;
                         break;
@@ -166,7 +187,7 @@ namespace Boolean
             {
                 assert(neigh.type == NeighborInfo::Face);
                 boundPlane = neigh.pTrangle->supportingPlane();
-                if (orientation(boundPlane, xvertex(vIdInPlane)) == ON_ORIENTED_BOUNDARY)
+                if (orientation(boundPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
                     break;
             }
             if (flag) break;
@@ -192,15 +213,16 @@ namespace Boolean
         }
         MyVertex& repVertex = xvertex(repVertexId);
 
-        // copy the relation
-        const size_t nMesh = ((FullIndicatorVector*)seed.eIndicators.get())->getNumber();
-        for (size_t i = 0; i < nMesh; i++)
-            relTab[i] = (Relation)seed.eIndicators.get()->at(i);
-
         // correct the relation
         for (auto &neigh: *edge.neighbor)
         {
             Oriented_side side;
+
+            if (neigh.neighborMeshId == polygon->meshId())
+            {
+                relTab[neigh.neighborMeshId] = REL_SAME;
+                continue;
+            }
 
             if (neigh.type == NeighborInfo::Edge)
             {
@@ -311,9 +333,11 @@ namespace Boolean
                         MyEdge::FaceIterator fItr(curEdge);
                         if (curEdge.neighbor)
                         {
-                            assert(curEdge.faceCount() >= 4);
+                            assert(curEdge.faceCount() >= 4); // 如果这是一个相交而成的边，那么一定会有超过4个polygon在周围
                             for (; fItr; ++fItr)
                             {
+                                if (!fItr.face()->isValid()) continue;
+
                                 tmpSeed.edgeId = edges[i];
                                 tmpSeed.pFace = fItr.face();
                                 if (fItr.face()->meshId() == curMeshId)

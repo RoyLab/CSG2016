@@ -243,8 +243,14 @@ namespace Boolean
 
     uint32_t MyEdge::faceCount() const
     {
-
-        return uint32_t();
+        auto fItr = ConstFaceIterator(*this);
+        uint32_t count = 0;
+        for (; fItr; ++fItr)
+        {
+            if (fItr.face()->isValid())
+                count++;
+        }
+        return count;
     }
 
     MyVertex & MyEdge::theOtherVertex(MyVertex::Index thiz) const
@@ -379,6 +385,14 @@ namespace Boolean
         output.resize(degree());
         for (uint32_t i = 0; i < degree(); i++)
             output[i] = vIds[i];
+    }
+
+    void IPolygon::getEdges(std::vector<MyEdge::Index>& output) const
+    {
+        assert(output.empty());
+        output.resize(degree());
+        for (size_t i = 0; i < degree(); i++)
+            output[i] = edgeId(i);
     }
 
     MyEdge & IPolygon::edge(int i) const

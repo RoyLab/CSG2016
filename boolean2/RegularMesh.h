@@ -26,7 +26,7 @@ namespace Boolean
 
         virtual bool isValid() const { return true; }
         virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
-        virtual void getEdges(std::vector<MyEdge::Index>&) const = 0;
+        virtual void getEdges(std::vector<MyEdge::Index>&) const;
         virtual TYPE getType() const = 0;
 
         virtual MyEdge& edge(int i) const;
@@ -58,7 +58,6 @@ namespace Boolean
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
         void getVertices(std::vector<MyVertex::Index>&) const;
-        void getEdges(std::vector<MyEdge::Index>&) const;
 
 		// search
         uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
@@ -80,7 +79,6 @@ namespace Boolean
         uint32_t eIds[3];
         uint32_t vIds[3];
 
-		XPlane sPlane;
 		XPlane bPlanes[3];
 
         bool added = false;
@@ -90,13 +88,12 @@ namespace Boolean
     class SubPolygon : public IPolygon
     {
     public:
-        SubPolygon(uint32_t d, uint32_t meshId, uint32_t i = uint32_t(-1)): 
+        SubPolygon(uint32_t meshId, uint32_t d, uint32_t i = uint32_t(-1)):
             IPolygon(d, i, meshId),  eIds(d), vIds(d) {}
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void getVertices(std::vector<MyVertex::Index>&) const;
-        void getEdges(std::vector<MyEdge::Index>&) const;
         TYPE getType() const { return SUBPOLYGON; }
 
         uint32_t edgeId(int i) const { return eIds[i]; }

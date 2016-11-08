@@ -99,7 +99,7 @@ namespace Boolean
         int linearOrder(const cyPointT& a, const cyPointT& b) const;
         void makePositive(XPlane& input) const;
         Real dot(const XPlane&) const;
-        XPlane pickPositiveVertical(const XPoint& p) const;
+        XPlane pickPositiveVertical(const XPoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
 
 #ifdef PREP_DEBUG_INFO
     protected:
