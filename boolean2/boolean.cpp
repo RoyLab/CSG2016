@@ -173,6 +173,9 @@ extern "C"
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
 
+        //for (auto& tmpEdge : xedges())
+            //assert(tmpEdge.neighbor == nullptr);
+
         doClassification(pOctree, pCsg, meshes, csgResult, seed);
 		csgResult->invCoords(center, scale);
 

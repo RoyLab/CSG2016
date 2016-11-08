@@ -205,7 +205,7 @@ namespace Boolean
         return polygon->vertexId(edgeIndexInFace);
     }
 
-    void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab)
+    void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab, bool hasNeighbor)
     {
         MyEdge& edge = xedge(seed.edgeId);
         IPolygon* polygon = seed.pFace;
@@ -213,8 +213,14 @@ namespace Boolean
         // copy the relation
         const size_t nMesh = ((FullIndicatorVector*)seed.eIndicators.get())->getNumber();
         for (size_t i = 0; i < nMesh; i++)
+        {
             relTab[i] = (Relation)seed.eIndicators.get()->at(i);
+            assert(i == polygon->meshId() || relTab[i] != REL_ON_BOUNDARY);
+        }
 
+        relTab[polygon->meshId()] = REL_SAME;
+
+        assert(!hasNeighbor || edge.neighbor->size());
         if (!edge.neighbor || edge.neighbor->empty()) return;
 
         // remove repetitive neighborInfo, must before <find repVertex>
@@ -249,10 +255,7 @@ namespace Boolean
             Oriented_side side;
 
             if (neigh.neighborMeshId == polygon->meshId())
-            {
-                relTab[neigh.neighborMeshId] = REL_SAME;
                 continue;
-            }
 
             if (neigh.type == NeighborInfo::Edge)
             {
@@ -283,7 +286,6 @@ namespace Boolean
         std::vector<RegularMesh*>& meshList, RegularMesh* result,
         MyVertex::Index seedId)
     {
-
         uint32_t nMesh = meshList.size();
         CSGTreeOld* tree = pCSG->auxiliary();
         CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
@@ -308,6 +310,7 @@ namespace Boolean
 
         interQueue.push(tmpSeed);
         tmpSeed.pFace->mark = SEEDED0;
+        assert(tmpSeed.pFace->isValid());
         while (!interQueue.empty())
         {
             SSeed curSeed = interQueue.front();
@@ -316,12 +319,13 @@ namespace Boolean
             if (curSeed.pFace->mark == VISITED)
                 continue;
 
-            curMeshId = tmpSeed.pFace->meshId();
+            curMeshId = curSeed.pFace->meshId();
             assert(intraQueue.empty());
             curSeed.pFace->mark = SEEDED1;
             intraQueue.push(curSeed);
             inverse = meshList[curMeshId]->inverse();
 
+            bool seedFlag = true;
             while (!intraQueue.empty())
             {
                 curSeed = intraQueue.front();
@@ -331,7 +335,9 @@ namespace Boolean
                     continue;
 
                 CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
-                calcFaceIndicator(curSeed, relTab);
+
+                calcFaceIndicator(curSeed, relTab, seedFlag?false:true);
+                if (seedFlag) seedFlag = false; // only for debug use
 
                 relation = ParsingCSGTree(meshList[curMeshId], relTab.data(), 
                     nMesh, tree0, curTreeLeaves, dummyForest);
@@ -357,6 +363,8 @@ namespace Boolean
                     edges.clear();
                     curFace->getEdges(edges);
                     assert(edges.size() == curFace->degree());
+
+                    // flood filling, bfs
                     for (int i = 0; i < curFace->degree(); i++)
                     {
                         MyEdge& curEdge = xedge(edges[i]);
@@ -392,6 +400,7 @@ namespace Boolean
                         {
                             for (; fItr; ++fItr)
                             {
+                                if (!fItr.face()->isValid()) continue;
                                 if (fItr.face()->mark < SEEDED2)
                                 {
                                     faceQueue.push(fItr.face());

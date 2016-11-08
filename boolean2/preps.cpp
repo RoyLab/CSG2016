@@ -54,7 +54,7 @@ namespace Boolean
             case ON_POSITIVE_SIDE:
                 return ON_NEGATIVE_SIDE;
             default:
-                break;
+                return OS_WRONG;
             }
         }
         else

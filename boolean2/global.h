@@ -1,9 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <memory>
-#include "csgdefs.h"
-#include "xgeometry.h"
-#include "CGALext.h"
 
 typedef double Real;
 

@@ -127,6 +127,7 @@ namespace Boolean
 
 	enum Oriented_side
 	{
+        OS_WRONG = -100,
 		ON_NEGATIVE_SIDE = -1, 
 		ON_ORIENTED_BOUNDARY = 0,
 		ON_POSITIVE_SIDE = 1

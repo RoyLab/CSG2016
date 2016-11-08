@@ -547,13 +547,33 @@ namespace Boolean
 		return REL_NOT_AVAILABLE;
 	}
 
+    Relation transformRelation(Relation x, bool inverse)
+    {
+        if (!inverse) return x;
+
+        switch (x)
+        {
+        case REL_INSIDE:
+            return REL_OUTSIDE;
+        case REL_OUTSIDE:
+            return REL_INSIDE;
+        case REL_SAME:
+            return REL_OPPOSITE;
+        case REL_OPPOSITE:
+            return REL_SAME;
+        default:
+            throw std::exception("invalid value");
+        }
+    }
 
 	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output)
 	{
 		for (uint32_t i = 0; i < nMesh; i++)
         {
             if (leaves[i])
-			    leaves[i]->relation = tab[i];
+            {
+			    leaves[i]->relation = transformRelation(tab[i], leaves[i]->pMesh->inverse());
+            }
         }
 
 		CSGTreeNode *seed = leaves[pMesh->id()], *comp;
