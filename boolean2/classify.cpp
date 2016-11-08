@@ -215,7 +215,22 @@ namespace Boolean
         for (size_t i = 0; i < nMesh; i++)
         {
             relTab[i] = (Relation)seed.eIndicators.get()->at(i);
-            assert(i == polygon->meshId() || relTab[i] != REL_ON_BOUNDARY);
+#ifdef _DEBUG
+            bool flag = true;
+            if (i != polygon->meshId() && relTab[i] == REL_ON_BOUNDARY)
+            {
+                flag = false;
+                for (auto& neigh : *edge.neighbor)
+                {
+                    if (neigh.neighborMeshId == i)
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            assert(flag);
+#endif
         }
 
         relTab[polygon->meshId()] = REL_SAME;
