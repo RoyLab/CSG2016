@@ -4,9 +4,41 @@
 #include "adaptive.h"
 
 #define USE_CGAL_PREDICATES
+#define USE_CGAL_PREDICATES_CHECK
 
 namespace Boolean
 {
+    namespace
+    {
+        Real mat3x3det(const Real* mat[3])
+        {
+#ifdef USE_CGAL_PREDICATES
+            Real res = cgalExact3x3(mat);
+#else
+            Real res = adaptiveDet3x3Sign(mat);
+#endif
+#ifdef USE_CGAL_PREDICATES_CHECK
+            Real check = adaptiveDet3x3Sign(mat);
+            assert(check == res || check * res > 0.0);
+#endif
+            return res;
+        }
+
+        Real mat4x4det(const Real* mat[4])
+        {
+#ifdef USE_CGAL_PREDICATES
+            Real res = cgalExact4x4(mat);
+#else
+            Real res = adaptiveDet4x4Sign(mat);
+#endif
+#ifdef USE_CGAL_PREDICATES_CHECK
+            Real check = adaptiveDet4x4Sign(mat);
+            assert(check == res || check * res > 0.0);
+#endif
+            return res;
+        }
+    }
+
     XPlane::XPlane(const cyPointT & p, const cyPointT & q, const cyPointT & r)
     {
         xplanes().emplace_back(p, q, r);
@@ -28,11 +60,9 @@ namespace Boolean
     {
         const Real* mat[4] = { p.plane(0).data(), p.plane(1).data(),
             p.plane(2).data(), data() };
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact4x4(mat);
-#else
-        Real res = adaptiveDet4x4Sign(mat);
-#endif
+
+        Real res = mat4x4det(mat);
+
         res *= p.plane(0).signd() * p.plane(1).signd() *
             p.plane(2).signd() * signd();
         if (res > 0) return ON_POSITIVE_SIDE;
@@ -76,11 +106,7 @@ namespace Boolean
         const Real* mat[4] = { m_planes[0].data(),
             m_planes[1].data(), b.data(), a.data() };
 
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact4x4(mat);
-#else
-        Real res = adaptiveDet4x4Sign(mat);
-#endif
+        Real res = mat4x4det(mat);
         res *= m_planes[0].signd() * m_planes[1].signd() * a.signd() * b.signd();
         if (res > 0) return 1;
         if (res < 0) return -1;
@@ -117,11 +143,8 @@ namespace Boolean
         if (vec.LengthSquared() == Real(0)) return 0;
 
         const Real* mat[3] = { m_planes[0].data(), m_planes[1].data(), (Real*)&vec };
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact3x3(mat);
-#else
-        Real res = adaptiveDet3x3Sign(mat);
-#endif
+
+        Real res = mat3x3det(mat);
         res *= m_planes[0].signd() * m_planes[1].signd();
         if (res > 0) return 1;
         else return -1;
@@ -136,11 +159,7 @@ namespace Boolean
         const Real* mat[4] = { m_planes[0].data(),
             m_planes[1].data(), b2.data(), a2.data() };
 
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact4x4(mat);
-#else
-        Real res = adaptiveDet4x4Sign(mat);
-#endif
+        Real res = mat4x4det(mat);
         res *= m_planes[0].signd() * m_planes[1].signd() *
             a2.signd() * b2.signd();
 
@@ -217,11 +236,8 @@ namespace Boolean
     Real sign(const XPlane & p, const XPlane & q, const XPlane & input)
     {
         const Real* mat[3] = { p.data(), q.data(), input.data() };
-#ifdef USE_CGAL_PREDICATES
-        Real res = cgalExact3x3(mat);
-#else
-        Real res = adaptiveDet3x3Sign(mat);
-#endif
+        Real res = mat3x3det(mat);
+
         res *= p.signd() * q.signd() * input.signd();
         return res;
     }

@@ -172,12 +172,12 @@ extern "C"
         MyVertex::Index seed = pickSeed(xmins);
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
-#ifdef _DEBUG
+#ifdef XR_DEBUG
         int nOrigEdge = xedges().size();
 #endif
         tessellation(meshes);
 
-#ifdef _DEBUG
+#ifdef XR_DEBUG
         for (int i = 0; i < nOrigEdge; i++)
             assert(!xedge(i).neighbor || xedge(i).neighbor && xedge(i).inscts); // 如果有neighbor那么必然有inscts
 #endif

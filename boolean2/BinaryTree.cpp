@@ -461,7 +461,7 @@ namespace Boolean
 				return CompressCSGNodeIteration(root);
 			}
 		}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 		else if (root->Type == TYPE_INTERSECT)
 #else
 		else
@@ -487,7 +487,7 @@ namespace Boolean
 				return CompressCSGNodeIteration(root);
 			}
 		}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 		else assert(0);
 #endif
 
@@ -513,7 +513,7 @@ namespace Boolean
 				return rRight;
 			}
 		}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 		else if (root->Type == TYPE_INTERSECT)
 #else
 		else
@@ -538,7 +538,7 @@ namespace Boolean
 				return rRight;
 			}
 		}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 		else assert(0);
 #endif
 
@@ -586,11 +586,11 @@ namespace Boolean
 			if (seed->Parent->Type == TYPE_UNION)
 				checkRel = REL_OUTSIDE;
 			else
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 				if (seed->Parent->Type == TYPE_INTERSECT)
 #endif
 				checkRel = REL_INSIDE;
-#ifdef _DEBUG
+#ifdef XR_DEBUG
 				else assert(0);
 #endif
 			if (LeftOrRight(seed) < 0)
@@ -669,7 +669,7 @@ namespace Boolean
 				return GetFirstNode(neib);
 			}
 			else
-#ifdef _DEBUG
+#ifdef XR_DEBUG
                 if (lor > 0) // right node, check the left
 #endif
 			{
@@ -680,7 +680,7 @@ namespace Boolean
 					return ParsingOppo(parent, output);
 				else return ParsingInside(parent, output);
 			}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
             else assert(0);
 #endif
 		}
@@ -706,7 +706,7 @@ namespace Boolean
 				return GetFirstNode(neib);
 			}
 			else
-#ifdef _DEBUG
+#ifdef XR_DEBUG
                 if (lor > 0) // right node, check the left
 #endif
 			{
@@ -717,7 +717,7 @@ namespace Boolean
 					return ParsingOppo(parent, output);
 				else return ParsingOutside(parent, output);
 			}
-#ifdef _DEBUG
+#ifdef XR_DEBUG
             else assert(0);
 #endif
 		}

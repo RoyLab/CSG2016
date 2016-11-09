@@ -68,6 +68,7 @@ namespace Boolean
 		Oriented_side orientation(const XPoint&) const;
         Oriented_side orientation(const cyPointT&) const;
         bool has_on(const cyPointT& p) { return orientation(p) == ON_ORIENTED_BOUNDARY; }
+        bool idEquals(const XPlane& p) const { return std::abs(id) == std::abs(p.id); }
 
         void setId(int i) { assert(i >= 0); id = i + 1; }
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);

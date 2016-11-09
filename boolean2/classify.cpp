@@ -190,6 +190,7 @@ namespace Boolean
 
         // correct the direction of bounding plane
         XLine edgeLine(polygon->supportingPlane(), boundPlane);
+        assert(!polygon->supportingPlane().idEquals(boundPlane));
         int tmpSide = linearOrder(edgeLine, xvertex(polygon->vertexId((edgeIndexInFace + 1) % polygon->degree())),
             xvertex(polygon->vertexId(edgeIndexInFace)));
 
@@ -238,7 +239,7 @@ namespace Boolean
         for (size_t i = 0; i < nMesh; i++)
         {
             relTab[i] = (Relation)seed.eIndicators.get()->at(i);
-#ifdef _DEBUG
+#ifdef XR_DEBUG
             bool flag = true;
             if (i != polygon->meshId() && relTab[i] == REL_ON_BOUNDARY)
             {
