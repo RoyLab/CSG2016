@@ -58,6 +58,8 @@ namespace Boolean
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
         void getVertices(std::vector<MyVertex::Index>&) const;
+        bool coherentEdge(int whichEdge) const; // 等价于MyEdge的faceOrientation
+        MyVertex::Index getTheOtherVertex(MyEdge::Index eId) const;
 
 		// search
         uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);

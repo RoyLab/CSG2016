@@ -290,6 +290,24 @@ namespace Boolean
             output[i] = vIds[i];
     }
 
+    bool Triangle::coherentEdge(int whichEdge) const
+    {
+        MyEdge& thisEdge = edge(whichEdge);
+        if (thisEdge.ends[0] == vertexId((whichEdge + 1) % 3))
+            return true;
+        else return false;
+    }
+
+    MyVertex::Index Triangle::getTheOtherVertex(MyEdge::Index eId) const
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (eIds[i] == eId)
+                return vIds[i];
+        }
+        throw std::exception("cannot find edge");
+    }
+
     uint32_t Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
     {
         InsctData<EdgePBI> **is;

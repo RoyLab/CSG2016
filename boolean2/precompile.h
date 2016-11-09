@@ -7,3 +7,7 @@
 #include "csgdefs.h"
 #include "xgeometry.h"
 #include "CGALext.h"
+#include <windows.h>
+
+#undef min
+#undef max

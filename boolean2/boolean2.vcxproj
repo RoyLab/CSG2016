@@ -122,6 +122,7 @@
       <AdditionalIncludeDirectories>D:\Libs\common;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>precompile.h</PrecompiledHeaderFile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\3rdparty\lib\$(Platform);$(BOOST_INCLUDEDIR)\lib64-msvc-14.0</AdditionalLibraryDirectories>

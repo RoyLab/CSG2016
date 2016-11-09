@@ -28,7 +28,10 @@ namespace Boolean
     void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, MyVertex::Index);
 
     void initContext() {}
-    void releaseContext() {}
+    void releaseContext()
+    {
+        MemoryManager::getInstance()->clear();
+    }
 
     bool collinear(const cyPointT& a, const cyPointT& b, const cyPointT& c)
     {
@@ -37,6 +40,7 @@ namespace Boolean
         return n.x == 0 && n.y == 0 && n.z == 0;
     }
 
+    // 取一个点，它的一度点不都在一个平面上
     MyVertex::Index pickSeed(std::vector<MyVertex::Index>& seed)
     {
         cyPointT basePoint[2];
@@ -104,10 +108,10 @@ extern "C"
         const int precision = exactinit(dieta);
         initContext();
 
-        test1();
-        test2();
-        test3();
-        test4();
+        //test1();
+        //test2();
+        //test3();
+        //test4();
 
 		std::vector<RegularMesh*> meshList(names.size());
 		for (int i = 0; i < names.size(); i++)
@@ -168,7 +172,15 @@ extern "C"
         MyVertex::Index seed = pickSeed(xmins);
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
+#ifdef _DEBUG
+        int nOrigEdge = xedges().size();
+#endif
         tessellation(meshes);
+
+#ifdef _DEBUG
+        for (int i = 0; i < nOrigEdge; i++)
+            assert(!xedge(i).neighbor || xedge(i).neighbor && xedge(i).inscts); // 如果有neighbor那么必然有inscts
+#endif
 
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");

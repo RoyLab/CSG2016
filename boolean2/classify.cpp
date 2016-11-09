@@ -52,41 +52,63 @@ namespace Boolean
         for (int i = 0; i < nMesh; i++)
             vInds[i] = REL_OUTSIDE;
 
+        // 找到那些on boundary的mesh，通过遍历所有的边上的面，查看它们的meshId
         for (auto &edgeId : seedV.edges)
         {
             MyEdge& eRef = xedge(edgeId);
             MyVertex& theOther = eRef.theOtherVertex(seedId);
-            if (theOther.isPlaneRep()) continue;
+            if (theOther.isPlaneRep()) continue; // 过滤掉非原始边
 
             auto fItr = MyEdge::ConstFaceIterator(eRef);
             for (; fItr; ++fItr)
             {
-                if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue;
+                if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue; // 过滤掉非原始面
                 vInds[fItr.face()->meshId()] = REL_ON_BOUNDARY;
             }
         }
 
+        // 找到一个包含有效面，且周围面的不共面的边，赋值edgeId
+        // 这里会有隐含的假设：这个极点必须是原始点（应该是对的）
         bool flag = false;
         for (auto &edgeId : seedV.edges)
         {
             MyEdge& eRef = xedge(edgeId);
             MyVertex& theOther = eRef.theOtherVertex(seedId);
 
-            auto fItr = MyEdge::FaceIterator(eRef);
-            for (; fItr; ++fItr)
+            auto fItr = MyEdge::FaceIterator(eRef, true);
+            XPlane basePlane = fItr.face()->supportingPlane();
+            flag = false;
+            for (; fItr; fItr.incrementToTriangle())
             {
-                if (fItr.face()->isValid())
+                assert(fItr.face()->getType() == IPolygon::TRIANGLE);
+                MyVertex& sampleV = xvertex(((Triangle*)fItr.face())->getTheOtherVertex(edgeId));
+                assert(!sampleV.isPlaneRep());
+                if (!basePlane.has_on(sampleV.point()))
                 {
                     seed.edgeId = edgeId;
-                    seed.pFace = fItr.face();
                     flag = true;
                     break;
                 }
             }
             if (flag) break;
         }
-
         assert(flag);
+
+        // 赋值pFace
+        MyEdge& eRef = xedge(seed.edgeId);
+        auto fItr = MyEdge::FaceIterator(eRef);
+        flag = false;
+        for (; fItr; ++fItr)
+        {
+            if (fItr.face()->isValid())
+            {
+                flag = true;
+                seed.pFace = fItr.face();
+                break;
+            }
+        }
+        assert(flag);
+
         calcEdgeIndicator(seedId, seed.edgeId, vInds, inds);
     }
 
@@ -102,7 +124,7 @@ namespace Boolean
             const Real* dataB = refPlane.data();
 
             if (dataA[0] * dataB[0] > 0 || dataA[1] * dataB[1] > 0
-                || dataA[1] * dataB[1] > 0)
+                || dataA[2] * dataB[2] > 0)
                 return REL_SAME;
             else
                 return REL_OPPOSITE;
@@ -141,9 +163,10 @@ namespace Boolean
             {
                 if (neigh.type == NeighborInfo::Edge)
                 {
-                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId));
+                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId), true);
                         fItr; fItr.incrementToTriangle())
                     {
+                        assert(fItr.face()->getType() == IPolygon::TRIANGLE);
                         boundPlane = ((Triangle*)fItr.face())->supportingPlane();
                         if (orientation(boundPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
                         {
@@ -275,9 +298,12 @@ namespace Boolean
             if (neigh.type == NeighborInfo::Edge)
             {
                 std::vector<IPolygon*> faces;
-                auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId));
+                auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId), true);
                 for (; fItr; fItr.incrementToTriangle())
+                {
+                    assert(fItr.face()->getType() == IPolygon::TRIANGLE);
                     faces.push_back(fItr.face());
+                }
 
                 BSPTree bsp; XPlane bspPlane;
                 bsp.buildNoCross(faces);
@@ -415,7 +441,7 @@ namespace Boolean
                         {
                             for (; fItr; ++fItr)
                             {
-                                if (!fItr.face()->isValid()) continue;
+                                if (!fItr.face()->isValid() || fItr.face()->meshId() != curMeshId) continue;
                                 if (fItr.face()->mark < SEEDED2)
                                 {
                                     faceQueue.push(fItr.face());

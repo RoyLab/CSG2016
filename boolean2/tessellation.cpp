@@ -132,9 +132,11 @@ namespace Boolean
         std::sort(seqs.begin(), seqs.end(), orderObj);
         std::vector<EdgePBI> newPbi(points.size() + 1);
         std::map<MyVertex::Index, uint32_t> idmap;
+        idmap[data.start] = 0;
+        idmap[data.end] = points.size()+1;
         for (int i = 0; i < seqs.size(); i++)
         {
-            idmap[seqs[i].id] = i;
+            idmap[seqs[i].id] = i+1;
             newPbi[i].ends[1] = seqs[i].id;
             newPbi[i+1].ends[0] = seqs[i].id;
             newPbi[i].pends[1] = seqs[i].plane;
@@ -143,6 +145,7 @@ namespace Boolean
         newPbi[0].ends[0] = data.start;
         newPbi[points.size()].ends[1] = data.end;
 
+        // add pbi intersections' neighborInfo into newly constructed pbi.
         for (auto& set : inscts)
         {
             for (auto &pbi : set.second)
@@ -156,6 +159,7 @@ namespace Boolean
                 assert(start < last);
                 for (int i = start; i < last; i++)
                 {
+                    assert(pbi.neighbor.size() == 1);
                     newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
                 }
             }
@@ -264,7 +268,9 @@ namespace Boolean
                     assert(m_nodes.find(e.ends[1]) != m_nodes.end());
                     edge.v[i0] = m_nodes.find(e.ends[0]);
                     edge.v[i1] = m_nodes.find(e.ends[1]);
+                    edge.pbi = nullptr;
                     m_edges.push_back(edge);
+                    assert(edge.checkPlaneOrientation(tri));
 
                     edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
                     edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
@@ -471,7 +477,7 @@ namespace Boolean
             for (int i = 0; i < 3; i++)
             {
                 EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
-                if (pTri->edge(i).ends[0] != pTri->vertexId((i+1)%3))
+                if (pTri->edge(i).faceOrientation(pTri) > 0)
                     data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
                 else
                     data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));

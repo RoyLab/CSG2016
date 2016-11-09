@@ -73,6 +73,19 @@ namespace Boolean
         file.close();
     }
 
+    void MemoryManager::clear()
+    {
+        planes.clear();
+        edges.clear();
+        vertices.clear();
+        points.clear();
+        ppoints.clear();
+        insctTris.clear();
+        for (SubPolygon* spoly : subpolys)
+            delete spoly;
+        subpolys.clear();
+    }
+
     MyEdge::ConstFaceIterator & MyEdge::ConstFaceIterator::operator++()
     {
         if (stage == -1) throw std::exception();
@@ -97,6 +110,16 @@ namespace Boolean
                 stage = -1;
         }
         return *this;
+    }
+
+    MyEdge::FaceIterator::FaceIterator(MyEdge & edge, bool triangle):
+        m_edge(edge), stage(0)
+    {
+        if (triangle)
+        {
+            if (face()->getType() != IPolygon::TRIANGLE)
+                incrementToTriangle();
+        }
     }
 
     MyEdge::FaceIterator & MyEdge::FaceIterator::operator++()

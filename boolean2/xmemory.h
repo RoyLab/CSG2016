@@ -17,10 +17,6 @@ namespace Boolean
 
     private:
         int rep = 0; // positive is v-base, negative is p-base
-#ifdef PREP_DEBUG_INFO
-    public:
-        int refcount = 0;
-#endif
     public:
         void setAsPRep(int i) { rep = -(i + 1); }
         void setAsVRep(int i) { rep = (i + 1); }
@@ -79,8 +75,7 @@ namespace Boolean
         class FaceIterator
         {
         public:
-            FaceIterator(MyEdge& edge) :
-                m_edge(edge), stage(0) {}
+            FaceIterator(MyEdge& edge, bool triangle = false);
 
             FaceIterator& operator++();
             FaceIterator& incrementToTriangle();
@@ -103,8 +98,8 @@ namespace Boolean
 
     public:
         MyVertex::Index ends[2];
-        InsctData<EdgePBI>* inscts = nullptr;
         std::vector<NeighborInfo>* neighbor = nullptr;
+        InsctData<EdgePBI>* inscts = nullptr;
         bool noOverlapNeighbor = false;
 
         MyEdge(MyVertex::Index a, MyVertex::Index b) : ends{ a, b } {}
@@ -143,6 +138,7 @@ namespace Boolean
         uint32_t getEdgeId(uint32_t a, uint32_t b, IPolygon* facePtr);
         void addSubPolygon(SubPolygon* poly) { subpolys.push_back(poly); }
         void outputIntersection(const std::string&, const cyPointT&, const cyPointT&);
+        void clear();
 
     private:
         MemoryManager() {}

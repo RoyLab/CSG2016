@@ -131,25 +131,37 @@ namespace Boolean
 			{
 				int zeroId = zeroCount[0];
 				tagA = tagB = vertex_tag(zeroId);
-				posA = posB = pr.boundingPlane((zeroId + 1) % 3);
+                int id1 = (zeroId + 1) % 3;
+                int id2 = (zeroId + 2) % 3;
+
+                if (posCount.size() == 2)
+                {
+                    posA = pr.boundingPlane(id1);
+                    posB = pr.boundingPlane(id2);
+                }
+                else
+                {
+                    posA = pr.boundingPlane(id2);
+                    posB = pr.boundingPlane(id1);
+                }
 				return INTERSECT_ON_POINT;
 			}
 
 			int posId = posCount[0];
-			int idA = (posId + 1) % 3;
-			int idB = (posId + 2) % 3;
-			posA = pr.boundingPlane(idB);
-			posB = pr.boundingPlane(idA);
+			int id1 = (posId + 1) % 3;
+			int id2 = (posId + 2) % 3;
+			posA = pr.boundingPlane(id2);
+			posB = pr.boundingPlane(id1);
 
-			if (idA == zeroCount[0])
+			if (id1 == zeroCount[0])
 			{
-				tagA = vertex_tag(idA);
-				tagB = edge_tag(idA);
+				tagA = vertex_tag(id1);
+				tagB = edge_tag(id1);
 			}
 			else
 			{
-				tagA = edge_tag(idB);
-				tagB = vertex_tag(idB);
+				tagA = edge_tag(id2);
+				tagB = vertex_tag(id2);
 			}
 			return INTERSECT_ON_LINE;
 		}
@@ -297,9 +309,6 @@ namespace Boolean
                 // add new
                 uint32_t vid = pMem->insertVertex(pt);
                 *(slots[0]) = *(slots[1]) = vid;
-#ifdef PREP_DEBUG_INFO
-                xvertex(vid).refcount += 2;
-#endif
                 return vid;
             }
             else return id[0];
@@ -307,15 +316,8 @@ namespace Boolean
         else
         {
             uint32_t vid = std::min(id[0], id[1]);
-#ifdef PREP_DEBUG_INFO
-            xvertex(vid).refcount += 2;
-            if (id[0] != INVALID_UINT32)
-                xvertex(id[0]).refcount --;
-            if (id[1] != INVALID_UINT32)
-                xvertex(id[1]).refcount --;
-#endif
             // PATCH: if vertex coincidence, merging ids is required for both edge and triangle
-            // edges around the vertex also need to be merge
+            // edges around the vertex also need to be merge, the slots is only the vId handle
             if (is_vertex(tag[0]) && is_vertex(tag[1]))
             {
                 int tobeModify = 0;
@@ -326,8 +328,25 @@ namespace Boolean
                 MyEdge& edge1 = fh[tobeModify]->edge((vTobeMerge+1)%3);
                 MyEdge& edge2 = fh[tobeModify]->edge((vTobeMerge+2)%3);
 
-                edge1.ends[0] == *slots[tobeModify] ? edge1.ends[0] = vid : edge1.ends[1] = vid;
-                edge2.ends[0] == *slots[tobeModify] ? edge2.ends[0] = vid : edge2.ends[1] = vid;
+                if (edge1.ends[0] == *slots[tobeModify])
+                {
+                    edge1.ends[0] = vid;
+                }
+                else
+                {
+                    if (edge1.ends[1] == *slots[tobeModify])
+                        edge1.ends[1] = vid;
+                }
+
+                if (edge2.ends[0] == *slots[tobeModify])
+                {
+                    edge2.ends[0] = vid;
+                }
+                else
+                {
+                    if (edge2.ends[1] == *slots[tobeModify])
+                        edge2.ends[1] = vid;
+                }
 
                 MyVertex& vRef = xvertex(*slots[(tobeModify+1)%2]), 
                     &vMerge = xvertex(*slots[tobeModify]);
@@ -391,7 +410,14 @@ namespace Boolean
 				if (eId[i] > -1)
 				{
 					EdgePBI epbi;
-                    if (sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), insctRes.A) < 0)
+					MyEdge* edge = &t[i]->edge(eId[i]);
+
+                    // let it be the same sequence as edge vertex's
+                    int sequence = 1;
+                    XPlane vertPlane = t[i]->boundingPlane(eId[i]);
+                    if (t[i]->coherentEdge(eId[i])) vertPlane.inverse();
+                    XLine edgeLine(t[i]->supportingPlane(), vertPlane);
+                    if (edgeLine.dot(insctRes.A) < 0)
                     {
                         epbi.pends[0] = insctRes.B.opposite();
                         epbi.pends[1] = insctRes.A.opposite();
@@ -407,11 +433,10 @@ namespace Boolean
                     }
                     epbi.neighbor.push_back(ninfo);
 
-                    assert(sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), epbi.pends[0]) > 0);
-                    assert(sign(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i]), epbi.pends[1]) > 0);
-                    assert(XLine(t[i]->supportingPlane(), t[i]->boundingPlane(eId[i])).linearOrder(epbi.pends[0], epbi.pends[1]) > 0);
+                    assert(edgeLine.dot(epbi.pends[0]) > 0);
+                    assert(edgeLine.dot(epbi.pends[1]) > 0);
+                    assert(edgeLine.linearOrder(epbi.pends[0], epbi.pends[1]) > 0);
 
-					MyEdge* edge = &t[i]->edge(eId[i]);
 					if (!edge->inscts)
 						edge->inscts = new InsctData<EdgePBI>;
 					edge->inscts->inscts[meshId[i]].push_back(epbi);
