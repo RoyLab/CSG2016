@@ -32,9 +32,6 @@ namespace Boolean
 
     void RegularMesh::writeFile(RegularMesh & mesh, const char *fileName)
     {
-        if (mesh.inverseMap.empty())
-            mesh.inverseMap.resize(mesh.m_faces.size(), false);
-
         size_t nVertices = xvertices().size();
         std::vector<int> idmap(nVertices, -1);
         uint32_t vCount = 0, fCount = 0;
@@ -43,8 +40,23 @@ namespace Boolean
         
         std::vector<MyVertex::Index> tmp, iSlotBuffer;
         cyPointT tmpVec;
+        bool inverse = false;
+        mesh.inverseMap.emplace_back(std::numeric_limits<uint32_t>::max(), 0);
+        auto rItr = mesh.inverseMap.begin();
+
         for (int i = 0; i < mesh.faces().size(); i++)
         {
+            if (rItr->first == i)
+                inverse = true;
+            else if (rItr->second == i)
+            {
+                ++rItr;
+                if (rItr->first == i)
+                    inverse = true;
+                else
+                    inverse = false;
+            }
+
             IPolygon* face = mesh.faces()[i];
             if (!face->isValid()) continue;
 
@@ -67,7 +79,7 @@ namespace Boolean
                 }
                 iSlotBuffer.push_back(cId);
             }
-            if (mesh.inverseMap[i])
+            if (inverse)
                 iSlot.insert(iSlot.end(), iSlotBuffer.rbegin(), iSlotBuffer.rend());
             else
                 iSlot.insert(iSlot.end(), iSlotBuffer.begin(), iSlotBuffer.end());
@@ -92,9 +104,11 @@ namespace Boolean
         writeOffFile(fileName, file);
     }
 
-	RegularMesh::RegularMesh(const OffFile& file, uint32_t id):
-        m_center(0, 0, 0), m_scale(1, 1, 1), m_id(id)
+	RegularMesh::RegularMesh(const OffFile& file, uint32_t id)
 	{
+        new(this)RegularMesh();
+        m_id = id;
+
 		assert(file.isValid());
 		assert(!memmgr || memmgr == MemoryManager::getInstance());
 		if (!memmgr)
@@ -279,6 +293,7 @@ namespace Boolean
 
     cyPointT & Triangle::point(int i) const
     {
+        // vIds must be non-plane rep vertex, +1, and -1, then = 0
         return xpoint(vIds[i]);
     }
 

@@ -111,7 +111,7 @@ namespace Boolean
 	{
 	public:
 		typedef IPolygon FaceT;
-        std::vector<bool> inverseMap;
+        std::vector<std::pair<uint32_t, uint32_t>> inverseMap;
 
 	protected:
 		static  MemoryManager* memmgr;
@@ -124,7 +124,7 @@ namespace Boolean
 		static RegularMesh* loadFromFile(const char*, uint32_t id);
 		static void writeFile(RegularMesh& mesh, const char*);
 
-		RegularMesh():m_center(0,0,0), m_scale(1,1,1) {}
+        RegularMesh() :m_center(0, 0, 0), m_scale(1, 1, 1) {}
 		RegularMesh(const XR::OffFile& file, uint32_t meshId); // triangle mesh
 		~RegularMesh() {}
 

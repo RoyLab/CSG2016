@@ -352,6 +352,7 @@ namespace Boolean
         std::queue<IPolygon*> faceQueue;
         std::queue<SSeed> intraQueue, interQueue;
         bool added, inverse;
+        std::pair<uint32_t, uint32_t> inversePair;
         Relation relation;
         TestTree dummyForest;
         std::vector<Relation> relTab(nMesh);
@@ -368,11 +369,14 @@ namespace Boolean
             if (curSeed.pFace->mark == VISITED)
                 continue;
 
-            curMeshId = curSeed.pFace->meshId();
             assert(intraQueue.empty());
             curSeed.pFace->mark = SEEDED1;
             intraQueue.push(curSeed);
+
+            curMeshId = curSeed.pFace->meshId();
             inverse = meshList[curMeshId]->inverse();
+            if (inverse)
+                inversePair.first = result->faces().size();
 
             bool seedFlag = true;
             while (!intraQueue.empty())
@@ -404,10 +408,7 @@ namespace Boolean
 
                     curFace->mark = VISITED;
                     if (added)
-                    {
                         result->faces().push_back(curFace);
-                        result->inverseMap.push_back(inverse);
-                    }
 
                     edges.clear();
                     curFace->getEdges(edges);
@@ -460,6 +461,11 @@ namespace Boolean
                     }
                 }
                 //break;
+            }
+            if (inverse)
+            {
+                inversePair.second = result->faces().size();
+                result->inverseMap.push_back(inversePair);
             }
             //break;
         }

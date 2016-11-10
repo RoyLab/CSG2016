@@ -7,6 +7,7 @@
 #include "global.h"
 #include "csg.h"
 #include "csgdefs.h"
+#include "xgeometry.h"
 
 
 
@@ -24,7 +25,7 @@ namespace Boolean
     {
         typedef CGAL::Point_3<Depick> Point;
         typedef CGAL::Vector_3<Depick> Vector;
-        typedef CGAL::Iso_cuboid_3<Depick> NodeShape;
+        typedef XR::BoundingBox NodeShape;
         typedef std::vector<Triangle*> TriList;
         typedef std::map<uint32_t, TriList*> TriTableT;
 

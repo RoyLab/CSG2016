@@ -28,6 +28,7 @@
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="intersection.h" />
+    <ClInclude Include="triboxtest.hpp" />
     <ClInclude Include="UndirectedGraph.hpp" />
     <ClInclude Include="xmemory.h" />
     <ClInclude Include="Octree.h" />

@@ -16,6 +16,7 @@ namespace Boolean
             // 我认为，这里的不等号加上等于号之后，可以作为开集的相交测试
             Vec3d c = bbox.center<Vec3d>();
             Vec3d e = bbox.diagonal<Vec3d>()*0.5;
+
             Vec3d v00 = v0 - c;
             Vec3d v10 = v1 - c;
             Vec3d v20 = v2 - c;
@@ -91,13 +92,20 @@ namespace Boolean
             //test 
             Vec3d normal = (v10 - v00).Cross(v20 - v10);
             double       d = -normal.Dot(v0);
-            Vec3d  e1 = c;
+            Vec3d  e1 = e;
             double  r1 = e1.Dot(Vec3d(fabs(normal[0]), fabs(normal[1]), fabs(normal[2])));
-            double  s = normal.Dot(e) + d;
+            double  s = normal.Dot(c) + d;
             return  (fabs(s) <= (r1));
         }
 
-        //inline bool triboxtest(Triangle* pTri, )
+        inline bool triboxtest(Triangle* pTri, const XR::BoundingBox& bbox)
+        {
+            //bool res =  CGAL::do_intersect(CGAL::Bbox_3(bbox.minVal(0), bbox.minVal(1),
+            //    bbox.minVal(2), bbox.maxVal(0), bbox.maxVal(1), bbox.maxVal(2)), pTri->triangle());
+            bool res = TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox);
+            //assert(res == TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox));
+            return res;
+        }
     }
 
     int Octree::MAX_TRIANGLE_COUNT = 30;
@@ -113,7 +121,8 @@ namespace Boolean
     Octree::Node* Octree::createRootNode(const Bbox_3& bbox)
     {
         Node* root = new Node;
-		root->bbox = bbox;
+		root->bbox = XR::BoundingBox(bbox.xmin(), bbox.ymin(), bbox.zmin(),
+            bbox.xmax(), bbox.ymax(), bbox.zmax());
         for (uint32_t i = 0; i < m_nMesh; i++)
         {
             auto pcMesh = mp_meshes[i];
@@ -162,24 +171,27 @@ namespace Boolean
             root->type = NODE_MIDSIDE;
             root->pChildren = new Node[8];
 
-            Vector minOffset, maxOffset;
+            cyPointT minOffset, maxOffset;
             NodeShape bbox = root->bbox;
-            Vector step = (bbox.max() - bbox.min()) * 0.5;
+            cyPointT step = (bbox.max<cyPointT>() - bbox.min<cyPointT>()) * 0.5;
     
             for (unsigned i = 0; i < 8 ; i++)
             {
                 auto pChild = &root->pChildren[i];
 
-                maxOffset = Vector(i & 4 ? 0 : -step[0],
+                maxOffset = cyPointT(i & 4 ? 0 : -step[0],
                     i & 2 ? 0 : -step[1],
                     i & 1 ? 0 : -step[2]);
 
-                minOffset = Vector(i & 4 ? step[0] : 0,
+                minOffset = cyPointT(i & 4 ? step[0] : 0,
                     i & 2 ? step[1] : 0,
                     i & 1 ? step[2] : 0);
 
-                pChild->bbox = NodeShape(bbox.min() + minOffset,
-                    bbox.max() + maxOffset);
+                cyPointT tmpa, tmpb;
+                tmpa = bbox.min<cyPointT>() + minOffset;
+                tmpb = bbox.max<cyPointT>() + maxOffset;
+                pChild->bbox = NodeShape(tmpa.x, tmpa.y, tmpa.z,
+                    tmpb.x, tmpb.y, tmpb.z);
 
                 pChild->pParent = root;
             }
@@ -200,7 +212,7 @@ namespace Boolean
                         TriList* triList = nullptr;
                         int isInbox = -1; // -1 no intersection, 1 bbox in box, 0 bbox not in box
 
-                        if (CGAL::do_intersect(child.bbox.bbox(), fh->triangle()))
+                        if (triboxtest(fh, child.bbox))
                             isInbox = 0;
 
                         if (isInbox >= 0)

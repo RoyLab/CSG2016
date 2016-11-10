@@ -160,22 +160,29 @@ extern "C"
 
 		RegularMesh* csgResult = new RegularMesh;
 
-		Octree* pOctree = new Octree();
+        XTIMER_HELPER(setClock("octree"));
+        Octree* pOctree = new Octree();
 		const double padding = 1e-3;
 		std::vector<Octree::Node*> intersectLeaves;
 
 		auto cgalbbox = Bbox_3(-1,-1,-1, 1, 1, 1);
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
+        XLOG_INFO << "build octree time: " << XTIMER_HELPER(milliseconds("octree")) << " ms";
 
-		doIntersection(meshes, intersectLeaves);
+        XTIMER_HELPER(setClock("insct"));
+        doIntersection(meshes, intersectLeaves);
+        XLOG_INFO << "intersection test time: " << XTIMER_HELPER(milliseconds("insct")) << " ms";
+
         MyVertex::Index seed = pickSeed(xmins);
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
 
 #ifdef XR_DEBUG
         int nOrigEdge = xedges().size();
 #endif
+        XTIMER_HELPER(setClock("tess"));
         tessellation(meshes);
+        XLOG_INFO << "tessellation time: " << XTIMER_HELPER(milliseconds("tess")) << " ms";
 
 #ifdef XR_DEBUG
         for (int i = 0; i < nOrigEdge; i++)
@@ -188,8 +195,10 @@ extern "C"
         //for (auto& tmpEdge : xedges())
             //assert(tmpEdge.neighbor == nullptr);
 
+        XTIMER_HELPER(setClock("classify"));
         doClassification(pOctree, pCsg, meshes, csgResult, seed);
-		csgResult->invCoords(center, scale);
+        XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
+        csgResult->invCoords(center, scale);
 
 		SAFE_DELETE(pCsg);
 		SAFE_DELETE(pOctree);
