@@ -3,8 +3,8 @@
 #include "xmemory.h"
 #include "adaptive.h"
 
-#define USE_CGAL_PREDICATES
-#define USE_CGAL_PREDICATES_CHECK
+//#define USE_CGAL_PREDICATES
+//#define USE_CGAL_PREDICATES_CHECK
 
 namespace Boolean
 {
@@ -53,6 +53,7 @@ namespace Boolean
 
     const XPlaneBase & XPlane::base() const
 	{
+        assert(id != 0);
 		return xplane(std::abs(id) - 1);
 	}
 

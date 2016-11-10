@@ -13,8 +13,6 @@
 
 namespace Boolean
 {
-    const int MARK_BEGIN = 0xff; // 因为mark还用来在第三阶段标志有没有被访问过，所以这里让出256个数字用于这些工作????
-    enum Mark { UNVISITED, SEEDED0, SEEDED1, SEEDED2, VISITED };
     typedef uint32_t MeshId;
 
     int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
@@ -76,6 +74,10 @@ namespace Boolean
             MyVertex& theOther = eRef.theOtherVertex(seedId);
 
             auto fItr = MyEdge::FaceIterator(eRef, true);
+            if (fItr.face()->getType() == IPolygon::TRIANGLE)
+            {
+                reinterpret_cast<Triangle*>(fItr.face())->calcSupportingPlane();
+            }
             XPlane basePlane = fItr.face()->supportingPlane();
             flag = false;
             for (; fItr; fItr.incrementToTriangle())
@@ -93,6 +95,7 @@ namespace Boolean
             if (flag) break;
         }
         assert(flag);
+        assert(xedge(seed.edgeId).ends[0] == seedId || xedge(seed.edgeId).ends[1] == seedId);
 
         // 赋值pFace
         MyEdge& eRef = xedge(seed.edgeId);
@@ -152,7 +155,7 @@ namespace Boolean
         assert(edgeIndexInFace != -1);
 
         MyVertex::Index vIdInPlane;
-        XPlane boundPlane;
+        XPlane boundPlane, tmpPlane;
         for (int i = 2; i < polygon->degree(); i++)
         {
             vIdInPlane = polygon->vertexId((edgeIndexInFace + i) % polygon->degree());
@@ -167,9 +170,10 @@ namespace Boolean
                         fItr; fItr.incrementToTriangle())
                     {
                         assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                        boundPlane = ((Triangle*)fItr.face())->supportingPlane();
-                        if (orientation(boundPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                        tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
+                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
                         {
+                            boundPlane = tmpPlane;
                             flag = true;
                             break;
                         }
@@ -178,9 +182,12 @@ namespace Boolean
                 else
                 {
                     assert(neigh.type == NeighborInfo::Face);
-                    boundPlane = neigh.pTrangle->supportingPlane();
-                    if (orientation(boundPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                    XPlane tmpPlane = neigh.pTrangle->supportingPlane();
+                    if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                    {
+                        boundPlane = tmpPlane;
                         break;
+                    }
                 }
                 if (flag) break;
             }

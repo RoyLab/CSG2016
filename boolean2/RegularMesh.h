@@ -13,7 +13,7 @@ namespace Boolean
     {
     public:
         enum TYPE {TRIANGLE, SUBPOLYGON};
-        int mark;
+        int mark = UNVISITED;
 
     public:
 		IPolygon(uint32_t d, uint32_t i, uint32_t meshId):
@@ -34,7 +34,7 @@ namespace Boolean
         virtual MyVertex& vertex(int i)const;
         virtual uint32_t vertexId(int i)const = 0;
 
-        XPlane supportingPlane() const { return sPlane; }
+        XPlane supportingPlane() const { assert(sPlane.isValid()); return sPlane; }
         XPlane sPlane;
     protected:
         const uint32_t m_degree;

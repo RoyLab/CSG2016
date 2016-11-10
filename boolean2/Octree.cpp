@@ -7,6 +7,99 @@
 
 namespace Boolean
 {
+    namespace
+    {
+        typedef cyPointT Vec3d;
+
+        bool TriangleAABBIntersectTest(const Vec3d& v0, const Vec3d& v1, const Vec3d& v2, const XR::BoundingBox& bbox)
+        {
+            // 我认为，这里的不等号加上等于号之后，可以作为开集的相交测试
+            Vec3d c = bbox.center<Vec3d>();
+            Vec3d e = bbox.diagonal<Vec3d>()*0.5;
+            Vec3d v00 = v0 - c;
+            Vec3d v10 = v1 - c;
+            Vec3d v20 = v2 - c;
+            //Compute edge vector 
+            Vec3d f0 = v10 - v00;
+            f0 = Vec3d(fabs(f0[0]), fabs(f0[1]), fabs(f0[2]));
+            Vec3d f1 = v20 - v10;
+            f1 = Vec3d(fabs(f1[0]), fabs(f1[1]), fabs(f1[2]));
+            Vec3d f2 = v00 - v20;
+            f2 = Vec3d(fabs(f2[0]), fabs(f2[1]), fabs(f2[2]));
+            //Test axes a00 edge-edge test 
+            double p0 = v00[2] * v10[1] - v00[1] * v10[2];
+            double p2 = v20[2] * (v10[1] - v00[1]) - v20[1] * (v10[2] - v00[2]);
+            double r = e[1] * f0[2] + e[2] * f0[1];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            // Test axes a01 edge -edge 
+            p0 = v10[2] * v20[1] - v10[1] * v20[2];
+            p2 = v00[2] * (v20[1] - v10[1]) - v00[1] * (v20[2] - v10[2]);
+            r = e[1] * f1[2] + e[2] * f1[1];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            // Test axes a02 edge  (dot (v2, a02))
+            p0 = v20[2] * v00[1] - v20[1] * v00[2];
+            p2 = v10[2] * (v00[1] - v20[1]) - v10[1] * (v00[2] - v20[2]);
+            r = e[1] * f2[2] + e[2] * f2[1];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+
+            // test axes a10 edge - edge  
+            p0 = v00[0] * v10[2] - v00[2] * v10[0];
+            p2 = v20[0] * (v10[2] - v00[2]) - v20[2] * (v10[0] - v00[0]);
+            r = e[0] * f0[2] + e[2] * f0[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            p0 = v10[0] * v20[2] - v10[2] * v20[0];
+            p2 = v00[0] * (v20[2] - v10[2]) - v00[2] * (v20[0] - v10[0]);
+            r = e[0] * f1[2] + e[2] * f1[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            p0 = v20[0] * v00[2] - v20[2] * v00[0];
+            p2 = v10[0] * (v00[2] - v20[2]) - v10[2] * (v00[0] - v20[0]);
+            r = e[0] * f2[2] + e[2] * f2[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+
+            // test axes a20 edge 
+            p0 = v00[1] * v10[0] - v00[0] * v10[1];
+            p2 = v20[1] * (v10[0] - v00[0]) - v20[0] * (v10[1] - v00[1]);
+            r = e[0] * f0[1] + e[1] * f0[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            p0 = v10[1] * v20[0] - v10[0] * v20[1];
+            p2 = v00[1] * (v20[0] - v10[0]) - v00[0] * (v20[1] - v10[1]);
+            r = e[0] * f1[1] + e[1] * f1[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+            p0 = v20[1] * v00[0] - v20[0] * v00[1];
+            p2 = v10[1] * (v00[0] - v20[0]) - v10[0] * (v00[1] - v20[1]);
+            r = e[0] * f2[1] + e[1] * f2[0];
+            if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r)
+                return false;
+
+            //   /* test in X-direction */
+            std::pair<double, double> minmaxValue;
+            minmaxValue = std::minmax({ v00[0], v10[0], v20[0] });
+            if (minmaxValue.first> e[0] || minmaxValue.second<-e[0]) return false;
+            minmaxValue = std::minmax({ v00[1], v10[1], v20[1] });
+            if (minmaxValue.first> e[1] || minmaxValue.second<-e[1]) return false;
+            minmaxValue = std::minmax({ v00[2], v10[2], v20[2] });
+            if (minmaxValue.first> e[2] || minmaxValue.second<-e[2]) return false;
+
+            //test 
+            Vec3d normal = (v10 - v00).Cross(v20 - v10);
+            double       d = -normal.Dot(v0);
+            Vec3d  e1 = c;
+            double  r1 = e1.Dot(Vec3d(fabs(normal[0]), fabs(normal[1]), fabs(normal[2])));
+            double  s = normal.Dot(e) + d;
+            return  (fabs(s) <= (r1));
+        }
+
+        //inline bool triboxtest(Triangle* pTri, )
+    }
+
     int Octree::MAX_TRIANGLE_COUNT = 30;
     int Octree::MAX_LEVEL = 9;
 

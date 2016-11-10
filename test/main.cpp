@@ -12,7 +12,7 @@ int main()
 
     std::string expr("0+1");
     std::vector<std::string> names;
-    if (true)
+    if (false)
     {
         names.clear();
         names.push_back("../../models/box1.off");
