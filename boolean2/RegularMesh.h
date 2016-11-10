@@ -52,7 +52,7 @@ namespace Boolean
         ~Triangle();
 
 		// access
-		const CGALTriangle& triangle() const { return cgalTri; }
+		//const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
         cyPointT& point(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
@@ -77,7 +77,7 @@ namespace Boolean
         TYPE getType() const { return TRIANGLE; }
 
     protected:
-		CGALTriangle cgalTri;
+		//CGALTriangle cgalTri;
         uint32_t eIds[3];
         uint32_t vIds[3];
 

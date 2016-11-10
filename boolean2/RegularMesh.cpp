@@ -11,14 +11,6 @@ namespace Boolean
 {
 	using namespace XR;
 
-	namespace
-	{
-		template <class CGALPointT>
-		CGALPointT convertToCGALPoint(const cyPointT& pt)
-		{
-			return CGALPointT(pt.x, pt.y, pt.z);
-		}
-	}
 	MemoryManager* RegularMesh::memmgr;
 
     RegularMesh * RegularMesh::loadFromFile(const char *fileName, uint32_t id)
@@ -144,13 +136,6 @@ namespace Boolean
 	void RegularMesh::prepareBoolean()
 	{
 		assert(!memmgr || memmgr == MemoryManager::getInstance());
-		for (auto face: m_faces)
-		{
-			Triangle* pTri = reinterpret_cast<Triangle*>(face);
-			pTri->cgalTri = CGALTriangle(convertToCGALPoint<CGALPoint>(memmgr->points[pTri->vIds[0]]),
-				convertToCGALPoint<CGALPoint>(memmgr->points[pTri->vIds[1]]), 
-				convertToCGALPoint<CGALPoint>(memmgr->points[pTri->vIds[2]]));
-		}
 	}
 
 	bool MyVertex::findEdge(uint32_t other, uint32_t * result) const

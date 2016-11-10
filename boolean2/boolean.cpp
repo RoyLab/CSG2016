@@ -24,6 +24,7 @@
 
 namespace Boolean
 {
+    extern int xrcount;
     void tessellation(std::vector<Boolean::RegularMesh*>& meshes);
     void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, MyVertex::Index);
 
@@ -169,8 +170,9 @@ extern "C"
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
         XLOG_INFO << "build octree time: " << XTIMER_HELPER(milliseconds("octree")) << " ms";
-
+        XLOG_INFO << "Number of triaabb test: " << xrcount;
         XTIMER_HELPER(setClock("insct"));
+
         doIntersection(meshes, intersectLeaves);
         XLOG_INFO << "intersection test time: " << XTIMER_HELPER(milliseconds("insct")) << " ms";
 

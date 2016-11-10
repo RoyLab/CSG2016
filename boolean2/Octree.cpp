@@ -3,10 +3,12 @@
 #include "CGALext.h"
 #include "RegularMesh.h"
 #include "xgeometry.h"
+#include "triboxtest.hpp"
 
 
 namespace Boolean
 {
+    int xrcount;
     namespace
     {
         typedef cyPointT Vec3d;
@@ -98,13 +100,37 @@ namespace Boolean
             return  (fabs(s) <= (r1));
         }
 
-        inline bool triboxtest(Triangle* pTri, const XR::BoundingBox& bbox)
+
+        template <class CGALPointT>
+        CGALPointT convertToCGALPoint(const cyPointT& pt)
         {
+            return CGALPointT(pt.x, pt.y, pt.z);
+        }
+
+        inline bool triboxtest(const cyPointT& a, const cyPointT& b, const cyPointT& c, const XR::BoundingBox& bbox)
+        {
+            //CGALTriangle cgalTri(convertToCGALPoint<CGALPoint>(a), 
+            //    convertToCGALPoint<CGALPoint>(b), convertToCGALPoint<CGALPoint>(c));
+
             //bool res =  CGAL::do_intersect(CGAL::Bbox_3(bbox.minVal(0), bbox.minVal(1),
-            //    bbox.minVal(2), bbox.maxVal(0), bbox.maxVal(1), bbox.maxVal(2)), pTri->triangle());
-            bool res = TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox);
+            //    bbox.minVal(2), bbox.maxVal(0), bbox.maxVal(1), bbox.maxVal(2)), cgalTri);
+
+            bool res = TriangleAABBIntersectTest(a, b, c, bbox);
+
             //assert(res == TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox));
             return res;
+        }
+
+        inline bool fasterTriboxtest(const cyPointT& a, const cyPointT& b, const cyPointT& c, const XR::BoundingBox& bbox)
+        {
+            double p[3][3] = { { a.x, a.y, a.z }, { b.x, b.y, b.z }, { c.x, c.y, c.z } };
+            cyPointT t1 = bbox.center<cyPointT>();
+            cyPointT t2 = bbox.diagonal<cyPointT>()*0.5;
+            double center[3] = { t1.x, t1.y, t1.z };
+            double radius[3] = { t2.x, t2.y, t2.z };
+            xrcount++;
+
+            return triBoxOverlap(center, radius, p) == 1;
         }
     }
 
@@ -206,16 +232,19 @@ namespace Boolean
                 for (size_t i = 0; i < tn; i++)
                 {
                     auto fh = parentMeshes[i];
+                    const cyPointT* pts[3] = { &fh->point(0), &fh->point(1), &fh->point(2) };
+
                     for (unsigned j = 0; j < 8; j++)
                     {
                         Node &child = root->pChildren[j];
                         TriList* triList = nullptr;
-                        int isInbox = -1; // -1 no intersection, 1 bbox in box, 0 bbox not in box
+                        int pointCount = 0; // -1 no intersection, 1 bbox in box, 0 bbox not in box
 
-                        if (triboxtest(fh, child.bbox))
-                            isInbox = 0;
+                        if (child.bbox.isInclude_left_open_right_close(*pts[0])) pointCount++;
+                        if (child.bbox.isInclude_left_open_right_close(*pts[1])) pointCount++;
+                        if (child.bbox.isInclude_left_open_right_close(*pts[2])) pointCount++;
 
-                        if (isInbox >= 0)
+                        if (pointCount > 0 || fasterTriboxtest(*pts[0], *pts[1], *pts[2], child.bbox))
                         {
                             if (!triList)
                                 triList = child.triTable.emplace(meshId, new TriList()).first->second;
@@ -223,7 +252,7 @@ namespace Boolean
                             triList->push_back(fh);
                             child.triCount++;
 
-                            if (isInbox == 1)
+                            if (pointCount == 3)
                                 break;
                         }
                     }
@@ -238,5 +267,5 @@ namespace Boolean
     }
 
 
-} // namespace CSG
+} // namespace Boolean
 
