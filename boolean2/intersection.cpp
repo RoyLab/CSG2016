@@ -475,6 +475,14 @@ namespace Boolean
 		return true;
 	}
 
+    bool cgalTriTriCheck(Triangle* t0, Triangle* t1)
+    {
+        CGALTriangle tr0 = convertToCGALTriangle(t0);
+        CGALTriangle tr1 = convertToCGALTriangle(t1);
+
+        return CGAL::do_intersect(tr0, tr1);
+    }
+
 	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves)
 	{
 		AdjacentGraph *adjGraph = nullptr;
@@ -527,7 +535,7 @@ namespace Boolean
 
                             if (insctTest(fh0, fh1, antiOverlapSet, meshId))
                             {
-                                assert(CGAL::do_intersect(fh0->triangle(), fh1->triangle()));
+                                assert(cgalTriTriCheck(fh0, fh1));
 								adjGraph->setValue(meshId[0], meshId[1], true);
                             }
 						}

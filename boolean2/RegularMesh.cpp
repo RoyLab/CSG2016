@@ -423,5 +423,11 @@ namespace Boolean
     {
         return xvertex(vertexId(i));
     }
+
+    CGALTriangle convertToCGALTriangle(const Triangle* pTri)
+    {
+        return CGALTriangle(convertToCGALPoint<CGALPoint>(pTri->point(0)),
+            convertToCGALPoint<CGALPoint>(pTri->point(1)), convertToCGALPoint<CGALPoint>(pTri->point(2)));
+    }
 }
 

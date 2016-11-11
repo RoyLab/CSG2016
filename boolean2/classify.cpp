@@ -26,13 +26,6 @@ namespace Boolean
         SSeed& operator=(const SSeed& other);
     };
 
-    Oriented_side orientation(const XPlane& p, const MyVertex& v)
-    {
-        if (v.isPlaneRep())
-            return p.orientation(v.ppoint());
-        else return p.orientation(v.point());
-    }
-
     void calcEdgeIndicator(MyVertex::Index seedVertexId, MyEdge::Index seedEdgeId, 
         FullIndicatorVector& vInds, FullIndicatorVector& eInds)
     {

@@ -87,6 +87,15 @@ namespace Boolean
         bool bIsValid = true;
 	};
 
+
+    template <class CGALPointT>
+    CGALPointT convertToCGALPoint(const cyPointT& pt)
+    {
+        return CGALPointT(pt.x, pt.y, pt.z);
+    }
+
+    CGALTriangle convertToCGALTriangle(const Triangle*);
+
     class SubPolygon : public IPolygon
     {
     public:

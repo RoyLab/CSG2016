@@ -101,21 +101,14 @@ namespace Boolean
         }
 
 
-        template <class CGALPointT>
-        CGALPointT convertToCGALPoint(const cyPointT& pt)
+        inline bool triboxtest(const Triangle* pTri, const XR::BoundingBox& bbox)
         {
-            return CGALPointT(pt.x, pt.y, pt.z);
-        }
-
-        inline bool triboxtest(const cyPointT& a, const cyPointT& b, const cyPointT& c, const XR::BoundingBox& bbox)
-        {
-            //CGALTriangle cgalTri(convertToCGALPoint<CGALPoint>(a), 
-            //    convertToCGALPoint<CGALPoint>(b), convertToCGALPoint<CGALPoint>(c));
+            CGALTriangle cgalTri = convertToCGALTriangle(pTri);
 
             //bool res =  CGAL::do_intersect(CGAL::Bbox_3(bbox.minVal(0), bbox.minVal(1),
             //    bbox.minVal(2), bbox.maxVal(0), bbox.maxVal(1), bbox.maxVal(2)), cgalTri);
 
-            bool res = TriangleAABBIntersectTest(a, b, c, bbox);
+            bool res = TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox);
 
             //assert(res == TriangleAABBIntersectTest(pTri->point(0), pTri->point(1), pTri->point(2), bbox));
             return res;

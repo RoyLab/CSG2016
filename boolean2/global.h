@@ -35,7 +35,6 @@ namespace Boolean
     template <class PBI> class InsctData;
     template <class Mesh> class CSGTree;
 
-
     template <class T> struct AutoPtr : std::shared_ptr<T> {};
     const uint32_t INVALID_UINT32 = uint32_t(-1);
 }

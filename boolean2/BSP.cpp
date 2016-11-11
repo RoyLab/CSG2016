@@ -4,8 +4,6 @@
 
 namespace Boolean
 {
-    Oriented_side orientation(const XPlane& p, const MyVertex& v);
-
     void BSPTree::buildNoCross(std::vector<IPolygon*>& faces)
     {
         mp_root = buildRecursion(faces);

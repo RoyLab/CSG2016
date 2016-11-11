@@ -1,15 +1,19 @@
 #pragma once
 #define _CRT_SECURE_NO_WARNINGS
-//#define XR_DEBUG
-#define NDEBUG
+#include <windows.h>
+#undef min
+#undef max
 
 #include <fstream>
 #include <cassert>
+
+#define XR_DEBUG
+//#define USE_CGAL_PREDICATES
+#define USE_CGAL_PREDICATES_CHECK
+
+//#define NDEBUG
+
 #include "global.h"
 #include "csgdefs.h"
 #include "xgeometry.h"
 #include "CGALext.h"
-#include <windows.h>
-
-#undef min
-#undef max

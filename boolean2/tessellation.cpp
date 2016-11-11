@@ -331,6 +331,14 @@ namespace Boolean
 
             return false;
         }
+
+        struct FacePBITessData
+        {
+            decltype(InsctData<FacePBI>::inscts)::mapped_type::iterator ptr;
+            decltype(InsctData<FacePBI>::inscts)::mapped_type* pContainer = nullptr;
+
+            std::vector<PlaneVertex> points;
+        };
     }
 
     void InsctData<EdgePBI>::refine(void* pData)
@@ -425,10 +433,168 @@ namespace Boolean
         bRefined = true;
     }
 
+    void removeOverlapPBI(InsctData<FacePBI>* thiz)
+    {
+
+    }
+
+    IndexPair makePbiIndex(const PBIRep* rep)
+    {
+        IndexPair res;
+        MakeIndex(rep->ends, res);
+        return res;
+    }
+
     void InsctData<FacePBI>::refine(void* pData)
     {
+        removeOverlapPBI(this);
+        Triangle* pTri = reinterpret_cast<Triangle*>(pData);
+        XPlane triSp = pTri->supportingPlane();
         if (isRefined() || inscts.size() < 2) return;
 
+        std::map<IndexPair, std::shared_ptr<FacePBITessData>> tessData;
+        for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
+        {
+            auto setItr2 = setItr; ++setItr2;
+            for (; setItr2 != inscts.end(); ++setItr2)
+            {
+                for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
+                {
+                    FacePBI& pbi = *pbiItr;
+                    for (auto pbiItr2 = setItr2->second.begin(); pbiItr2 != setItr2->second.end(); ++pbiItr2)
+                    {
+                        PlaneVertex slots[2][2]; // 需要添加的顶点
+                        FacePBI& pbi2 = *pbiItr2;
+                        Oriented_side side[2][2];
+                        side[0][0] = orientation(pbi2.vertPlane, pbi.ends[0]);
+                        side[0][1] = orientation(pbi2.vertPlane, pbi.ends[1]);
+                        if (side[0][0] == side[0][1])
+                        {
+                            if (side[0][0] == ON_ORIENTED_BOUNDARY) // 共线情况
+                            {
+                                XLine line(triSp, pbi.vertPlane);
+                                assert(line.dot(pbi2.vertPlane) == 0.);
+                                Real dotRes = line.dot(pbi2.pends[0]) > 0;
+                                assert(dotRes != 0.);
+                                bool inverseLine = dotRes > 0? false : true;
+
+                                PlaneVertex pbi2ends[2] = { {pbi2.pends[0], pbi2.ends[0]}, {pbi2.pends[1], pbi2.ends[1]} };
+                                if (inverseLine)
+                                {
+                                    pbi2ends[0].plane.inverse();
+                                    pbi2ends[1].plane.inverse();
+                                    std::swap(pbi2ends[0], pbi2ends[1]);
+                                }
+
+                                // linear order 计算overlap
+                                assert(line.linearOrder(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
+                                assert(line.linearOrderNoCheck(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
+                                if (line.linearOrderNoCheck(pbi2ends[0].plane, pbi.pends[1]) <= 0 ||
+                                    line.linearOrderNoCheck(pbi.pends[0], pbi2ends[1].plane) <= 0)
+                                    continue;
+
+                                int compRes[2] = {
+                                    line.linearOrderNoCheck(pbi.pends[0], pbi2ends[0].plane),
+                                    line.linearOrderNoCheck(pbi.pends[1], pbi2ends[1].plane),
+                                };
+
+                                assert(!(compRes[0] == 0 && compRes[1] == 0));
+
+                                if (compRes[0] > 0)
+                                    slots[0][0] = pbi2ends[0];
+                                else if (compRes[0] < 0)
+                                {
+                                    slots[1][0].id = pbi.ends[0];
+                                    slots[1][0].plane = pbi.pends[0];
+                                    if (inverseLine) slots[1][0].plane.inverse();
+                                }
+
+                                if (compRes[1] > 0)
+                                {
+                                    slots[1][1].id = pbi.ends[1];
+                                    slots[1][1].plane = pbi.pends[1];
+                                    if (inverseLine) slots[1][1].plane.inverse();
+                                }
+                                else if (compRes[1] < 0)
+                                    slots[0][1] = pbi2ends[1];
+                            }
+                            else continue;
+                        }
+                        else
+                        {
+                            side[1][0] = orientation(pbi.vertPlane, pbi2.ends[0]);
+                            side[1][1] = orientation(pbi.vertPlane, pbi2.ends[1]);
+
+                            if (side[1][0] == side[1][1])
+                            {
+                                assert(side[1][0] != ON_ORIENTED_BOUNDARY);//如果是共线情况，在前面应当已经被测试到
+                                continue; // 不相交
+                            }
+
+                            if (side[0][0] * side[0][1] == 0)
+                            {
+                                if (side[1][0] * side[1][1] == 0) // 相交于某个顶点，不用split
+                                    continue;
+
+                                int addedTarget = side[0][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
+                                slots[1][0].id = pbi.ends[addedTarget];
+                                slots[1][0].plane = pbi.vertPlane;
+                                XLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
+                            }
+                            else
+                            {
+                                assert(side[0][0] * side[0][1] == 1);
+                                if (side[1][0] * side[1][1] == 0)
+                                {
+                                    int addedTarget = side[1][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
+                                    slots[0][0].id = pbi2.ends[addedTarget];
+                                    slots[0][0].plane = pbi2.vertPlane;
+                                    XLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
+                                }
+                                else
+                                {
+                                    assert(side[1][0] * side[1][1] == 1);
+                                    // new vertex
+                                    XPlane thirdPlane = pbi2.vertPlane;
+                                    XLine(triSp, pbi.vertPlane).makePositive(thirdPlane); // 似乎不需要，可以尝试注释这一句
+                                    XPoint newPoint(triSp, pbi.vertPlane, thirdPlane);
+
+                                    uint32_t *newPos = point(newPoint);
+                                    if (*newPos == INVALID_UINT32)
+                                    {
+                                        *newPos = MemoryManager::getInstance()->insertVertex(newPoint);
+                                    }
+
+                                }
+                            }
+
+                        }
+
+                        if (added[0][0] || added[0][1])
+                        {
+                            IndexPair pbiIndex0 = makePbiIndex(&pbi);
+                            auto pbiData = tessData.find(pbiIndex0);
+                            if (pbiData == tessData.end())
+                            {
+                                FacePBITessData *tessItem = new FacePBITessData;
+                                tessItem->pContainer = &setItr->second;
+                                tessItem->ptr = pbiItr;
+                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex0,
+                                    std::shared_ptr<FacePBITessData>(tessItem)));
+
+                                assert(insertRes.second);
+                                pbiData = insertRes.first;
+                            }
+
+                            pbiData->second->points.
+                        }
+                    }
+                }
+            }
+        }
+
+
+        removeOverlapPBI(this);
         bRefined = true;
         throw XR::NotImplementedException();
     }
@@ -441,7 +607,7 @@ namespace Boolean
         {
             assert(pTri->isAdded4Tess());
             if (pTri->inscts)
-                pTri->inscts->refine((void*)&pTri->supportingPlane());
+                pTri->inscts->refine((void*)pTri);
 
             for (int i = 0; i < 3; i++)
             {

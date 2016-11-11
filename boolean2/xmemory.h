@@ -169,4 +169,8 @@ namespace Boolean
 
     // other functions
     int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
+    static inline int linearOrder(const XLine& l, MyVertex::Index a, MyVertex::Index b) { return linearOrder(l, xvertex(a), xvertex(b)); }
+
+    Oriented_side orientation(const XPlane& p, const MyVertex& v);
+    static inline Oriented_side orientation(const XPlane& p, MyVertex::Index v) { return orientation(p, xvertex(v)); }
 }

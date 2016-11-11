@@ -186,4 +186,11 @@ namespace Boolean
         }
         return 0;
     }
+
+    Oriented_side orientation(const XPlane& p, const MyVertex& v)
+    {
+        if (v.isPlaneRep())
+            return p.orientation(v.ppoint());
+        else return p.orientation(v.point());
+    }
 }

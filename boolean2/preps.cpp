@@ -3,9 +3,6 @@
 #include "xmemory.h"
 #include "adaptive.h"
 
-//#define USE_CGAL_PREDICATES
-//#define USE_CGAL_PREDICATES_CHECK
-
 namespace Boolean
 {
     namespace
