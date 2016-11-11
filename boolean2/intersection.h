@@ -36,6 +36,7 @@ namespace Boolean
 	struct FacePBI: public PBIRep
 	{
 		XPlane vertPlane;
+        //std::list<Triangle*> pTris; // ≤ªø…÷ÿ∏¥
 	};
 
 	template <class PBI>

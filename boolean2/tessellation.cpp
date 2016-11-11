@@ -1,6 +1,7 @@
 #include "precompile.h"
 #include <list>
 #include <map>
+#include <set>
 #include "xmemory.h"
 #include "RegularMesh.h"
 #include "intersection.h"
@@ -435,7 +436,45 @@ namespace Boolean
 
     void removeOverlapPBI(InsctData<FacePBI>* thiz)
     {
+        std::map<MyVertex::Index, std::set<FacePBI*>> data;
+        for (auto &pbiSet : thiz->inscts)
+        {
+            for (auto pbiItr = pbiSet.second.begin(); pbiItr != pbiSet.second.end(); ++pbiItr)
+            {
+                FacePBI& pbi = *pbiItr;
+                bool found = false;
+                for (auto alreadyHere : data[pbi.ends[0]])
+                {
+                    if (alreadyHere->ends[0] == pbi.ends[1] ||
+                        alreadyHere->ends[1] == pbi.ends[1])
+                    {
+                        for (NeighborInfo& nInfo : pbi.neighbor)
+                        {
+                            bool unique = true;
+                            for (NeighborInfo& nInfo2 : alreadyHere->neighbor)
+                            {
+                                if (nInfo.neighborMeshId == nInfo.neighborMeshId)
+                                {
+                                    unique = false;
+                                    break;
+                                }
+                            }
 
+                            if (unique)
+                            {
+                                alreadyHere->neighbor.push_back(nInfo);
+                            }
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) continue;
+
+                data[pbi.ends[0]].insert(&pbi);
+                data[pbi.ends[1]].insert(&pbi);
+            }
+        }
     }
 
     IndexPair makePbiIndex(const PBIRep* rep)
@@ -559,44 +598,148 @@ namespace Boolean
                                     XLine(triSp, pbi.vertPlane).makePositive(thirdPlane); // 似乎不需要，可以尝试注释这一句
                                     XPoint newPoint(triSp, pbi.vertPlane, thirdPlane);
 
-                                    uint32_t *newPos = point(newPoint);
-                                    if (*newPos == INVALID_UINT32)
+                                    uint32_t* newPos;
+                                    newPos = point(newPoint);
+                                    std::vector<uint32_t*> vecs;
+                                    vecs.push_back(newPos);
+                                    uint32_t minVal = *newPos;
+
+                                    // 去所有的邻居看一看
+                                    for (NeighborInfo& neiInfo : pbi.neighbor)
                                     {
-                                        *newPos = MemoryManager::getInstance()->insertVertex(newPoint);
+                                        if (neiInfo.type == NeighborInfo::Edge)
+                                        {
+                                            MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
+                                            assert(eRef.inscts);
+                                            newPos = eRef.inscts->point(newPoint);
+                                        }
+                                        else
+                                        {
+                                            assert(neiInfo.type == NeighborInfo::Face);
+                                            assert(neiInfo.pTrangle->inscts);
+                                            newPos = neiInfo.pTrangle->inscts->point(newPoint);
+                                        }
+                                        if (*newPos < minVal)
+                                            minVal = *newPos;
+                                        vecs.push_back(newPos);
                                     }
 
+                                    for (NeighborInfo& neiInfo : pbi2.neighbor)
+                                    {
+                                        if (neiInfo.type == NeighborInfo::Edge)
+                                        {
+                                            MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
+                                            assert(eRef.inscts);
+                                            newPos = eRef.inscts->point(newPoint);
+                                        }
+                                        else
+                                        {
+                                            assert(neiInfo.type == NeighborInfo::Face);
+                                            assert(neiInfo.pTrangle->inscts);
+                                            newPos = neiInfo.pTrangle->inscts->point(newPoint);
+                                        }
+                                        minVal = *newPos;
+                                        vecs.push_back(newPos);
+                                    }
+
+                                    // 所有的邻居都没有，那就真没有了
+                                    if (minVal == INVALID_UINT32)
+                                    {
+                                        minVal = MemoryManager::getInstance()->insertVertex(newPoint);
+                                    }
+                                    for (uint32_t *pInt : vecs)
+                                        *pInt = minVal;
+
+                                    slots[0][0].id = minVal;
+                                    slots[0][0].plane = pbi2.vertPlane;
+                                    XLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
+
+                                    slots[1][0].id = minVal;
+                                    slots[1][0].plane = pbi.vertPlane;
+                                    XLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
                                 }
                             }
 
                         }
 
-                        if (added[0][0] || added[0][1])
+                        if (slots[0][0].plane.isValid() || slots[0][1].plane.isValid())
                         {
-                            IndexPair pbiIndex0 = makePbiIndex(&pbi);
-                            auto pbiData = tessData.find(pbiIndex0);
+                            IndexPair pbiIndex = makePbiIndex(&pbi);
+                            auto pbiData = tessData.find(pbiIndex);
                             if (pbiData == tessData.end())
                             {
                                 FacePBITessData *tessItem = new FacePBITessData;
                                 tessItem->pContainer = &setItr->second;
                                 tessItem->ptr = pbiItr;
-                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex0,
+                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
                                     std::shared_ptr<FacePBITessData>(tessItem)));
 
                                 assert(insertRes.second);
                                 pbiData = insertRes.first;
                             }
 
-                            pbiData->second->points.
+                            if (slots[0][0].plane.isValid())
+                                pbiData->second->points.push_back(slots[0][0]);
+
+                            if (slots[0][1].plane.isValid())
+                                pbiData->second->points.push_back(slots[0][1]);
+                        }
+
+                        if (slots[1][0].plane.isValid() || slots[1][1].plane.isValid())
+                        {
+                            IndexPair pbiIndex2 = makePbiIndex(&pbi2);
+                            auto pbiData = tessData.find(pbiIndex2);
+                            if (pbiData == tessData.end())
+                            {
+                                FacePBITessData *tessItem = new FacePBITessData;
+                                tessItem->pContainer = &setItr2->second;
+                                tessItem->ptr = pbiItr2;
+                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex2,
+                                    std::shared_ptr<FacePBITessData>(tessItem)));
+
+                                assert(insertRes.second);
+                                pbiData = insertRes.first;
+                            }
+
+                            if (slots[1][0].plane.isValid())
+                                pbiData->second->points.push_back(slots[1][0]);
+
+                            if (slots[1][1].plane.isValid())
+                                pbiData->second->points.push_back(slots[1][1]);
                         }
                     }
                 }
             }
         }
 
+        for (auto &pPair : tessData)
+        {
+            FacePBITessData* pData = pPair.second.get();
+            XLine line(triSp, pData->ptr->vertPlane);
+            LinOrderObj orderObj = { line };
+            std::sort(pData->points.begin(), pData->points.end(), orderObj);
+
+            std::vector<FacePBI> newPbi(points.size() + 1, *pData->ptr);
+            std::map<MyVertex::Index, uint32_t> idmap;
+            idmap[pData->ptr->ends[0]] = 0;
+            idmap[pData->ptr->ends[1]] = pData->points.size() + 1;
+            for (int i = 0; i < pData->points.size(); i++)
+            {
+                idmap[pData->points[i].id] = i + 1;
+                newPbi[i].ends[1] = pData->points[i].id;
+                newPbi[i + 1].ends[0] = pData->points[i].id;
+                newPbi[i].pends[1] = pData->points[i].plane;
+                newPbi[i + 1].pends[0] = pData->points[i].plane;
+            }
+            newPbi[0].ends[0] = pData->ptr->ends[0];
+            newPbi[points.size()].ends[1] = pData->ptr->ends[1];
+
+            pData->pContainer->erase(pData->ptr);
+            pData->pContainer->insert(pData->pContainer->end(), newPbi.begin(), newPbi.end());
+        }
 
         removeOverlapPBI(this);
         bRefined = true;
-        throw XR::NotImplementedException();
     }
 
     void tessellation(std::vector<RegularMesh*>& meshes)
