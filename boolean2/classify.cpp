@@ -15,7 +15,6 @@ namespace Boolean
 {
     typedef uint32_t MeshId;
 
-    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
     struct SSeed
     {
         MyEdge::Index edgeId;

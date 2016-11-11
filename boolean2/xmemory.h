@@ -166,4 +166,7 @@ namespace Boolean
     inline std::vector<XPlaneBase>& xplanes() { return MemoryManager::getInstance()->planes; }
 
     inline std::vector<Triangle*>& intersectTriangles() { return MemoryManager::getInstance()->insctTris; }
+
+    // other functions
+    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
 }

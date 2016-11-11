@@ -9,179 +9,48 @@
 
 namespace Boolean
 {
-    struct PlaneVertex
-    {
-        XPlane plane;
-        MyVertex::Index id;
-    };
-
-    struct EdgeAuxiliaryStructure
-    {
-        MyVertex::Index start, end;
-        XLine line;
-    };
-
-    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b)
-    {
-        int type = 0;
-        if (a.isPlaneRep()) type += 1;
-        if (b.isPlaneRep()) type += 2;
-
-        Oriented_side side;
-        switch (type)
-        {
-        case 0:
-            return l.linearOrder(a.point(), b.point());
-        case 1:
-            side = l.pickPositiveVertical(a.ppoint())
-                .orientation(b.point());
-            if (side == ON_POSITIVE_SIDE) return 1;
-            else if (side == ON_NEGATIVE_SIDE) return -1;
-            else return 0;
-        case 2:
-            side = l.pickPositiveVertical(b.ppoint())
-                .orientation(a.point());
-            if (side == ON_NEGATIVE_SIDE) return 1;
-            else if (side == ON_POSITIVE_SIDE) return -1;
-            else return 0;
-        case 3:
-            return l.linearOrder(a.ppoint(), b.ppoint());
-        default:
-            throw std::exception();
-        }
-        return 0;
-    }
-
-
-    struct LinOrderObj
-    {
-        bool operator()(const PlaneVertex& a, const PlaneVertex& b) const
-        {
-            int type = 0;
-            if (xvertex(a.id).isPlaneRep()) type += 1;
-            if (xvertex(b.id).isPlaneRep()) type += 2;
-
-            switch (type)
-            {
-            case 0:
-                return line.linearOrder(xvertex(a.id).point(),
-                    xvertex(b.id).point()) > 0;
-            case 1:
-                return a.plane.orientation(xvertex(b.id).point()) == ON_POSITIVE_SIDE;
-            case 2:
-                return b.plane.orientation(xvertex(a.id).point()) == ON_NEGATIVE_SIDE;
-            case 3:
-                return line.linearOrder(a.plane, b.plane) > 0;
-            default:
-                throw std::exception();
-            }
-        }
-
-        XLine line;
-    };
-
-    void InsctData<EdgePBI>::refine(void* pData)
-    {
-        if (isRefined()) return;
-
-        std::vector<PlaneVertex> seqs(points.size());
-        auto vItr = points.begin();
-        for (int i = 0; i < points.size(); i++, vItr++)
-            seqs[i].id = *vItr;
-
-        std::map<MyVertex::Index, XPlane> v2p;
-        for (auto& set : inscts)
-        {
-            for (auto &pbi : set.second)
-            {
-                v2p[pbi.ends[0]] = pbi.pends[0];
-                v2p[pbi.ends[1]] = pbi.pends[1];
-            }
-        }
-
-        EdgeAuxiliaryStructure data = *(EdgeAuxiliaryStructure*)(pData);
-        // assign each vertex a plane and the corresponding id
-        for (int i = 0; i < points.size(); i++)
-        {
-            auto res0 = v2p.find(seqs[i].id);
-            if (res0 == v2p.end())
-            {
-                // some vertex cannot be assigned a valid plane
-                // therefore we should find it manually from Plane Triples
-                auto &vRef = xvertex(seqs[i].id);
-                if (vRef.isPlaneRep())
-                {
-                    auto& xpointRef = vRef.ppoint();
-                    for (int j = 0; j < 3; j++)
-                    {
-                        Real fres = data.line.dot(xpointRef.plane(j));
-                        if (fres == Real(0)) continue;
-
-                        if (fres > 0)
-                            seqs[i].plane = xpointRef.plane(j);
-                        else if (fres < 0)
-                            seqs[i].plane = xpointRef.plane(j).opposite();
-                        break;
-                    }
-                }
-            }
-            else seqs[i].plane = res0->second;
-        }
-
-        LinOrderObj orderObj = { data.line };
-        std::sort(seqs.begin(), seqs.end(), orderObj);
-        std::vector<EdgePBI> newPbi(points.size() + 1);
-        std::map<MyVertex::Index, uint32_t> idmap;
-        idmap[data.start] = 0;
-        idmap[data.end] = points.size()+1;
-        for (int i = 0; i < seqs.size(); i++)
-        {
-            idmap[seqs[i].id] = i+1;
-            newPbi[i].ends[1] = seqs[i].id;
-            newPbi[i+1].ends[0] = seqs[i].id;
-            newPbi[i].pends[1] = seqs[i].plane;
-            newPbi[i + 1].pends[0] = seqs[i].plane;
-        }
-        newPbi[0].ends[0] = data.start;
-        newPbi[points.size()].ends[1] = data.end;
-
-        // add pbi intersections' neighborInfo into newly constructed pbi.
-        for (auto& set : inscts)
-        {
-            for (auto &pbi : set.second)
-            {
-                assert(idmap.find(pbi.ends[0]) != idmap.end());
-                assert(idmap.find(pbi.ends[1]) != idmap.end());
-
-                uint32_t start = idmap[pbi.ends[0]];
-                uint32_t last = idmap[pbi.ends[1]];
-
-                assert(start < last);
-                for (int i = start; i < last; i++)
-                {
-                    assert(pbi.neighbor.size() == 1);
-                    newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
-                }
-            }
-        }
-        inscts.clear();
-        auto& slot = inscts[INVALID_UINT32];
-        for (int i = 0; i < newPbi.size(); i++)
-            slot.push_back(newPbi[i]);
-
-        bRefined = true;
-    }
-
-    void InsctData<FacePBI>::refine(void* pData)
-    {
-        if (isRefined() || inscts.size() < 2) return;
-
-        bRefined = true;
-        throw XR::NotImplementedException();
-    }
-
     namespace
     {
+        struct PlaneVertex
+        {
+            XPlane plane;
+            MyVertex::Index id;
+        };
+
+        // 用于传到sortObj里面去的辅助结构
+        struct EdgeAuxiliaryStructure
+        {
+            MyVertex::Index start, end;
+            XLine line;
+        };
+
+        struct LinOrderObj
+        {
+            bool operator()(const PlaneVertex& a, const PlaneVertex& b) const
+            {
+                int type = 0;
+                if (xvertex(a.id).isPlaneRep()) type += 1;
+                if (xvertex(b.id).isPlaneRep()) type += 2;
+
+                switch (type)
+                {
+                case 0:
+                    return line.linearOrder(xvertex(a.id).point(),
+                        xvertex(b.id).point()) > 0;
+                case 1:
+                    return a.plane.orientation(xvertex(b.id).point()) == ON_POSITIVE_SIDE;
+                case 2:
+                    return b.plane.orientation(xvertex(a.id).point()) == ON_NEGATIVE_SIDE;
+                case 3:
+                    return line.linearOrder(a.plane, b.plane) > 0;
+                default:
+                    throw std::exception();
+                }
+            }
+
+            XLine line;
+        };
+
         class TessGraph
         {
             struct Edge;
@@ -462,7 +331,107 @@ namespace Boolean
 
             return false;
         }
-}
+    }
+
+    void InsctData<EdgePBI>::refine(void* pData)
+    {
+        if (isRefined()) return;
+
+        std::vector<PlaneVertex> seqs(points.size());
+        auto vItr = points.begin();
+        for (int i = 0; i < points.size(); i++, vItr++)
+            seqs[i].id = *vItr;
+
+        std::map<MyVertex::Index, XPlane> v2p;
+        for (auto& set : inscts)
+        {
+            for (auto &pbi : set.second)
+            {
+                v2p[pbi.ends[0]] = pbi.pends[0];
+                v2p[pbi.ends[1]] = pbi.pends[1];
+            }
+        }
+
+        EdgeAuxiliaryStructure data = *(EdgeAuxiliaryStructure*)(pData);
+        // assign each vertex a plane and the corresponding id
+        for (int i = 0; i < points.size(); i++)
+        {
+            auto res0 = v2p.find(seqs[i].id);
+            if (res0 == v2p.end())
+            {
+                // some vertex cannot be assigned a valid plane
+                // therefore we should find it manually from Plane Triples
+                auto &vRef = xvertex(seqs[i].id);
+                if (vRef.isPlaneRep())
+                {
+                    auto& xpointRef = vRef.ppoint();
+                    for (int j = 0; j < 3; j++)
+                    {
+                        Real fres = data.line.dot(xpointRef.plane(j));
+                        if (fres == Real(0)) continue;
+
+                        if (fres > 0)
+                            seqs[i].plane = xpointRef.plane(j);
+                        else if (fres < 0)
+                            seqs[i].plane = xpointRef.plane(j).opposite();
+                        break;
+                    }
+                }
+            }
+            else seqs[i].plane = res0->second;
+        }
+
+        LinOrderObj orderObj = { data.line };
+        std::sort(seqs.begin(), seqs.end(), orderObj);
+        std::vector<EdgePBI> newPbi(points.size() + 1);
+        std::map<MyVertex::Index, uint32_t> idmap;
+        idmap[data.start] = 0;
+        idmap[data.end] = points.size() + 1;
+        for (int i = 0; i < seqs.size(); i++)
+        {
+            idmap[seqs[i].id] = i + 1;
+            newPbi[i].ends[1] = seqs[i].id;
+            newPbi[i + 1].ends[0] = seqs[i].id;
+            newPbi[i].pends[1] = seqs[i].plane;
+            newPbi[i + 1].pends[0] = seqs[i].plane;
+        }
+        newPbi[0].ends[0] = data.start;
+        newPbi[points.size()].ends[1] = data.end;
+
+        // add pbi intersections' neighborInfo into newly constructed pbi.
+        for (auto& set : inscts)
+        {
+            for (auto &pbi : set.second)
+            {
+                assert(idmap.find(pbi.ends[0]) != idmap.end());
+                assert(idmap.find(pbi.ends[1]) != idmap.end());
+
+                uint32_t start = idmap[pbi.ends[0]];
+                uint32_t last = idmap[pbi.ends[1]];
+
+                assert(start < last);
+                for (int i = start; i < last; i++)
+                {
+                    assert(pbi.neighbor.size() == 1);
+                    newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
+                }
+            }
+        }
+        inscts.clear();
+        auto& slot = inscts[INVALID_UINT32];
+        for (int i = 0; i < newPbi.size(); i++)
+            slot.push_back(newPbi[i]);
+
+        bRefined = true;
+    }
+
+    void InsctData<FacePBI>::refine(void* pData)
+    {
+        if (isRefined() || inscts.size() < 2) return;
+
+        bRefined = true;
+        throw XR::NotImplementedException();
+    }
 
     void tessellation(std::vector<RegularMesh*>& meshes)
     {
