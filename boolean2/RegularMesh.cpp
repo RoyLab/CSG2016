@@ -40,7 +40,7 @@ namespace Boolean
         {
             if (rItr->first == i)
                 inverse = true;
-            else if (rItr->second == i)
+            else if (inverse && rItr->second == i)
             {
                 ++rItr;
                 if (rItr->first == i)

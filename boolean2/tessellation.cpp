@@ -469,7 +469,12 @@ namespace Boolean
                         break;
                     }
                 }
-                if (found) continue;
+
+                if (found)
+                {
+                    pbiSet.second.erase(pbiItr);
+                    continue;
+                }
 
                 data[pbi.ends[0]].insert(&pbi);
                 data[pbi.ends[1]].insert(&pbi);
