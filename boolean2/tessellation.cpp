@@ -18,6 +18,11 @@ namespace Boolean
             MyVertex::Index id;
         };
 
+        bool pred(const PlaneVertex &a, const PlaneVertex &b)
+        {
+            return a.id == b.id;
+        }
+
         // 用于传到sortObj里面去的辅助结构
         struct EdgeAuxiliaryStructure
         {
@@ -592,7 +597,7 @@ namespace Boolean
                             }
                             else
                             {
-                                assert(side[0][0] * side[0][1] == 1);
+                                assert(side[0][0] * side[0][1] == -1);
                                 if (side[1][0] * side[1][1] == 0)
                                 {
                                     int addedTarget = side[1][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
@@ -602,7 +607,7 @@ namespace Boolean
                                 }
                                 else
                                 {
-                                    assert(side[1][0] * side[1][1] == 1);
+                                    assert(side[1][0] * side[1][1] == -1);
                                     // new vertex
                                     XPlane thirdPlane = pbi2.vertPlane;
                                     XLine(triSp, pbi.vertPlane).makePositive(thirdPlane); // 似乎不需要，可以尝试注释这一句
@@ -727,19 +732,22 @@ namespace Boolean
             FacePBITessData* pData = pPair.second.get();
             XLine line(triSp, pData->ptr->vertPlane);
             LinOrderObj orderObj = { line };
-            std::sort(pData->points.begin(), pData->points.end(), orderObj);
 
-            std::vector<FacePBI> newPbi(points.size() + 1, *pData->ptr);
+            auto &inserted = pData->points;
+            std::sort(inserted.begin(), inserted.end(), orderObj);
+            inserted.erase(std::unique(inserted.begin(), inserted.end(), pred), inserted.end());
+
+            std::vector<FacePBI> newPbi(inserted.size() + 1, *pData->ptr);
             std::map<MyVertex::Index, uint32_t> idmap;
             idmap[pData->ptr->ends[0]] = 0;
-            idmap[pData->ptr->ends[1]] = pData->points.size() + 1;
-            for (int i = 0; i < pData->points.size(); i++)
+            idmap[pData->ptr->ends[1]] = inserted.size() + 1;
+            for (int i = 0; i < inserted.size(); i++)
             {
-                idmap[pData->points[i].id] = i + 1;
-                newPbi[i].ends[1] = pData->points[i].id;
-                newPbi[i + 1].ends[0] = pData->points[i].id;
-                newPbi[i].pends[1] = pData->points[i].plane;
-                newPbi[i + 1].pends[0] = pData->points[i].plane;
+                idmap[inserted[i].id] = i + 1;
+                newPbi[i].ends[1] = inserted[i].id;
+                newPbi[i + 1].ends[0] = inserted[i].id;
+                newPbi[i].pends[1] = inserted[i].plane;
+                newPbi[i + 1].pends[0] = inserted[i].plane;
             }
             newPbi[0].ends[0] = pData->ptr->ends[0];
             newPbi[points.size()].ends[1] = pData->ptr->ends[1];

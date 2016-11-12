@@ -468,7 +468,7 @@ namespace Boolean
 
 					if (!t[i]->inscts)
 						t[i]->inscts = new InsctData<FacePBI>;
-					t[i]->inscts->inscts[meshId[i]].push_back(fpbi);
+					t[i]->inscts->inscts[meshId[i2]].push_back(fpbi);
 				}
 			}
 		}
