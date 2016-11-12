@@ -437,6 +437,7 @@ namespace Boolean
     void removeOverlapPBI(InsctData<FacePBI>* thiz)
     {
         std::map<MyVertex::Index, std::set<FacePBI*>> data;
+        std::vector<decltype(thiz->inscts[0].begin())> garbage;
         for (auto &pbiSet : thiz->inscts)
         {
             for (auto pbiItr = pbiSet.second.begin(); pbiItr != pbiSet.second.end(); ++pbiItr)
@@ -472,13 +473,17 @@ namespace Boolean
 
                 if (found)
                 {
-                    pbiSet.second.erase(pbiItr);
+                    garbage.push_back(pbiItr);
                     continue;
                 }
 
                 data[pbi.ends[0]].insert(&pbi);
                 data[pbi.ends[1]].insert(&pbi);
             }
+            
+            for (auto& pbiItr : garbage)
+                pbiSet.second.erase(pbiItr);
+            garbage.clear();
         }
     }
 

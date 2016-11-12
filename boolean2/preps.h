@@ -19,6 +19,7 @@ namespace Boolean
 		XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
         Oriented_side orientation(const cyPointT&) const;
+        bool coplanar(const XPlaneBase&) const;
 
 		const Real& a() const { return m_data[0]; }
 		const Real& b() const { return m_data[1]; }
@@ -72,6 +73,7 @@ namespace Boolean
 
         void setId(int i) { assert(i >= 0); id = i + 1; }
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+        bool coplanar(const XPlane& p) const { return base().coplanar(p.base()); }
     protected:
 		int id; // id = (realId+1) * sign
 

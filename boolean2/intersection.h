@@ -13,12 +13,12 @@ namespace Boolean
 		enum Type {Vertex, Edge, Face};
 
 		Type type;
+		uint32_t neighborMeshId;
 		union
 		{
 			int neighborEdgeId; // >0 is fid, < 0 is eid,  0 is invalid
 			Triangle* pTrangle;
 		};
-		uint32_t neighborMeshId;
 	};
 
     struct PBIRep

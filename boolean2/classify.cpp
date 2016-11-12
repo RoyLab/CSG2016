@@ -65,19 +65,24 @@ namespace Boolean
             MyEdge& eRef = xedge(edgeId);
             MyVertex& theOther = eRef.theOtherVertex(seedId);
 
-            auto fItr = MyEdge::FaceIterator(eRef, true);
+            auto fItr = MyEdge::FaceIterator(eRef);
             if (fItr.face()->getType() == IPolygon::TRIANGLE)
             {
                 reinterpret_cast<Triangle*>(fItr.face())->calcSupportingPlane();
             }
             XPlane basePlane = fItr.face()->supportingPlane();
-            flag = false;
-            for (; fItr; fItr.incrementToTriangle())
+            flag = false; // 是否有不共面的相邻面
+            for (; fItr; ++fItr)
             {
-                assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                MyVertex& sampleV = xvertex(((Triangle*)fItr.face())->getTheOtherVertex(edgeId));
-                assert(!sampleV.isPlaneRep());
-                if (!basePlane.has_on(sampleV.point()))
+                if (!fItr.face()->isValid()) continue;
+
+                if (fItr.face()->getType() == IPolygon::TRIANGLE)
+                {
+                    Triangle* pTri = (Triangle*)fItr.face();
+                    pTri->calcSupportingPlane();
+                }
+                
+                if (!basePlane.coplanar(fItr.face()->supportingPlane()))
                 {
                     seed.edgeId = edgeId;
                     flag = true;
@@ -388,8 +393,7 @@ namespace Boolean
                     nMesh, tree0, curTreeLeaves, dummyForest);
                 assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
 
-                added = (relation == REL_SAME);
-
+                added = (relation == REL_SAME); 
                 faceQueue.push(curSeed.pFace);
                 while (!faceQueue.empty())
                 {
@@ -413,13 +417,34 @@ namespace Boolean
                         MyEdge::FaceIterator fItr(curEdge);
                         if (curEdge.neighbor)
                         {
-                            assert(curEdge.faceCount() >= 4); // 如果这是一个相交而成的边，那么一定会有超过4个polygon在周围
+                            // 但因为共面的存在，有些neigh可能记录的相邻，但不在相邻面当中，这没关系！
+                            //assert(curEdge.faceCount() >= 4); // 如果这是一个相交而成的边，那么一定会有超过4个polygon在周围
                             for (; fItr; ++fItr)
                             {
                                 if (!fItr.face()->isValid()) continue;
 
                                 tmpSeed.edgeId = edges[i];
                                 tmpSeed.pFace = fItr.face();
+
+                                for (int i = 0; i < nMesh; i++)
+                                {
+                                    Indicator tmpInd = REL_NOT_AVAILABLE;
+                                    switch (relTab[i])
+                                    {
+                                    case REL_SAME:
+                                    case REL_OPPOSITE:
+                                        tmpInd = REL_ON_BOUNDARY;
+                                        break;
+                                    default:
+                                        tmpInd = relTab[i];
+                                        break;
+                                    }
+                                    tmpSeed.eIndicators->at(i) = tmpInd;
+                                }
+
+                                for (NeighborInfo& nInfo : *curEdge.neighbor)
+                                    tmpSeed.eIndicators->at(nInfo.neighborMeshId) = REL_ON_BOUNDARY;
+
                                 if (fItr.face()->meshId() == curMeshId)
                                 {
                                     if (fItr.face()->mark < SEEDED1)

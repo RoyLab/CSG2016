@@ -24,7 +24,6 @@ namespace Boolean
 		uint32_t id() const { return m_id; }
         uint32_t meshId() const { return m_meshId; }
 
-        virtual bool isValid() const { return true; }
         virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
         virtual void getEdges(std::vector<MyEdge::Index>&) const;
         virtual TYPE getType() const = 0;
@@ -33,6 +32,7 @@ namespace Boolean
         virtual uint32_t edgeId(int i) const = 0;
         virtual MyVertex& vertex(int i)const;
         virtual uint32_t vertexId(int i)const = 0;
+        virtual bool isValid() const = 0;
 
         XPlane supportingPlane() const { assert(sPlane.isValid()); return sPlane; }
         XPlane sPlane;
@@ -106,6 +106,7 @@ namespace Boolean
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void getVertices(std::vector<MyVertex::Index>&) const;
         TYPE getType() const { return SUBPOLYGON; }
+        bool isValid() const { return true; }
 
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }

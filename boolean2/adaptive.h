@@ -708,7 +708,8 @@ namespace Boolean
 			mat[0][0], mat[0][1], mat[1][0], mat[1][1]);
 	}
 
-	inline REAL adaptiveDet2x2Sign(const REAL(*mat)[2])
+    template <class MatrixT>
+    inline REAL adaptiveDet2x2Sign(const MatrixT& mat)
 	{
 		return adaptiveDet2x2Sign(
 			mat[0][0], mat[0][1], mat[1][0], mat[1][1]);

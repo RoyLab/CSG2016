@@ -12,7 +12,7 @@ int main()
 
     std::string expr;
     std::vector<std::string> names;
-    if (true)
+    if (false)
     {
         expr = "0+1";
         names.clear();
@@ -46,12 +46,20 @@ int main()
         names.push_back("../../models/dragon.off");
         test(names, expr, "D:/result6.off");
 #endif // !_DEBUG
+
+        expr = "0+1+2";
+        names.clear();
+        names.push_back("../../models/box1.off");
+        names.push_back("../../models/box2.off");
+        names.push_back("../../models/boxm1.off");
+        test(names, expr, "D:/result7.off");
     }
 
     expr = "0+1+2";
+    names.clear();
     names.push_back("../../models/box1.off");
     names.push_back("../../models/box2.off");
-    names.push_back("../../models/boxm1.off");
+    names.push_back("../../models/box3.off");
     test(names, expr, "D:/result.off");
 
     system("pause");

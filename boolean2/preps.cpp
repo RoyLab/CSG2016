@@ -7,6 +7,20 @@ namespace Boolean
 {
     namespace
     {
+        Real mat2x2det(const Real* mat[2])
+        {
+#ifdef USE_CGAL_PREDICATES
+            Real res = cgalExact2x2(mat);
+#else
+            Real res = adaptiveDet2x2Sign(mat);
+#endif
+#ifdef USE_CGAL_PREDICATES_CHECK
+            Real check = cgalExact2x2(mat);
+            assert(check == res || check * res > 0.0);
+#endif
+            return res;
+        }
+
         Real mat3x3det(const Real* mat[3])
         {
 #ifdef USE_CGAL_PREDICATES
@@ -15,7 +29,7 @@ namespace Boolean
             Real res = adaptiveDet3x3Sign(mat);
 #endif
 #ifdef USE_CGAL_PREDICATES_CHECK
-            Real check = adaptiveDet3x3Sign(mat);
+            Real check = cgalExact3x3(mat);
             assert(check == res || check * res > 0.0);
 #endif
             return res;
@@ -29,7 +43,7 @@ namespace Boolean
             Real res = adaptiveDet4x4Sign(mat);
 #endif
 #ifdef USE_CGAL_PREDICATES_CHECK
-            Real check = adaptiveDet4x4Sign(mat);
+            Real check = cgalExact4x4(mat);
             assert(check == res || check * res > 0.0);
 #endif
             return res;
@@ -215,6 +229,17 @@ namespace Boolean
         if (res > -data()[3]) return ON_POSITIVE_SIDE;
         if (res < -data()[3]) return ON_NEGATIVE_SIDE;
         return ON_ORIENTED_BOUNDARY;
+    }
+
+    bool XPlaneBase::coplanar(const XPlaneBase & p) const
+    {
+        const Real* mat[2] = { m_data, p.m_data };
+        if (mat2x2det(mat) != 0) return false;
+
+        const Real* mat2[2] = { m_data+1, p.m_data+1 };
+        if (mat2x2det(mat2) != 0) return false;
+
+        return true;
     }
 
     bool XPoint::operator==(const XPoint &p) const

@@ -10,6 +10,12 @@ namespace Boolean
     typedef CGAL::Exact_predicates_exact_constructions_kernel Depeck;
 
     template <class MatrixT>
+    inline double cgalExact2x2(const MatrixT& mat)
+    {
+        return CGAL::sign(CGAL::determinant<Depeck::RT>(mat[0][0], mat[0][1], mat[1][0], mat[1][1]));
+    }
+
+    template <class MatrixT>
     inline double cgalExact3x3(const MatrixT& mat)
     {
         return CGAL::sign(CGAL::determinant<Depeck::RT>(mat[0][0], mat[0][1], mat[0][2],
