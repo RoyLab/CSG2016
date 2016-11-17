@@ -12,7 +12,7 @@ int main()
 
     std::string expr;
     std::vector<std::string> names;
-    if (true)
+    if (false)
     {
         expr = "0+1";
         names.clear();
@@ -70,7 +70,7 @@ int main()
     }
 
     expr = "0";
-    char buffer[20];
+    char buffer[200];
     for (int i = 1; i < 25; i++)
     {
         expr += "+";
@@ -86,10 +86,11 @@ int main()
     names.clear();
     for (int i = 0; i < 50; i++)
     {
-        names.push_back("D:\Codes\Boolean2016\exps\data\ref_timing\t1_0.off");
+        sprintf(buffer, "D:/Codes/Boolean2016/exps/data/ref_timing/t1_%d.off", i);
+        names.push_back(buffer);
     }
     test(names, expr, "D:/result.off");
 
-    system("pause");
+    //system("pause");
     return 0;
 }

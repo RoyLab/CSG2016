@@ -434,7 +434,7 @@ namespace Boolean
         bRefined = true;
     }
 
-    bool checkIsolatedPart(Triangle* pTri)
+    bool checkIsolatedPart(Triangle* pTri, std::vector<MyVertex::Index>& strayVertices)
     {
         struct ColorVertex
         {
@@ -517,34 +517,44 @@ namespace Boolean
                             }
                         }
 
-                        if (eId != -1) break;
+                        if (eId >= 0) break;
                     }
-
-                    MyEdge& crossEdgeRef = xedge(eId);
-                    FacePBI fPbi;
-                    fPbi.ends[0] = pTri->vertexId(0);
-                    fPbi.ends[1] = chooseVertex;
-                    fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
-                        xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
-
-                    XLine line(pTri->supportingPlane(), fPbi.vertPlane);
-                    fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
-                    fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
-                    assert(line.dot(fPbi.pends[0]) > 0);
-                    assert(line.dot(fPbi.pends[1]) > 0);
-                    if (line.linearOrderNoCheck(fPbi.pends[0], fPbi.pends[1]) < 0)
+                    assert(eId != -1);
+                    if (eId >= 0)
                     {
-                        std::swap(fPbi.ends[0], fPbi.ends[1]);
-                        std::swap(fPbi.pends[0], fPbi.pends[1]);
-                    }
+                        FacePBI fPbi;
+                        fPbi.ends[0] = pTri->vertexId(0);
+                        fPbi.ends[1] = chooseVertex;
 
-                    assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
-                    thiz->inscts[isoCount++].push_back(fPbi);
+                        MyEdge& crossEdgeRef = xedge(eId);
+                        fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
+                            xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
+
+                        XLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                        fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
+                        fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
+                        assert(line.dot(fPbi.pends[0]) > 0);
+                        assert(line.dot(fPbi.pends[1]) > 0);
+                        if (line.linearOrderNoCheck(fPbi.pends[0], fPbi.pends[1]) < 0)
+                        {
+                            std::swap(fPbi.ends[0], fPbi.ends[1]);
+                            std::swap(fPbi.pends[0], fPbi.pends[1]);
+                        }
+
+                        assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
+                        thiz->inscts[isoCount++].push_back(fPbi);
+                    }
+                    else
+                    {
+                        assert(eId == -2 && history.size() == 1);
+                        strayVertices.push_back(history[0]);
+                    }
                     boolRes = true;
                 }
                 history.clear();
             }
         }
+
         return boolRes;
     }
 
@@ -608,7 +618,7 @@ namespace Boolean
         return res;
     }
 
-    void FaceInsctData::resolveIntersection(Triangle* pTri)
+    void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<MyVertex::Index>* strayVertices)
     {
         XPlane triSp = pTri->supportingPlane();
         std::map<IndexPair, std::shared_ptr<FacePBITessData>> tessData;
@@ -725,43 +735,35 @@ namespace Boolean
                                     uint32_t minVal = *newPos;
 
                                     // 去所有的邻居看一看
-                                    for (NeighborInfo& neiInfo : pbi.neighbor)
-                                    {
-                                        if (neiInfo.type == NeighborInfo::Edge)
-                                        {
-                                            MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
-                                            assert(eRef.inscts);
-                                            newPos = eRef.inscts->point(newPoint);
-                                        }
-                                        else
-                                        {
-                                            assert(neiInfo.type == NeighborInfo::Face);
-                                            assert(neiInfo.pTrangle->inscts);
-                                            newPos = neiInfo.pTrangle->inscts->point(newPoint, -1);
-                                        }
-                                        if (*newPos < minVal)
-                                            minVal = *newPos;
-                                        vecs.push_back(newPos);
-                                    }
+                                    FacePBI* twoPbiPtr[2] = { &pbi, &pbi2 };
 
-                                    for (NeighborInfo& neiInfo : pbi2.neighbor)
+                                    for (int i = 0; i < 2; i++)
                                     {
-                                        if (neiInfo.type == NeighborInfo::Edge)
+                                        int i2 = (i + 1) % 2;
+                                        for (NeighborInfo& neiInfo : twoPbiPtr[i]->neighbor)
                                         {
-                                            MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
-                                            assert(eRef.inscts);
-                                            newPos = eRef.inscts->point(newPoint);
-                                        }
-                                        else
-                                        {
-                                            assert(neiInfo.type == NeighborInfo::Face);
-                                            assert(neiInfo.pTrangle->inscts);
-                                            newPos = neiInfo.pTrangle->inscts->point(newPoint, -1);
-                                        }
-                                        minVal = *newPos;
-                                        vecs.push_back(newPos);
-                                    }
+                                            if (neiInfo.type == NeighborInfo::Edge)
+                                            {
+                                                MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
+                                                assert(eRef.inscts);
+                                                newPos = eRef.inscts->point(newPoint);
+                                            }
+                                            else
+                                            {
+                                                assert(neiInfo.type == NeighborInfo::Face);
+                                                assert(neiInfo.pTrangle->inscts);
+                                                int eId = -1;
+                                                if (twoPbiPtr[i2]->neighbor.empty())
+                                                    eId = -2;
 
+                                                newPos = neiInfo.pTrangle->inscts->point(newPoint, eId);
+                                            }
+                                            if (*newPos < minVal)
+                                                minVal = *newPos;
+                                            vecs.push_back(newPos);
+                                        }
+                                    }
+                                    
                                     // 所有的邻居都没有，那就真没有了
                                     if (minVal == INVALID_UINT32)
                                     {
@@ -832,6 +834,43 @@ namespace Boolean
             }
         }
 
+        if (strayVertices)
+        {
+            for (MyVertex::Index strayV : *strayVertices)
+            {
+                for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
+                {
+                    for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
+                    {
+                        assert(xvertex(strayV).isPlaneRep());
+                        FacePBI& fPbi = *pbiItr;
+                        if (fPbi.vertPlane.has_on(xvertex(strayV).ppoint()))
+                        {
+                            IndexPair pbiIndex = makePbiIndex(&fPbi);
+                            auto pbiData = tessData.find(pbiIndex);
+                            if (pbiData == tessData.end())
+                            {
+                                FacePBITessData *tessItem = new FacePBITessData;
+                                tessItem->pContainer = &setItr->second;
+                                tessItem->ptr = pbiItr;
+                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
+                                    std::shared_ptr<FacePBITessData>(tessItem)));
+
+                                assert(insertRes.second);
+                                pbiData = insertRes.first;
+                            }
+
+                            XLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                            line.pickPositiveVertical(xvertex(strayV).ppoint());
+                            pbiData->second->points.push_back(
+                                PlaneVertex{ line.pickPositiveVertical(xvertex(strayV).ppoint()), strayV });
+                            break; // 如果需要加两个以上的fpbi的话，这个点应该已经被探测出来了
+                        }
+                    }
+                }
+            }
+        }
+
         for (auto &pPair : tessData)
         {
             FacePBITessData* pData = pPair.second.get();
@@ -858,10 +897,11 @@ namespace Boolean
                 newPbi[i + 1].pends[0] = inserted[i].plane;
             }
             newPbi[0].ends[0] = pData->ptr->ends[0];
-            newPbi[points.size()].ends[1] = pData->ptr->ends[1];
+            newPbi[inserted.size()].ends[1] = pData->ptr->ends[1];
 
-            pData->pContainer->erase(pData->ptr);
+            pData->pContainer->erase(pData->ptr); 
             pData->pContainer->insert(pData->pContainer->end(), newPbi.begin(), newPbi.end());
+            newPbi.clear();
         }
 
         removeOverlapPBI(this);
@@ -875,8 +915,9 @@ namespace Boolean
         if (!isRefined() && inscts.size() >= 2)
             resolveIntersection(pTri);
 
-        if (checkIsolatedPart(pTri))
-            resolveIntersection(pTri);
+        std::vector<MyVertex::Index> strayVertices;
+        if (checkIsolatedPart(pTri, strayVertices))
+            resolveIntersection(pTri, &strayVertices);
 
         bRefined = true;
     }

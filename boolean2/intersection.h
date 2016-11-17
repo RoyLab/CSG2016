@@ -73,7 +73,7 @@ namespace Boolean
         VertexList  points;
 
     protected:
-        void resolveIntersection(Triangle* pTri);
+        void resolveIntersection(Triangle* pTri, std::vector<MyVertex::Index>* strayVertices = nullptr);
         bool		bRefined = false;
     };
 

@@ -37,16 +37,7 @@ namespace Boolean
             m_data = nullptr;
 #endif
         }
-		XPlane(int i) : id(i) {
-#ifdef PREP_DEBUG_INFO
-            debug();
-#endif  
-        }
-		XPlane(int i, bool inv) : id(inv?i:-i) {
-#ifdef PREP_DEBUG_INFO
-            debug();
-#endif
-        }
+
         XPlane(const cyPointT& p, const cyPointT& q, const cyPointT& r);
         XPlane(const XLine& l, const cyPointT& p);
 
@@ -58,6 +49,7 @@ namespace Boolean
 		XPlane opposite() const { return XPlane(-id); }
         Real signd() const { return isInverse() ? -1.0 : 1.0; }
         const Real* normal() const { return data(); }
+        uint32_t getId() const { return isValid() ? std::abs(id) - 1 : INVALID_UINT32; }
 
 		bool isValid() const { return id != 0; }
 		const XPlaneBase& base() const;
@@ -66,13 +58,25 @@ namespace Boolean
 		// predicates
 		Oriented_side orientation(const XPoint&) const;
         Oriented_side orientation(const cyPointT&) const;
-        bool has_on(const cyPointT& p) { return orientation(p) == ON_ORIENTED_BOUNDARY; }
+        bool has_on(const cyPointT& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
+        bool has_on(const XPoint& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
         bool idEquals(const XPlane& p) const { return std::abs(id) == std::abs(p.id); }
 
         void setId(int i) { assert(i >= 0); id = i + 1; }
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
         bool coplanar(const XPlane& p) const { return base().coplanar(p.base()); }
     protected:
+        XPlane(int i) : id(i) {
+#ifdef PREP_DEBUG_INFO
+            debug();
+#endif  
+        }
+        XPlane(int i, bool inv) : id(inv?i:-i) {
+#ifdef PREP_DEBUG_INFO
+            debug();
+#endif
+        }
+
 		int id; // id = (realId+1) * sign
 
 #ifdef PREP_DEBUG_INFO

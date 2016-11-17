@@ -36,20 +36,50 @@ namespace XR
 
 		const int nFace = off.nFaces;
 		const int nIdx = off.nFaces * 4;
-		int *idx = new int[nIdx];
+        std::vector<int> idx, tmpIds;
+        int iPtr = 0;
+        int nFacePlus = 0;
 		for (int i = 0; i < nFace; i++)
 		{
-			file >> idx[4*i];
-			assert(idx[4 * i] == 3);
-			for (int j = 1; j < 4; j++)
-				file >> idx[4*i+j];
+            int nD, tmpIdx;
+            file >> nD;
+            idx.push_back(3);
+            tmpIds.resize(nD);
+
+            for (int j = 0; j < nD; j++)
+            {
+                file >> tmpIdx;
+                tmpIds[j] = tmpIdx;
+            }
+
+            switch (nD)
+            {
+            case 3:
+                idx.insert(idx.end(), tmpIds.begin(), tmpIds.end());
+                break;
+            case 4:
+                idx.insert(idx.end(), tmpIds.begin(), tmpIds.begin() + 3);
+                idx.push_back(3);
+                idx.push_back(tmpIds[0]);
+                idx.push_back(tmpIds[2]);
+                idx.push_back(tmpIds[3]);
+                ++nFacePlus;
+                break;
+            default:
+                throw std::exception();
+            }
+            tmpIds.clear();
 		}
 
 		assert(file.good());
 		file.close();
 
+        off.nFaces += nFacePlus;
 		off.vertices.reset(v);
-		off.indices.reset(idx);
+
+        int *idxPtr = new int[idx.size()];
+        std::copy(idx.begin(), idx.end(), idxPtr);
+		off.indices.reset(idxPtr);
 
 		return true;
 	}
