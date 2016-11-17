@@ -135,6 +135,12 @@ extern "C"
 
 	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
+        if (meshes.size() > MAX_MESH_COUNT)
+        {
+            XLOG_FATAL << "Mesh number exceeds limit";
+            exit(-1);
+        }
+
 		MemoryManager* pMem = MemoryManager::getInstance();
         std::vector<MyVertex::Index> xmins;
 		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), xmins);
@@ -193,9 +199,6 @@ extern "C"
 
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
-
-        //for (auto& tmpEdge : xedges())
-            //assert(tmpEdge.neighbor == nullptr);
 
         XTIMER_HELPER(setClock("classify"));
         doClassification(pOctree, pCsg, meshes, csgResult, seed);

@@ -46,7 +46,7 @@ namespace Boolean
     {
 		friend class RegularMesh;
     public:
-		InsctData<FacePBI>* inscts = nullptr;
+		FaceInsctData* inscts = nullptr;
 
 		Triangle(uint32_t meshId, uint32_t i): IPolygon(3, i, meshId) {}
         ~Triangle();
@@ -62,7 +62,8 @@ namespace Boolean
         MyVertex::Index getTheOtherVertex(MyEdge::Index eId) const;
 
 		// search
-        uint32_t findVertex(const XPoint& pt, PosTag tag, uint32_t*&);
+        uint32_t findVertex(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*&);
+        uint32_t findNonFaceVertex(const XPoint& pt, PosTag tag, uint32_t*&);
 
 		// manipulate
 		void calcSupportingPlane();

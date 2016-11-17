@@ -12,7 +12,7 @@ int main()
 
     std::string expr;
     std::vector<std::string> names;
-    if (false)
+    if (true)
     {
         expr = "0+1";
         names.clear();
@@ -53,13 +53,41 @@ int main()
         names.push_back("../../models/box2.off");
         names.push_back("../../models/boxm1.off");
         test(names, expr, "D:/result7.off");
+
+        expr = "0+1+2";
+        names.clear();
+        names.push_back("../../models/box1.off");
+        names.push_back("../../models/box2.off");
+        names.push_back("../../models/box3.off");
+        test(names, expr, "D:/result8.off");
+
+        expr = "0*1";
+        names.clear();
+        names.push_back("../../models/box1.off");
+        names.push_back("../../models/tetrahedron.off");
+        test(names, expr, "D:/result9.off");
+
     }
 
-    expr = "0+1+2";
+    expr = "0";
+    char buffer[20];
+    for (int i = 1; i < 25; i++)
+    {
+        expr += "+";
+        expr += itoa(i, buffer, 10);
+    }
+
+    for (int i = 25; i < 50; i++)
+    {
+        expr += "-";
+        expr += itoa(i, buffer, 10);
+    }
+
     names.clear();
-    names.push_back("../../models/box1.off");
-    names.push_back("../../models/box2.off");
-    names.push_back("../../models/box3.off");
+    for (int i = 0; i < 50; i++)
+    {
+        names.push_back("D:\Codes\Boolean2016\exps\data\ref_timing\t1_0.off");
+    }
     test(names, expr, "D:/result.off");
 
     system("pause");

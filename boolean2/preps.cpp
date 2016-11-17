@@ -54,12 +54,22 @@ namespace Boolean
     {
         xplanes().emplace_back(p, q, r);
         setId(xplanes().size()-1);
-        assert(has_on(p));
-        assert(has_on(q));
-        assert(has_on(r));
 #ifdef PREP_DEBUG_INFO
         debug();
 #endif
+        assert(has_on(p));
+        assert(has_on(q));
+        assert(has_on(r));
+    }
+
+    XPlane::XPlane(const XLine & l, const cyPointT& p)
+    {
+        xplanes().emplace_back(l, p);
+        setId(xplanes().size() - 1);
+#ifdef PREP_DEBUG_INFO
+        debug();
+#endif
+        assert(has_on(p));
     }
 
     const XPlaneBase & XPlane::base() const
@@ -191,6 +201,11 @@ namespace Boolean
         return sign(m_planes[0], m_planes[1], input);
     }
 
+    XPlane XLine::pickPositiveVertical(const cyPointT & p) const
+    {
+        return XPlane(*this, p);
+    }
+
     XPlane XLine::pickPositiveVertical(const XPoint & p) const
     {
         for (int j = 0; j < 3; j++)
@@ -204,6 +219,33 @@ namespace Boolean
                 return p.plane(j).opposite();
         }
         throw std::exception("cannnot find a proper plane");
+    }
+
+    cyPointT XLine::approxNormal() const
+    {
+        vec3 normal;
+        vec3_mul_cross(normal, m_planes[0].data(), m_planes[1].data());
+        return cyPointT(normal);
+    }
+
+    XPlaneBase::XPlaneBase(const XLine & l, const cyPointT & p)
+    {
+        cyPointT approxNormal = l.approxNormal();
+        int maxIndex = 0;
+        Real maxVal = std::abs(approxNormal.x);
+
+        for (int i = 1; i < 3; i++)
+        {
+            if (std::abs(approxNormal.y) > maxVal)
+            {
+                maxIndex = i;
+                maxVal = std::abs(approxNormal[i]);
+            }
+        }
+
+        for (int i = 0; i < 3; i++) m_data[i] = 0;
+        m_data[maxIndex] = std::copysign(1.0, approxNormal[maxIndex]);
+        m_data[3] = m_data[maxIndex] > 0? -p[maxIndex]: p[maxIndex];
     }
 
     XPlaneBase::XPlaneBase(const cyPointT &p, const cyPointT &q, const cyPointT & r)

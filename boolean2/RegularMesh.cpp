@@ -307,29 +307,33 @@ namespace Boolean
         }
         throw std::exception("cannot find edge");
     }
-
-    uint32_t Triangle::findVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    uint32_t Triangle::findVertex(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*& slot)
     {
-        InsctData<EdgePBI> **is;
+        assert(tag == INNER);
+        if (!inscts) inscts = new FaceInsctData;
+        slot = inscts->point(pt, eIdx);
+        return *slot;
+    }
+
+
+    uint32_t Triangle::findNonFaceVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    {
+        EdgeInsctData **is;
         switch (tag)
         {
-        case INNER:
-            if (!inscts) inscts = new InsctData<FacePBI>;
-            slot = inscts->point(pt);
-            return *slot;
         case EDGE_0:
             is = &xedge(eIds[0]).inscts;
-            if (!*is) *is = new InsctData<EdgePBI>;
+            if (!*is) *is = new EdgeInsctData;
             slot = (*is)->point(pt);
             return *slot;
         case EDGE_1:
             is = &xedge(eIds[1]).inscts;
-            if (!*is) *is = new InsctData<EdgePBI>;
+            if (!*is) *is = new EdgeInsctData;
             slot = (*is)->point(pt);
             return *slot;
         case EDGE_2:
             is = &xedge(eIds[2]).inscts;
-            if (!*is) *is = new InsctData<EdgePBI>;
+            if (!*is) *is = new EdgeInsctData;
             slot = (*is)->point(pt);
             return *slot;
         case VER_0:

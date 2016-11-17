@@ -18,11 +18,6 @@ namespace Boolean
             MyVertex::Index id;
         };
 
-        bool pred(const PlaneVertex &a, const PlaneVertex &b)
-        {
-            return a.id == b.id;
-        }
-
         // 用于传到sortObj里面去的辅助结构
         struct EdgeAuxiliaryStructure
         {
@@ -122,8 +117,8 @@ namespace Boolean
 
             if (tri->inscts)
             {
-                for (auto vId : tri->inscts->points)
-                    m_nodes[vId] = node;
+                for (auto v : tri->inscts->points)
+                    m_nodes[v.vId] = node;
             }
 
             edge.dir = D_SEQ;
@@ -203,8 +198,8 @@ namespace Boolean
         {
             for (int i = 1; i < vec.size(); i++)
             {
-                if (!sortObj(vec[i - 1], vec[i]) && sortObj(vec[i], vec[i-1]))
-                      return false;
+                if (!sortObj(vec[i - 1], vec[i]) && sortObj(vec[i], vec[i - 1]))
+                    return false;
             }
             return true;
         }
@@ -292,7 +287,7 @@ namespace Boolean
                         nTarget->insert(nTarget->end(), nSourse.begin(), nSourse.end());
                     }
                 }
-                 
+
                 spoly->sPlane = mp_tri->supportingPlane();
                 pMem->addSubPolygon(spoly);
             }
@@ -307,7 +302,7 @@ namespace Boolean
 
             auto sp = pTG->mp_tri->supportingPlane();
             XPlane ep[2] = { ei.prep, ej.prep };
-            
+
             if (ei.startVertex() != node)
                 ep[0].inverse();
 
@@ -340,14 +335,14 @@ namespace Boolean
 
         struct FacePBITessData
         {
-            decltype(InsctData<FacePBI>::inscts)::mapped_type::iterator ptr;
-            decltype(InsctData<FacePBI>::inscts)::mapped_type* pContainer = nullptr;
+            decltype(FaceInsctData::inscts)::mapped_type::iterator ptr;
+            decltype(FaceInsctData::inscts)::mapped_type* pContainer = nullptr;
 
             std::vector<PlaneVertex> points;
         };
     }
 
-    void InsctData<EdgePBI>::refine(void* pData)
+    void EdgeInsctData::refine(void* pData)
     {
         if (isRefined()) return;
 
@@ -439,7 +434,121 @@ namespace Boolean
         bRefined = true;
     }
 
-    void removeOverlapPBI(InsctData<FacePBI>* thiz)
+    bool checkIsolatedPart(Triangle* pTri)
+    {
+        struct ColorVertex
+        {
+            std::set<MyVertex::Index> neighbors;
+            int color = -1;
+        } defaultCV;
+
+        FaceInsctData* thiz = pTri->inscts;
+        // initialize the graph
+        std::map<MyVertex::Index, ColorVertex> data;
+        for (auto& v : thiz->points)
+            data[v.vId] = defaultCV;
+
+        for (auto& pbiSet : thiz->inscts)
+        {
+            for (FacePBI& fPbi : pbiSet.second)
+            {
+                data[fPbi.ends[0]].neighbors.insert(fPbi.ends[1]);
+                data[fPbi.ends[1]].neighbors.insert(fPbi.ends[0]);
+            }
+        }
+
+        // init vertex set
+        std::set<MyVertex::Index> edgeVertices;
+        for (int i = 0; i < 3; i++)
+        {
+            edgeVertices.insert(pTri->vertexId(i));
+            MyEdge& edge = pTri->edge(i);
+            if (!edge.inscts) continue;
+            for (MyVertex::Index vId : edge.inscts->points)
+                edgeVertices.insert(vId);
+        }
+
+        // colorization
+        int color = 0;
+        uint32_t isoCount = MAX_MESH_COUNT;
+        bool isIsolated = false, boolRes = false;
+        std::stack<MyVertex::Index> vStack;
+        std::vector<MyVertex::Index> history;
+        for (auto& vItem : data)
+        {
+            if (vItem.second.color == -1)
+            {
+                ++color;
+                isIsolated = true;
+                assert(vStack.empty());
+                vStack.push(vItem.first);
+                while (!vStack.empty())
+                {
+                    MyVertex::Index curVId = vStack.top();
+                    vStack.pop();
+                    auto& curV = data[curVId];
+                    if (curV.color != -1) continue;
+
+                    history.push_back(curVId);
+                    if (edgeVertices.find(curVId) != edgeVertices.end())
+                        isIsolated = false;
+
+                    curV.color = color;
+                    for (MyVertex::Index vId : curV.neighbors)
+                    {
+                        if (data[vId].color == -1)
+                            vStack.push(vId);
+                    }
+                }
+
+                if (isIsolated)
+                {
+                    MyVertex::Index chooseVertex = INVALID_UINT32;
+                    MyEdge::SIndex eId = -1;
+                    for (MyVertex::Index vId : history)
+                    {
+                        for (auto &v : thiz->points)
+                        {
+                            if (v.vId == vId)
+                            {
+                                chooseVertex = vId;
+                                eId = v.eId;
+                                break;
+                            }
+                        }
+
+                        if (eId != -1) break;
+                    }
+
+                    MyEdge& crossEdgeRef = xedge(eId);
+                    FacePBI fPbi;
+                    fPbi.ends[0] = pTri->vertexId(0);
+                    fPbi.ends[1] = chooseVertex;
+                    fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
+                        xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
+
+                    XLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                    fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
+                    fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
+                    assert(line.dot(fPbi.pends[0]) > 0);
+                    assert(line.dot(fPbi.pends[1]) > 0);
+                    if (line.linearOrderNoCheck(fPbi.pends[0], fPbi.pends[1]) < 0)
+                    {
+                        std::swap(fPbi.ends[0], fPbi.ends[1]);
+                        std::swap(fPbi.pends[0], fPbi.pends[1]);
+                    }
+
+                    assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
+                    thiz->inscts[isoCount++].push_back(fPbi);
+                    boolRes = true;
+                }
+                history.clear();
+            }
+        }
+        return boolRes;
+    }
+
+    void removeOverlapPBI(FaceInsctData * thiz)
     {
         std::map<MyVertex::Index, std::set<FacePBI*>> data;
         std::vector<decltype(thiz->inscts[0].begin())> garbage;
@@ -449,14 +558,14 @@ namespace Boolean
             {
                 FacePBI& pbi = *pbiItr;
                 bool found = false;
-                for (auto alreadyHere : data[pbi.ends[0]])
+                for (auto alreadyHere : data[pbi.ends[0]]) // search in current graph
                 {
                     if (alreadyHere->ends[0] == pbi.ends[1] ||
-                        alreadyHere->ends[1] == pbi.ends[1])
+                        alreadyHere->ends[1] == pbi.ends[1]) // if has
                     {
                         for (NeighborInfo& nInfo : pbi.neighbor)
                         {
-                            bool unique = true;
+                            bool unique = true; // search if the neighInfo is already there, == std::find
                             for (NeighborInfo& nInfo2 : alreadyHere->neighbor)
                             {
                                 if (nInfo.neighborMeshId == nInfo.neighborMeshId)
@@ -485,7 +594,7 @@ namespace Boolean
                 data[pbi.ends[0]].insert(&pbi);
                 data[pbi.ends[1]].insert(&pbi);
             }
-            
+
             for (auto& pbiItr : garbage)
                 pbiSet.second.erase(pbiItr);
             garbage.clear();
@@ -499,13 +608,9 @@ namespace Boolean
         return res;
     }
 
-    void InsctData<FacePBI>::refine(void* pData)
+    void FaceInsctData::resolveIntersection(Triangle* pTri)
     {
-        removeOverlapPBI(this);
-        Triangle* pTri = reinterpret_cast<Triangle*>(pData);
         XPlane triSp = pTri->supportingPlane();
-        if (isRefined() || inscts.size() < 2) return;
-
         std::map<IndexPair, std::shared_ptr<FacePBITessData>> tessData;
         for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
         {
@@ -528,11 +633,11 @@ namespace Boolean
                             {
                                 XLine line(triSp, pbi.vertPlane);
                                 assert(line.dot(pbi2.vertPlane) == 0.);
-                                Real dotRes = line.dot(pbi2.pends[0]) > 0;
+                                Real dotRes = line.dot(pbi2.pends[0]);
                                 assert(dotRes != 0.);
-                                bool inverseLine = dotRes > 0? false : true;
+                                bool inverseLine = dotRes > 0 ? false : true;
 
-                                PlaneVertex pbi2ends[2] = { {pbi2.pends[0], pbi2.ends[0]}, {pbi2.pends[1], pbi2.ends[1]} };
+                                PlaneVertex pbi2ends[2] = { { pbi2.pends[0], pbi2.ends[0] },{ pbi2.pends[1], pbi2.ends[1] } };
                                 if (inverseLine)
                                 {
                                     pbi2ends[0].plane.inverse();
@@ -614,7 +719,7 @@ namespace Boolean
                                     XPoint newPoint(triSp, pbi.vertPlane, thirdPlane);
 
                                     uint32_t* newPos;
-                                    newPos = point(newPoint);
+                                    newPos = point(newPoint, -1);
                                     std::vector<uint32_t*> vecs;
                                     vecs.push_back(newPos);
                                     uint32_t minVal = *newPos;
@@ -632,7 +737,7 @@ namespace Boolean
                                         {
                                             assert(neiInfo.type == NeighborInfo::Face);
                                             assert(neiInfo.pTrangle->inscts);
-                                            newPos = neiInfo.pTrangle->inscts->point(newPoint);
+                                            newPos = neiInfo.pTrangle->inscts->point(newPoint, -1);
                                         }
                                         if (*newPos < minVal)
                                             minVal = *newPos;
@@ -651,7 +756,7 @@ namespace Boolean
                                         {
                                             assert(neiInfo.type == NeighborInfo::Face);
                                             assert(neiInfo.pTrangle->inscts);
-                                            newPos = neiInfo.pTrangle->inscts->point(newPoint);
+                                            newPos = neiInfo.pTrangle->inscts->point(newPoint, -1);
                                         }
                                         minVal = *newPos;
                                         vecs.push_back(newPos);
@@ -735,7 +840,10 @@ namespace Boolean
 
             auto &inserted = pData->points;
             std::sort(inserted.begin(), inserted.end(), orderObj);
-            inserted.erase(std::unique(inserted.begin(), inserted.end(), pred), inserted.end());
+            inserted.erase(std::unique(inserted.begin(), inserted.end(),
+                [](const PlaneVertex &a, const PlaneVertex &b)->bool {
+                return a.id == b.id;
+            }), inserted.end());
 
             std::vector<FacePBI> newPbi(inserted.size() + 1, *pData->ptr);
             std::map<MyVertex::Index, uint32_t> idmap;
@@ -757,6 +865,19 @@ namespace Boolean
         }
 
         removeOverlapPBI(this);
+    }
+
+
+    void FaceInsctData::refine(void* pData)
+    {
+        removeOverlapPBI(this);
+        Triangle* pTri = reinterpret_cast<Triangle*>(pData);
+        if (!isRefined() && inscts.size() >= 2)
+            resolveIntersection(pTri);
+
+        if (checkIsolatedPart(pTri))
+            resolveIntersection(pTri);
+
         bRefined = true;
     }
 
@@ -778,7 +899,7 @@ namespace Boolean
                 else
                     data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
 
-                 if (pTri->edge(i).inscts)
+                if (pTri->edge(i).inscts)
                     pTri->edge(i).inscts->refine((void*)&data);
             }
 

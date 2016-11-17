@@ -39,37 +39,43 @@ namespace Boolean
         //std::list<Triangle*> pTris; // ≤ªø…÷ÿ∏¥
 	};
 
-	template <class PBI>
-    class InsctData
+    class EdgeInsctData
     {
     public:
-		typedef std::map<uint32_t, std::list<PBI>> PBIList;
-		typedef std::list<MyVertex::Index> VertexList;
+		typedef std::map<uint32_t, std::list<EdgePBI>> PBIList;
+		typedef std::vector<MyVertex::Index> VertexList;
 
 		void refine(void* pData);
         bool isRefined() const { return bRefined; }
         uint32_t* point(const XPoint&);
 
-    protected:
-        bool		bRefined = false;
-
 	public:
 		PBIList		inscts;
 		VertexList  points;
+
+    protected:
+        bool		bRefined = false;
+    };
+
+    class FaceInsctData
+    {
+    public:
+        struct Vertex { MyVertex::Index vId; MyEdge::SIndex eId; };
+        typedef std::map<uint32_t, std::list<FacePBI>> PBIList;
+        typedef std::vector<Vertex> VertexList;
+
+        void refine(void* pData);
+        bool isRefined() const { return bRefined; }
+        uint32_t* point(const XPoint&, MyEdge::SIndex eIdx);
+
+    public:
+        PBIList		inscts;
+        VertexList  points;
+
+    protected:
+        void resolveIntersection(Triangle* pTri);
+        bool		bRefined = false;
     };
 
     void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&);
-
-    template<class PBI>
-    inline uint32_t * InsctData<PBI>::point(const XPoint &p)
-    {
-        for (auto itr = points.begin(); itr != points.end(); itr++)
-        {
-            if (xvertex(*itr) == p)
-                return &*itr;
-        }
-
-        points.push_back(INVALID_UINT32);
-        return &points.back();
-    }
 }

@@ -193,4 +193,12 @@ namespace Boolean
             return p.orientation(v.ppoint());
         else return p.orientation(v.point());
     }
+
+    XPlane pickPositiveVertical(const XLine &l, const MyVertex & v)
+    {
+        if (v.isPlaneRep())
+            return l.pickPositiveVertical(v.ppoint());
+        else
+            return l.pickPositiveVertical(v.point());
+    }
 }

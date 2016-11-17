@@ -299,8 +299,25 @@ namespace Boolean
 		auto pMem = MemoryManager::getInstance();
 		uint32_t id[2];
         uint32_t *slots[2];
-		id[0] = fh[0]->findVertex(pt, tag[0], slots[0]);
-		id[1] = fh[1]->findVertex(pt, tag[1], slots[1]);
+
+        MyEdge::Index eIdx = INVALID_UINT32;
+        if (tag[0] == INNER)
+        {
+            assert(tag[1] != INNER);
+            if (is_edge(tag[1])) eIdx = fh[1]->edgeId(edge_idx(tag[1]));
+            else eIdx = fh[1]->edgeId((vertex_idx(tag[1]) + 1) % 3);
+            id[0] = fh[0]->findVertex(pt, eIdx, tag[0], slots[0]);
+        }
+        else id[0] = fh[0]->findNonFaceVertex(pt, tag[0], slots[0]);
+
+        if (tag[1] == INNER)
+        {
+            assert(tag[0] != INNER);
+            if (is_edge(tag[0])) eIdx = fh[0]->edgeId(edge_idx(tag[0]));
+            else eIdx = fh[0]->edgeId((vertex_idx(tag[0]) + 1) % 3);
+            id[1] = fh[1]->findVertex(pt, eIdx, tag[1], slots[1]);
+        }
+		else id[1] = fh[1]->findNonFaceVertex(pt, tag[1], slots[1]);
 
         if (id[0] == id[1])
         {
@@ -438,7 +455,7 @@ namespace Boolean
                     assert(edgeLine.linearOrder(epbi.pends[0], epbi.pends[1]) > 0);
 
 					if (!edge->inscts)
-						edge->inscts = new InsctData<EdgePBI>;
+						edge->inscts = new EdgeInsctData;
 					edge->inscts->inscts[meshId[i]].push_back(epbi);
 				}
 				else
@@ -467,7 +484,7 @@ namespace Boolean
                     assert(XLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
 
 					if (!t[i]->inscts)
-						t[i]->inscts = new InsctData<FacePBI>;
+						t[i]->inscts = new FaceInsctData;
 					t[i]->inscts->inscts[meshId[i2]].push_back(fpbi);
 				}
 			}
@@ -544,4 +561,30 @@ namespace Boolean
 			}
 		}
 	}
+
+    uint32_t * EdgeInsctData::point(const XPoint & p)
+    {
+        for (auto itr = points.begin(); itr != points.end(); itr++)
+        {
+            if (xvertex(*itr) == p)
+                return &*itr;
+        }
+
+        points.push_back(INVALID_UINT32);
+        return &points.back();
+    }
+
+
+    uint32_t * FaceInsctData::point(const XPoint &p, MyEdge::SIndex eIdx)
+    {
+        for (auto itr = points.begin(); itr != points.end(); itr++)
+        {
+            if (xvertex(itr->vId) == p)
+                return &itr->vId;
+        }
+        Vertex v{ INVALID_UINT32, eIdx };
+        points.push_back(v);
+        return &points.back().vId;
+    }
+
 }

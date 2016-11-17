@@ -1,5 +1,4 @@
 #pragma once
-#define PREP_DEBUG_INFO
 #ifdef PREP_DEBUG_INFO
 #include <CGAL/intersection_3.h>
 #endif
@@ -13,10 +12,8 @@ namespace Boolean
 	{
 	public:
         XPlaneBase() {}
-		XPlaneBase(Real *);
-		XPlaneBase(Real, Real, Real, Real);
-
-		XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
+        XPlaneBase(const XLine& l, const cyPointT& p);
+        XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
         void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
         Oriented_side orientation(const cyPointT&) const;
         bool coplanar(const XPlaneBase&) const;
@@ -51,6 +48,7 @@ namespace Boolean
 #endif
         }
         XPlane(const cyPointT& p, const cyPointT& q, const cyPointT& r);
+        XPlane(const XLine& l, const cyPointT& p);
 
 #ifdef PREP_DEBUG_INFO
         void debug() { m_data = data(); }
@@ -102,7 +100,9 @@ namespace Boolean
         int linearOrder(const cyPointT& a, const cyPointT& b) const;
         void makePositive(XPlane& input) const;
         Real dot(const XPlane&) const;
+        XPlane pickPositiveVertical(const cyPointT& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
         XPlane pickPositiveVertical(const XPoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
+        cyPointT approxNormal() const;
 
 #ifdef PREP_DEBUG_INFO
     protected:

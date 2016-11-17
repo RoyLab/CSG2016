@@ -47,6 +47,7 @@ namespace Boolean
     {
     public:
         typedef uint32_t Index;
+        typedef int32_t SIndex;
 
         class ConstFaceIterator
         {
@@ -99,7 +100,7 @@ namespace Boolean
     public:
         MyVertex::Index ends[2];
         std::vector<NeighborInfo>* neighbor = nullptr;
-        InsctData<EdgePBI>* inscts = nullptr;
+        EdgeInsctData* inscts = nullptr;
         bool noOverlapNeighbor = false;
 
         MyEdge(MyVertex::Index a, MyVertex::Index b) : ends{ a, b } {}
@@ -173,4 +174,5 @@ namespace Boolean
 
     Oriented_side orientation(const XPlane& p, const MyVertex& v);
     static inline Oriented_side orientation(const XPlane& p, MyVertex::Index v) { return orientation(p, xvertex(v)); }
+    XPlane pickPositiveVertical(const XLine&, const MyVertex&);
 }
