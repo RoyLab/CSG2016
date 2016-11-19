@@ -11,13 +11,15 @@ namespace Boolean
 		err3x3B1, err3x3B2, err4x4A0, err4x4A1, err4x4A2, err4x4A3
 		, err4x4B;
 
-	uint32_t exactinit(double dieta)
+	uint32_t exactinit(double logDieta)
 	{
-        uint32_t precision = static_cast<uint32_t>((53 - 3 + dieta * 2) / 3);
-        FP_FACTOR = std::pow(2, precision - 1);
-        double edge = precision + 1 - dieta;
-        FP_EDGE_FACTOR = std::pow(2, int(floor(edge)) - 1);
-        FP_EDGE_CHECK = std::pow(2, int(ceil(edge)) - 1);
+        // here is the lower bound of dieta, logDieta = 0 means the
+        // edge length can be as large as boundingbox axis
+        uint32_t L = static_cast<uint32_t>((53 - 3 + logDieta * 2) / 3);
+        FP_FACTOR = std::pow(2, L - 1);
+        double K = L + 1 - logDieta;
+        FP_EDGE_FACTOR = std::pow(2, int(floor(K)) - 1);
+        FP_EDGE_CHECK = std::pow(2, int(ceil(K)) - 1);
 
 		REAL half;
 		REAL check, lastcheck;
@@ -59,6 +61,6 @@ namespace Boolean
 		err4x4A3 = epsilon * epsilon * (1.0 + 16.0 * epsilon);
 
 		err4x4B = epsilon * epsilon * (1.0 + 16.0 * epsilon);
-        return precision;
+        return L;
 	}
 }

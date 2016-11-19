@@ -271,7 +271,7 @@ namespace Boolean
 	extern REAL err3dot, err2x2, 
 		err3x3A0, err3x3A1, err3x3A2, err3x3B1, err3x3B2,
 		err4x4A0, err4x4A1, err4x4A2, err4x4A3, err4x4B;
-    uint32_t exactinit(double dieta);
+    uint32_t exactinit(double logDieta);
 
 	/*****************************************************************************/
 	/*                                                                           */

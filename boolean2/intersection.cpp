@@ -2,6 +2,7 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#include <xlogger.h>
 #include "adaptive.h"
 #include "intersection.h"
 #include "UndirectedGraph.hpp"
@@ -494,6 +495,9 @@ namespace Boolean
 
     bool cgalTriTriCheck(Triangle* t0, Triangle* t1)
     {
+#ifdef XR_PROFILE
+        XLOG_FATAL << "assert is not turnoff!";
+#endif
         CGALTriangle tr0 = convertToCGALTriangle(t0);
         CGALTriangle tr1 = convertToCGALTriangle(t1);
 

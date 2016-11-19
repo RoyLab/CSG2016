@@ -9,10 +9,9 @@ int main()
 
     //names.push_back("../../models/ball1.off");
     //names.push_back("../../models/ball2.off");
-
     std::string expr;
     std::vector<std::string> names;
-    if (false)
+    if (true)
     {
         expr = "0+1";
         names.clear();
@@ -91,6 +90,6 @@ int main()
     }
     test(names, expr, "D:/result.off");
 
-    //system("pause");
+    system("pause");
     return 0;
 }

@@ -133,10 +133,10 @@ namespace Boolean
 
 	class XPoint
 	{
-	public:
-		XPoint() {}
-		XPoint(const XPlane& a, const XPlane& b, const XPlane& c):
-			m_planes{ a, b, c } {
+    public:
+        XPoint(const XPlane& a, const XPlane& b, const XPlane& c) :
+            m_planes{ a, b, c } {
+            //m_pos = convertToPoint<Depeck>(a, b, c);
 #ifdef PREP_DEBUG_INFO
             auto res = convertToPoint<Depick>(a, b, c);
             coord[0] = res.x();
@@ -144,7 +144,7 @@ namespace Boolean
             coord[2] = res.z();
 #endif
         }
-
+	public:
         XPlane& plane(int i) { return m_planes[i]; }
         const XPlane& plane(int i) const { return m_planes[i]; }
         bool operator==(const XPoint& p) const;
@@ -162,6 +162,7 @@ namespace Boolean
 #endif
 
 	protected:
+        //CGAL::Point_3<Depeck> m_pos;
 		XPlane m_planes[3];
 	};
 

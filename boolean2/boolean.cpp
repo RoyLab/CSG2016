@@ -105,14 +105,18 @@ extern "C"
 
 	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
 	{
-        const double dieta = 1;
-        const int precision = exactinit(dieta);
-        initContext();
+        XLOG_INFO << "\n***Test Begin***";
+        XLOG_INFO << names.size() << " meshes:";
+        for (int i = 0; i < names.size(); i++)
+            XLOG_INFO << names[i];
 
-        //test1();
-        //test2();
-        //test3();
-        //test4();
+#ifdef XR_PROFILE
+        XLOG_INFO << "______tHIS iS pROFILING vERTION_____";
+#endif
+
+        const double logDieta = 0;
+        exactinit(logDieta);
+        initContext();
 
 		std::vector<RegularMesh*> meshList(names.size());
 		for (int i = 0; i < names.size(); i++)

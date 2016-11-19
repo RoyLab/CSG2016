@@ -286,6 +286,7 @@ namespace Boolean
 
     bool XPoint::operator==(const XPoint &p) const
     {
+        //return m_pos == p.m_pos;
         return plane(0).orientation(p) == ON_ORIENTED_BOUNDARY
             && plane(1).orientation(p) == ON_ORIENTED_BOUNDARY
             && plane(2).orientation(p) == ON_ORIENTED_BOUNDARY;
