@@ -7,10 +7,13 @@
 #include <fstream>
 #include <cassert>
 
-//#define XR_DEBUG
+#ifdef _DEBUG
+#define XR_DEBUG
+#endif
+
 //#define USE_CGAL_PREDICATES
-//#define USE_CGAL_PREDICATES_CHECK
-//#define PREP_DEBUG_INFO
+#define USE_CGAL_PREDICATES_CHECK
+#define PREP_DEBUG_INFO
 
 //#define NDEBUG
 

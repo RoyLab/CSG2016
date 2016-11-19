@@ -421,6 +421,12 @@ namespace Boolean
                             //assert(curEdge.faceCount() >= 4); // 如果这是一个相交而成的边，那么一定会有超过4个polygon在周围
                             for (; fItr; ++fItr)
                             {
+                                if (!fItr.face())
+                                {
+                                    XLOG_ERROR << "Edge with less than two neighboring faces.";
+                                    continue;
+                                }
+
                                 if (!fItr.face()->isValid()) continue;
 
                                 tmpSeed.edgeId = edges[i];
@@ -467,6 +473,11 @@ namespace Boolean
                         {
                             for (; fItr; ++fItr)
                             {
+                                if (!fItr.face())
+                                {
+                                    XLOG_ERROR << "Edge with less than two neighboring faces.";
+                                    continue;
+                                }
                                 if (!fItr.face()->isValid() || fItr.face()->meshId() != curMeshId) continue;
                                 if (fItr.face()->mark < SEEDED2)
                                 {
