@@ -2,6 +2,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <xlogger.h>
 #include "xmemory.h"
 #include "RegularMesh.h"
 #include "intersection.h"
@@ -92,7 +93,7 @@ namespace Boolean
 
         public:
             TessGraph(const Triangle*);
-            void tessellate();
+            bool tessellate();
 
         protected:
             NodeMap m_nodes;
@@ -134,17 +135,22 @@ namespace Boolean
 
                 if (!e.inscts)
                 {
-                    assert(m_nodes.find(e.ends[0]) != m_nodes.end());
-                    assert(m_nodes.find(e.ends[1]) != m_nodes.end());
-                    edge.v[i0] = m_nodes.find(e.ends[0]);
-                    edge.v[i1] = m_nodes.find(e.ends[1]);
-                    edge.pbi = nullptr;
-                    m_edges.push_back(edge);
-                    assert(edge.checkPlaneOrientation(tri));
+                    auto findres0 = m_nodes.find(e.ends[0]);
+                    auto findres1 = m_nodes.find(e.ends[1]);
 
-                    edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
-                    edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                    if (findres0 != m_nodes.end() && findres1 != m_nodes.end())
+                    {
+                        edge.v[i0] = findres0;
+                        edge.v[i1] = findres1;
+                        edge.pbi = nullptr;
+                        m_edges.push_back(edge);
+                        assert(edge.checkPlaneOrientation(tri));
 
+                        edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
+                        edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                    }
+                    else XLOG_ERROR << "Cannot find vertex on tessellating triangle " 
+                        << tri->meshId() << '/' << tri->id();
                     continue;
                 }
 
@@ -152,21 +158,23 @@ namespace Boolean
                 {
                     for (auto& ePBI : set.second)
                     {
-                        assert(m_nodes.find(ePBI.ends[0]) != m_nodes.end());
-                        assert(m_nodes.find(ePBI.ends[1]) != m_nodes.end());
+                        auto findres0 = m_nodes.find(ePBI.ends[0]);
+                        auto findres1 = m_nodes.find(ePBI.ends[1]);
 
-                        edge.v[i0] = m_nodes.find(ePBI.ends[0]);
-                        edge.v[i1] = m_nodes.find(ePBI.ends[1]);
-                        assert(edge.checkPlaneOrientation(tri));
+                        if (findres0 != m_nodes.end() && findres1 != m_nodes.end())
+                        {
+                            edge.v[i0] = findres0;
+                            edge.v[i1] = findres1;
+                            assert(edge.checkPlaneOrientation(tri));
 
-                        edge.pbi = &ePBI;
-                        m_edges.push_back(edge);
+                            edge.pbi = &ePBI;
+                            m_edges.push_back(edge);
 
-                        assert(edge.v[0] != m_nodes.end());
-                        assert(edge.v[1] != m_nodes.end());
-
-                        edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
-                        edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                            edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
+                            edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                        }
+                        else XLOG_ERROR << "*Cannot find vertex on tessellating triangle "
+                            << tri->meshId() << '/' << tri->id();
                     }
                 }
             }
@@ -178,18 +186,24 @@ namespace Boolean
             {
                 for (auto& fPBI : set.second)
                 {
-                    assert(m_nodes.find(fPBI.ends[0]) != m_nodes.end());
-                    assert(m_nodes.find(fPBI.ends[1]) != m_nodes.end());
+                    auto findres0 = m_nodes.find(fPBI.ends[0]);
+                    auto findres1 = m_nodes.find(fPBI.ends[1]);
 
-                    edge.v[0] = m_nodes.find(fPBI.ends[0]);
-                    edge.v[1] = m_nodes.find(fPBI.ends[1]);
-                    edge.prep = fPBI.vertPlane;
-                    assert(edge.checkPlaneOrientation(tri));
+                    if (findres0 != m_nodes.end() && findres1 != m_nodes.end())
+                    {
+                        edge.v[0] = findres0;
+                        edge.v[1] = findres1;
 
-                    edge.pbi = &fPBI;
-                    m_edges.push_back(edge);
-                    edge.v[0]->second.edges.push_back(m_edges.size() - 1);
-                    edge.v[1]->second.edges.push_back(m_edges.size() - 1);
+                        edge.prep = fPBI.vertPlane;
+                        assert(edge.checkPlaneOrientation(tri));
+
+                        edge.pbi = &fPBI;
+                        m_edges.push_back(edge);
+                        edge.v[0]->second.edges.push_back(m_edges.size() - 1);
+                        edge.v[1]->second.edges.push_back(m_edges.size() - 1);
+                    }
+                    else XLOG_ERROR << "*Cannot find vertex on tessellating triangle "
+                        << tri->meshId() << '/' << tri->id();
                 }
             }
         }
@@ -204,8 +218,15 @@ namespace Boolean
             return true;
         }
 
-        void TessGraph::tessellate()
+        bool TessGraph::tessellate()
         {
+            bool error;
+            if (m_edges.size() < 3 || m_nodes.size() < 3)
+            {
+                XLOG_ERROR << "Invalid tess graph, triangle" << mp_tri->meshId() << "/" << mp_tri->id();
+                return false;
+            }
+
             // sort all node by circular order
             SortObject sortObj = { this };
             for (auto& nPair : m_nodes)
@@ -218,13 +239,12 @@ namespace Boolean
 
             // tessellate
             typedef uint32_t VeretxIndex;
-            NodeMap::iterator chead, cend;
+            NodeMap::iterator chead, curV;
             EdgeIndex cedge;
             std::stack<EdgeIndex> edgeStack;
             std::vector<uint32_t> loop;
             std::vector<EdgeIndex> loopEdge;
             edgeStack.push(0);
-            cend = m_edges[0].v[1];
             auto pMem = MemoryManager::getInstance();
 
             while (!edgeStack.empty())
@@ -243,31 +263,42 @@ namespace Boolean
 
                 loop.clear();
                 loopEdge.clear();
-                loop.push_back((eRef.dir == D_SEQ) ? eRef.v[0]->first : eRef.v[1]->first);
-                loopEdge.push_back(cedge);
+                error = false;
 
                 chead = (eRef.dir == D_SEQ) ? eRef.v[0] : eRef.v[1];
-                cend = (eRef.dir == D_SEQ) ? eRef.v[1] : eRef.v[0];
-                while (cend != chead)
+                curV = (eRef.dir == D_SEQ) ? eRef.v[1] : eRef.v[0];
+
+                loop.push_back(chead->first);
+                loopEdge.push_back(cedge);
+
+                while (curV != chead)
                 {
-                    cedge = cend->second.findnext(cedge);
+                    cedge = curV->second.findnext(cedge);
                     Edge& newEdge = m_edges[cedge];
 
                     Direction dir = D_SEQ;
-                    if (newEdge.v[0] != cend)
+                    if (newEdge.v[0] != curV)
                         dir = D_INV;
 
-                    assert(newEdge.dir & dir);
+                    assert(newEdge.dir > 0 && (newEdge.dir & dir));
+                    if (newEdge.dir < 1)
+                    {
+                        XLOG_ERROR << "Tessellation error: " << mp_tri->meshId() << "/" << mp_tri->id();
+                        error = true;
+                        break;
+                    }
                     newEdge.dir = Direction(newEdge.dir - dir);
-                    loop.push_back(cend->first);
+                    loop.push_back(curV->first);
                     loopEdge.push_back(cedge);
 
                     auto& eRef = m_edges[cedge];
-                    cend = (dir == D_SEQ) ? newEdge.v[1] : newEdge.v[0];
+                    curV = (dir == D_SEQ) ? newEdge.v[1] : newEdge.v[0];
 
                     if (newEdge.dir != D_NAN)
                         edgeStack.push(cedge);
                 }
+
+                if (error) continue;
 
                 // add subpolygon
                 const uint32_t n = loop.size();
@@ -291,6 +322,7 @@ namespace Boolean
                 spoly->sPlane = mp_tri->supportingPlane();
                 pMem->addSubPolygon(spoly);
             }
+            return true;
         }
 
         bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
@@ -838,11 +870,11 @@ namespace Boolean
         {
             for (MyVertex::Index strayV : *strayVertices)
             {
+                if (!xvertex(strayV).isPlaneRep()) continue; // 不合理，但是先这样吧
                 for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
                 {
                     for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
                     {
-                        assert(xvertex(strayV).isPlaneRep());
                         FacePBI& fPbi = *pbiItr;
                         if (fPbi.vertPlane.has_on(xvertex(strayV).ppoint()))
                         {
@@ -945,8 +977,8 @@ namespace Boolean
             }
 
             TessGraph tg(pTri);
-            tg.tessellate();
-            pTri->invalidate();
+            if (tg.tessellate())
+                pTri->invalidate();
         }
     }
 }

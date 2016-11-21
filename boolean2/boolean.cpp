@@ -113,9 +113,6 @@ extern "C"
 #ifdef XR_PROFILE
         XLOG_INFO << "______tHIS iS pROFILING vERTION_____";
 #endif
-
-        const double logDieta = 0;
-        exactinit(logDieta);
         initContext();
 
 		std::vector<RegularMesh*> meshList(names.size());
@@ -149,6 +146,11 @@ extern "C"
         std::vector<MyVertex::Index> xmins;
 		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), xmins);
 
+        double logDieta = -2;
+        if (pMem->points.size() > 1e6) logDieta = -5;
+        else if (pMem->points.size() < 1000) logDieta = 0;
+        exactinit(logDieta);
+
 		cyPointT center, scale;
 		for (int i = 0; i < 3; i++)
 		{
@@ -156,10 +158,10 @@ extern "C"
 			scale[i] = aabb.maxVal(i) - aabb.minVal(i);
 		}
 
-		for (auto &pt: pMem->points)
+		for (int i = 0; i < pMem->points.size(); i++)
 		{
-			XR::normalizeCoords(center, scale, pt);
-			fp_filter(reinterpret_cast<Real*>(&pt));
+			XR::normalizeCoords(center, scale, pMem->points[i]);
+			fp_filter(reinterpret_cast<Real*>(&pMem->points[i]));
 		}
 
 		for (auto mesh : meshes)

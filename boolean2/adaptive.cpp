@@ -1,5 +1,6 @@
 #include "precompile.h"
 #include "adaptive.h"
+#include <xlogger.h>
 
 namespace Boolean
 {
@@ -15,11 +16,13 @@ namespace Boolean
 	{
         // here is the lower bound of dieta, logDieta = 0 means the
         // edge length can be as large as boundingbox axis
-        uint32_t L = static_cast<uint32_t>((53 - 3 + logDieta * 2) / 3);
+        uint32_t L = static_cast<uint32_t>((53 - 3 - logDieta * 2) / 3);
         FP_FACTOR = std::pow(2, L - 1);
         double K = L + 1 - logDieta;
         FP_EDGE_FACTOR = std::pow(2, int(floor(K)) - 1);
         FP_EDGE_CHECK = std::pow(2, int(ceil(K)) - 1);
+
+        XLOG_DEBUG << "Using precision " << L << ". factor: " << FP_FACTOR;
 
 		REAL half;
 		REAL check, lastcheck;

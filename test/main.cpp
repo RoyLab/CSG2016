@@ -4,14 +4,14 @@
 #include <sstream>
 #include "boolean.h"
 
-std::istringstream getValidStream(std::ifstream& file)
+std::stringstream getValidStream(std::ifstream& file)
 {
     std::string line;
     while (file)
     {
         std::getline(file, line);
         if (line.size() && line[0] != ';')
-            return (std::istringstream(line));
+            return (std::stringstream(line));
     }
 }
 
@@ -21,9 +21,10 @@ int main()
     std::vector<std::string> names;
 
     std::ifstream configFile(".\\mycsg.ini");
+    //std::ifstream configFile("D:\\Codes\\Boolean2016\\exps\\mycsg.ini");
     if (!configFile.is_open())
     {
-        if (false)
+        if (true)
         {
             expr = "0+1";
             names.clear();
@@ -106,11 +107,14 @@ int main()
         names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/buddha.off");
         names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/lion.off");
         test(names, expr, "D:/result.off");
+
+        system("pause");
+        return 0;
     }
 
     int N = 0, nMesh;
     std::string name, output, line;
-    std::istringstream buffer;
+    std::stringstream buffer;
 
     buffer = getValidStream(configFile);
     buffer >> N;
@@ -124,12 +128,51 @@ int main()
         {
             buffer = getValidStream(configFile);
             buffer >> name;
-            names.push_back(name);
+            if (name[0] == '@')
+            {
+                --j;
+                name = name.substr(1, name.length());
+                buffer = getValidStream(configFile);
+                int s, e;
+                char nameBuffer[512];
+                buffer >> s >> e;
+                for (int k = s; k <= e; k++, j++)
+                {
+                    sprintf(nameBuffer, name.c_str(), k);
+                    names.push_back(nameBuffer);
+                }
+            }
+            else names.push_back(name);
         }
+        // expr
         buffer = getValidStream(configFile);
-        buffer >> expr;
+        char first = buffer.peek();
+        if (first == '@')
+        {
+            buffer.get();
+            expr = "0";
+            int num, count = 1;
+            std::string opstr;
+            char opch;
+            while (1)
+            {
+                buffer >> num >> opstr;
+                assert(opstr.size() == 1);
+                opch = opstr[0];
+                for (int j = 0; j < num; j++, count++)
+                {
+                    expr += opch;
+                    expr += std::to_string(count);
+                }
+                if (buffer.eof()) break;
+            }
+        }
+        else buffer >> expr;
+
+        // output
         buffer = getValidStream(configFile);
         buffer >> output;
+
         test(names, expr, output);
     }
     configFile.close();
