@@ -9,11 +9,11 @@
 
 #ifdef _DEBUG
 #define XR_DEBUG
+#define PREP_DEBUG_INFO
 #endif
 
 //#define USE_CGAL_PREDICATES
 //#define USE_CGAL_PREDICATES_CHECK
-//#define PREP_DEBUG_INFO
 
 #define NDEBUG
 

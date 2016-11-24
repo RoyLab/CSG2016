@@ -183,30 +183,22 @@ extern "C"
 		pOctree->build(meshes, cgalbbox, &intersectLeaves);
         XLOG_INFO << "build octree time: " << XTIMER_HELPER(milliseconds("octree")) << " ms";
         XLOG_INFO << "Number of triaabb test: " << xrcount;
-        XTIMER_HELPER(setClock("insct"));
 
+
+        XTIMER_HELPER(setClock("insct"));
         doIntersection(meshes, intersectLeaves);
         XLOG_INFO << "intersection test time: " << XTIMER_HELPER(milliseconds("insct")) << " ms";
 
-        MyVertex::Index seed = pickSeed(xmins);
-        //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
-
-#ifdef XR_DEBUG
-        int nOrigEdge = xedges().size();
-#endif
         XTIMER_HELPER(setClock("tess"));
         tessellation(meshes);
         XLOG_INFO << "tessellation time: " << XTIMER_HELPER(milliseconds("tess")) << " ms";
 
-#ifdef XR_DEBUG
-        for (int i = 0; i < nOrigEdge; i++)
-            assert(!xedge(i).neighbor || xedge(i).neighbor && xedge(i).inscts); // 如果有neighbor那么必然有inscts
-#endif
-
+        //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
         //meshes[0]->invCoords(center, scale);
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
 
         XTIMER_HELPER(setClock("classify"));
+        MyVertex::Index seed = pickSeed(xmins);
         doClassification(pOctree, pCsg, meshes, csgResult, seed);
         XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
         csgResult->invCoords(center, scale);
