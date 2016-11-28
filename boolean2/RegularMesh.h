@@ -46,13 +46,17 @@ namespace Boolean
     {
 		friend class RegularMesh;
     public:
-		FaceInsctData* inscts = nullptr;
+        typedef uint32_t LocalVertexId;
+        enum { INNER_PREFIX = 0, 
+            VER0_PREFIX = 0x1000, VER1_PREFIX = 0x2000, 
+            VER2_PREFIX = 0x3000, EDGE0_PREFIX = 0x4000, 
+            EDGE1_PREFIX = 0x5000, EDGE2_PREFIX = 0x6000
+        };
 
 		Triangle(uint32_t meshId, uint32_t i): IPolygon(3, i, meshId) {}
         ~Triangle();
 
 		// access
-		//const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
         cyPointT& point(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
@@ -64,29 +68,29 @@ namespace Boolean
 		// search
         uint32_t findVertex(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*&);
         uint32_t findNonFaceVertex(const XPoint& pt, PosTag tag, uint32_t*&);
+        LocalVertexId getFaceLocalId(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*&);
+        LocalVertexId getNonFaceLocalId(const XPoint& pt, PosTag tag, uint32_t*&);
+
 
 		// manipulate
 		void calcSupportingPlane();
 		void calcBoundingPlane();
-        template <class Container>
-        void addTo(Container& c);
 
         // state
-        bool isAdded4Tess() const { return added; }
         bool isValid() const { return bIsValid; }
         void invalidate() { bIsValid = false; }
         TYPE getType() const { return TRIANGLE; }
 
     protected:
-		//CGALTriangle cgalTri;
         uint32_t eIds[3];
         uint32_t vIds[3];
-
 		XPlane bPlanes[3];
-
-        bool added = false;
         bool bIsValid = true;
-	};
+
+    public:
+        bool bIsInsct = false;
+        FaceInsctData* inscts = nullptr;
+    };
 
 
     template <class CGALPointT>
@@ -123,6 +127,8 @@ namespace Boolean
 	public:
 		typedef IPolygon FaceT;
         std::vector<std::pair<uint32_t, uint32_t>> inverseMap;
+        typedef int SIndex;
+        typedef uint32_t Index;
 
 	protected:
 		static  MemoryManager* memmgr;

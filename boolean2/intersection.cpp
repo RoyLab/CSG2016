@@ -295,89 +295,42 @@ namespace Boolean
 		return INTERSECT_ON_LINE;
 	}
 
-	uint32_t addAndMerge(Triangle* fh[2], XPoint& pt, PosTag tag[2])
+	void addAndMerge(Triangle* fh[2], XPoint& pt, PosTag tag[2], Triangle::LocalVertexId* vId)
 	{
 		auto pMem = MemoryManager::getInstance();
-		uint32_t id[2];
         uint32_t *slots[2];
 
         MyEdge::Index eIdx = INVALID_UINT32;
-        if (tag[0] == INNER)
+        for (int i = 0; i < 2; i++)
         {
-            assert(tag[1] != INNER);
-            if (is_edge(tag[1])) eIdx = fh[1]->edgeId(edge_idx(tag[1]));
-            else eIdx = fh[1]->edgeId((vertex_idx(tag[1]) + 1) % 3);
-            id[0] = fh[0]->findVertex(pt, eIdx, tag[0], slots[0]);
-        }
-        else id[0] = fh[0]->findNonFaceVertex(pt, tag[0], slots[0]);
-
-        if (tag[1] == INNER)
-        {
-            assert(tag[0] != INNER);
-            if (is_edge(tag[0])) eIdx = fh[0]->edgeId(edge_idx(tag[0]));
-            else eIdx = fh[0]->edgeId((vertex_idx(tag[0]) + 1) % 3);
-            id[1] = fh[1]->findVertex(pt, eIdx, tag[1], slots[1]);
-        }
-		else id[1] = fh[1]->findNonFaceVertex(pt, tag[1], slots[1]);
-
-        if (id[0] == id[1])
-        {
-            if (id[0] == INVALID_UINT32)
+            int i2 = (i == 0 ? 1 : 0);
+            if (tag[i] == INNER)
             {
-                // add new
-                uint32_t vid = pMem->insertVertex(pt);
-                *(slots[0]) = *(slots[1]) = vid;
-                return vid;
+                assert(tag[i2] != INNER);
+
+                if (is_edge(tag[i2]))
+                    eIdx = fh[i2]->edgeId(edge_idx(tag[i2]));
+                else
+                    eIdx = fh[i2]->edgeId((vertex_idx(tag[i2]) + 1) % 3);
+
+                vId[i] = fh[i]->getFaceLocalId(pt, eIdx, tag[i], slots[i]);
             }
-            else return id[0];
+            else 
+                vId[i] = fh[i]->getNonFaceLocalId(pt, tag[i], slots[i]);
+        }
+
+        if (*slots[0] == *slots[1])
+        {
+            if (*slots[0] == INVALID_UINT32)
+                *(slots[0]) = *(slots[1]) = pMem->insertVertex(pt);
         }
         else
         {
-            uint32_t vid = std::min(id[0], id[1]);
-            // PATCH: if vertex coincidence, merging ids is required for both edge and triangle
-            // edges around the vertex also need to be merge, the slots is only the vId handle
-            if (is_vertex(tag[0]) && is_vertex(tag[1]))
-            {
-                int tobeModify = 0;
-                if (id[0] == vid)
-                    tobeModify = 1;
-                int vTobeMerge = vertex_idx(tag[tobeModify]);
-
-                MyEdge& edge1 = fh[tobeModify]->edge((vTobeMerge+1)%3);
-                MyEdge& edge2 = fh[tobeModify]->edge((vTobeMerge+2)%3);
-
-                if (edge1.ends[0] == *slots[tobeModify])
-                {
-                    edge1.ends[0] = vid;
-                }
-                else
-                {
-                    if (edge1.ends[1] == *slots[tobeModify])
-                        edge1.ends[1] = vid;
-                }
-
-                if (edge2.ends[0] == *slots[tobeModify])
-                {
-                    edge2.ends[0] = vid;
-                }
-                else
-                {
-                    if (edge2.ends[1] == *slots[tobeModify])
-                        edge2.ends[1] = vid;
-                }
-
-                MyVertex& vRef = xvertex(*slots[(tobeModify+1)%2]), 
-                    &vMerge = xvertex(*slots[tobeModify]);
-
-                if (!vMerge.edges.empty())
-                {
-                    vRef.edges.insert(vRef.edges.end(), vMerge.edges.begin(), vMerge.edges.end());
-                    vMerge.edges.clear();
-                }
-            }
-
-            *(slots[0]) = *(slots[1]) = vid;
-            return vid;
+            auto minmaxId = std::minmax(*slots[0], *slots[1]);
+            if (minmaxId.second == INVALID_UINT32)
+                *slots[0] = *slots[1] = minmaxId.first;
+            else
+                pMem->mergeVertex(*slots[0], *slots[1]);
         }
 	}
 
@@ -394,16 +347,16 @@ namespace Boolean
 		if (sres == NOT_INTERSECT || sres == COPLANAR)
 			return false;
 
-        fh0->addTo(intersectTriangles());
-        fh1->addTo(intersectTriangles());
+        t[0]->bIsInsct = true;
+        t[1]->bIsInsct = true;
 
-		uint32_t v[2];
+		Triangle::LocalVertexId vId[2][2]; // local Id
 		XPoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);
-		v[0] = addAndMerge(t, A, insctRes.tagA);
+		addAndMerge(t, A, insctRes.tagA, vId[0]);
 		if (sres != INTERSECT_ON_POINT)
 		{
 			XPoint B(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.B);
-			v[1] = addAndMerge(t, B, insctRes.tagB);
+			addAndMerge(t, B, insctRes.tagB, vId[1]);
 
 			int eId[2] = { -1, -1 };
 			for (int i = 0; i < 2; i++)
@@ -427,7 +380,7 @@ namespace Boolean
 
 				if (eId[i] > -1)
 				{
-					EdgePBI epbi;
+					EdgeInsctData::PBI epbi;
 					MyEdge* edge = &t[i]->edge(eId[i]);
 
                     // let it be the same sequence as edge vertex's
@@ -439,15 +392,15 @@ namespace Boolean
                     {
                         epbi.pends[0] = insctRes.B.opposite();
                         epbi.pends[1] = insctRes.A.opposite();
-                        epbi.ends[0] = v[1];
-                        epbi.ends[1] = v[0];
+                        epbi.ends[0] = vId[i][1];
+                        epbi.ends[1] = vId[i][0];
                     }
                     else
                     {
                         epbi.pends[0] = insctRes.A;
                         epbi.pends[1] = insctRes.B;
-                        epbi.ends[0] = v[0];
-                        epbi.ends[1] = v[1];
+                        epbi.ends[0] = vId[i][0];
+                        epbi.ends[1] = vId[i][1];
                     }
                     epbi.neighbor.push_back(ninfo);
 
@@ -461,21 +414,21 @@ namespace Boolean
 				}
 				else
 				{
-					FacePBI fpbi;
+					FaceInsctData::PBI fpbi;
 					fpbi.vertPlane = t[i2]->supportingPlane();
                     if (sign(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
                     {
                         fpbi.pends[0] = insctRes.B.opposite();
                         fpbi.pends[1] = insctRes.A.opposite();
-                        fpbi.ends[0] = v[1];
-                        fpbi.ends[1] = v[0];
+                        fpbi.ends[0] = vId[i][1];
+                        fpbi.ends[1] = vId[i][0];
                     }
                     else
                     {
                         fpbi.pends[0] = insctRes.A;
                         fpbi.pends[1] = insctRes.B;
-                        fpbi.ends[0] = v[0];
-                        fpbi.ends[1] = v[1];
+                        fpbi.ends[0] = vId[i][0];
+                        fpbi.ends[1] = vId[i][1];
                     }
 
 					fpbi.neighbor.push_back(ninfo);
@@ -578,6 +531,23 @@ namespace Boolean
         return &points.back();
     }
 
+    Triangle::LocalVertexId EdgeInsctData::localId(const XPoint &p, MyVertex::Index *& slot)
+    {
+        auto n = points.size();
+        for (int i = 0; i < n; i++)
+        {
+            if (xvertex(points[i]) == p)
+            {
+                slot = &points[i];
+                return i;
+            }
+        }
+
+        points.push_back(INVALID_UINT32);
+        slot = &points.back();
+        return points.size() - 1;
+    }
+
 
     uint32_t * FaceInsctData::point(const XPoint &p, MyEdge::SIndex eIdx)
     {
@@ -589,6 +559,24 @@ namespace Boolean
         Vertex v{ INVALID_UINT32, eIdx };
         points.push_back(v);
         return &points.back().vId;
+    }
+
+    Triangle::LocalVertexId FaceInsctData::localId(const XPoint &p, MyEdge::SIndex eIdx, MyVertex::Index *& slot)
+    {
+        auto n = points.size();
+        for (int i = 0; i < n; i++)
+        {
+            if (xvertex(points[i].vId) == p)
+            {
+                slot = &points[i].vId;
+                return i;
+            }
+        }
+
+        Vertex v{ INVALID_UINT32, eIdx };
+        points.push_back(v);
+        slot = &points.back().vId;
+        return points.size() - 1;
     }
 
 }

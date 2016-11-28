@@ -350,6 +350,47 @@ namespace Boolean
             return -1;
         }
     }
+    
+    Triangle::LocalVertexId Triangle::getFaceLocalId(const XPoint & pt, 
+        MyEdge::Index eIdx, PosTag tag, uint32_t *&slot)
+    {
+        assert(tag == INNER);
+        if (!inscts)
+            inscts = new FaceInsctData;
+
+        return inscts->localId(pt, eIdx, slot) | Triangle::INNER_PREFIX;
+    }
+
+    Triangle::LocalVertexId Triangle::getNonFaceLocalId(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    {
+        EdgeInsctData **is;
+        switch (tag)
+        {
+        case EDGE_0:
+            is = &xedge(eIds[0]).inscts;
+            if (!*is) *is = new EdgeInsctData;
+            return (*is)->localId(pt, slot) & Triangle::EDGE0_PREFIX;
+        case EDGE_1:
+            is = &xedge(eIds[1]).inscts;
+            if (!*is) *is = new EdgeInsctData;
+            return (*is)->localId(pt, slot) & Triangle::EDGE1_PREFIX;
+        case EDGE_2:
+            is = &xedge(eIds[2]).inscts;
+            if (!*is) *is = new EdgeInsctData;
+            return (*is)->localId(pt, slot) & Triangle::EDGE2_PREFIX;
+        case VER_0:
+            slot = &vIds[0];
+            return Triangle::VER0_PREFIX;
+        case VER_1:
+            slot = &vIds[1];
+            return Triangle::VER1_PREFIX;
+        case VER_2:
+            slot = &vIds[2];
+            return Triangle::VER2_PREFIX;
+        default:
+            throw std::exception();
+        }
+    }
 
     void Triangle::calcSupportingPlane()
     {
