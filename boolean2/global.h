@@ -28,9 +28,16 @@ namespace Boolean
 	class MemoryManager;
 
     struct NeighborInfo;
-    class FaceInsctData;
-    class EdgeInsctData;
+    struct FacePBI;
+    struct PBIRep;
+    typedef PBIRep EdgePBI;
 
+    template <class PBI> class InsctData;
     template <class Mesh> class CSGTree;
+
+    class EdgeInsctData;
+    class FaceInsctData;
+
+    template <class T> struct AutoPtr : std::shared_ptr<T> {};
     const uint32_t INVALID_UINT32 = uint32_t(-1);
 }

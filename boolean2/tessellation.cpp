@@ -11,9 +11,6 @@
 
 namespace Boolean
 {
-    typedef FaceInsctData::PBI FacePBI;
-    typedef EdgeInsctData::PBI EdgePBI;
-
     namespace
     {
         struct PlaneVertex
@@ -79,7 +76,7 @@ namespace Boolean
                 NodeMap::iterator v[2];
                 Direction dir;
                 XPlane prep;
-                ExternPtr PBIBase* pbi = nullptr;
+                ExternPtr PBIRep* pbi = nullptr;
 
                 VertexIndex startVertex() const { return v[0]->first; }
                 VertexIndex endVertex() const { return v[1]->first; }
@@ -646,7 +643,7 @@ namespace Boolean
         }
     }
 
-    IndexPair makePbiIndex(const PBIBase* rep)
+    IndexPair makePbiIndex(const PBIRep* rep)
     {
         IndexPair res;
         MakeIndex(rep->ends, res);
@@ -957,31 +954,31 @@ namespace Boolean
         bRefined = true;
     }
 
-    //void tessellation(std::vector<RegularMesh*>& meshes)
-    //{
-    //    auto pMem = MemoryManager::getInstance();
-    //    auto& inscts = intersectTriangles();
-    //    for (Triangle* pTri : inscts)
-    //    {
-    //        assert(pTri->isAdded4Tess());
-    //        if (pTri->inscts)
-    //            pTri->inscts->refine((void*)pTri);
+    void tessellation(std::vector<RegularMesh*>& meshes)
+    {
+        auto pMem = MemoryManager::getInstance();
+        auto& inscts = intersectTriangles();
+        for (Triangle* pTri : inscts)
+        {
+            assert(pTri->isAdded4Tess());
+            if (pTri->inscts)
+                pTri->inscts->refine((void*)pTri);
 
-    //        for (int i = 0; i < 3; i++)
-    //        {
-    //            EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
-    //            if (pTri->edge(i).faceOrientation(pTri) > 0)
-    //                data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
-    //            else
-    //                data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
+            for (int i = 0; i < 3; i++)
+            {
+                EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
+                if (pTri->edge(i).faceOrientation(pTri) > 0)
+                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
+                else
+                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
 
-    //            if (pTri->edge(i).inscts)
-    //                pTri->edge(i).inscts->refine((void*)&data);
-    //        }
+                if (pTri->edge(i).inscts)
+                    pTri->edge(i).inscts->refine((void*)&data);
+            }
 
-    //        TessGraph tg(pTri);
-    //        if (tg.tessellate())
-    //            pTri->invalidate();
-    //    }
-    //}
+            TessGraph tg(pTri);
+            if (tg.tessellate())
+                pTri->invalidate();
+        }
+    }
 }

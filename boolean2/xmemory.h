@@ -41,7 +41,7 @@ namespace Boolean
     {
         FH() {}
         FH(int o, IPolygon* p) : orientation(o), ptr(p) {}
-        int orientation = 1; // +1 same, -1 oppo
+        int orientation; // +1 same, -1 oppo
         IPolygon* ptr = nullptr;
     };
 
