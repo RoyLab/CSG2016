@@ -29,7 +29,7 @@ namespace Boolean
     uint32_t MemoryManager::insertVertex(XPoint & pt)
     {
         ppoints.push_back(pt);
-        int vId = ppoints.size() - 1;
+        int vId =  ppoints.size() - 1;
         MyVertex ver;
         ver.setAsPRep(vId);
         vertices.push_back(ver);
@@ -48,7 +48,7 @@ namespace Boolean
         {
             MyVertex& theother = xvertex(b);
             assert(!theother.findEdge(a));
-
+            
             target = edges.size();
             edges.emplace_back(a, b);
 
@@ -57,38 +57,6 @@ namespace Boolean
         }
         xedge(target).addAjacentFace(a, b, facePtr);
         return target;
-    }
-
-    void MemoryManager::mergeVertex(MyVertex::Index a, MyVertex::Index b)
-    {
-        MyVertex& va = xvertex(a), &vb = xvertex(b);
-        auto minmaxShare = std::minmax(va.shareId, vb.shareId);
-        if (minmaxShare.first == minmaxShare.second)
-        {
-            if (minmaxShare.first == -1)
-            {
-                va.shareId = vb.shareId = mergeItems.size();
-                mergeItems.emplace_back(new MergeItem{ a, b });
-            }
-        }
-        else
-        {
-            if (minmaxShare.first == -1)
-            {
-                va.shareId = vb.shareId = minmaxShare.second;
-                mergeItems[minmaxShare.second]->insert(
-                    va.shareId == minmaxShare.second ? b : a);
-            }
-            else
-            {
-                MergeItem* merged = mergeItems[minmaxShare.second];
-                mergeItems[minmaxShare.first]->insert(merged->begin(), merged->end());
-                for (MyVertex::Index vId: *merged)
-                    xvertex(vId).shareId = minmaxShare.first;
-                assert(va.shareId == minmaxShare.first);
-                assert(vb.shareId == minmaxShare.first);
-            }
-        }
     }
 
     void MemoryManager::outputIntersection(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
@@ -112,6 +80,7 @@ namespace Boolean
         vertices.clear();
         points.clear();
         ppoints.clear();
+        insctTris.clear();
         for (SubPolygon* spoly : subpolys)
             delete spoly;
         subpolys.clear();

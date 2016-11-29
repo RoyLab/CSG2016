@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <macros.h>
-#include <set>
 #include "preps.h"
 #include "global.h"
 
@@ -23,7 +22,6 @@ namespace Boolean
         void setAsVRep(int i) { rep = (i + 1); }
 
         std::list<uint32_t> edges;
-        int shareId = -1;
 
         bool findEdge(uint32_t other, uint32_t* result = nullptr) const;
         Oriented_side orientation(const XPlane& p) const;
@@ -47,6 +45,7 @@ namespace Boolean
 
     struct MyEdge
     {
+    public:
         typedef uint32_t Index;
         typedef int32_t SIndex;
 
@@ -98,11 +97,11 @@ namespace Boolean
             std::list<FH>::iterator eItr;
         };
 
+    public:
         MyVertex::Index ends[2];
         std::vector<NeighborInfo>* neighbor = nullptr;
         EdgeInsctData* inscts = nullptr;
-        bool noOverlapNeighbor = false; // 这个flag用来表示neighbor有没有被执行过去重，其实用map就不需要这个玩意儿了TODO
-        int mergeItem = -1;
+        bool noOverlapNeighbor = false;
 
         MyEdge(MyVertex::Index a, MyVertex::Index b) : ends{ a, b } {}
         ~MyEdge();
@@ -121,7 +120,6 @@ namespace Boolean
     class MemoryManager
     {
         typedef cyPointT VPoint;
-        typedef std::set<MyEdge::Index> MergeItem;
     public:
         std::vector<XPlaneBase> planes;
         std::vector<MyEdge> edges;
@@ -129,8 +127,8 @@ namespace Boolean
 
         std::vector<VPoint>	points;
         std::vector<XPoint>	ppoints;
+        ExternPtr std::vector<Triangle*> insctTris;
         std::vector<SubPolygon*> subpolys;
-        std::vector<MergeItem*> mergeItems;
 
     public:
         ~MemoryManager() {}
@@ -139,7 +137,6 @@ namespace Boolean
         uint32_t insertVertices(VPoint* begin, VPoint* end);
         uint32_t insertVertex(XPoint& pt);
         uint32_t getEdgeId(uint32_t a, uint32_t b, IPolygon* facePtr);
-        void mergeVertex(MyVertex::Index a, MyVertex::Index b);
         void addSubPolygon(SubPolygon* poly) { subpolys.push_back(poly); }
         void outputIntersection(const std::string&, const cyPointT&, const cyPointT&);
         void clear();
@@ -168,6 +165,8 @@ namespace Boolean
     inline const XPlaneBase& xcplane(uint32_t id) { return MemoryManager::getInstance()->planes[id]; }
     inline XPlaneBase& xplane(uint32_t id) { return MemoryManager::getInstance()->planes[id]; }
     inline std::vector<XPlaneBase>& xplanes() { return MemoryManager::getInstance()->planes; }
+
+    inline std::vector<Triangle*>& intersectTriangles() { return MemoryManager::getInstance()->insctTris; }
 
     // other functions
     int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b);
