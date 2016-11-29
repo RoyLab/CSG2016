@@ -22,16 +22,17 @@ namespace Boolean
 		};
 	};
 
+    struct PBIBase
+    {
+        XPlane pends[2];
+        Triangle::LocalVertexId ends[2];
+        std::vector<NeighborInfo> neighbor;
+    };
+
     class EdgeInsctData
     {
     public:
-        struct PBI
-        {
-            XPlane pends[2];
-            Triangle::LocalVertexId ends[2];
-            std::vector<NeighborInfo> neighbor;
-        };
-
+        typedef PBIBase PBI;
         typedef std::map<RegularMesh::Index, std::list<PBI>> PBIList;
         typedef std::vector<MyVertex::Index> VertexList;
 
@@ -50,11 +51,8 @@ namespace Boolean
     class FaceInsctData
     {
     public:
-        struct PBI
+        struct PBI: public PBIBase
         {
-            XPlane pends[2];
-            Triangle::LocalVertexId ends[2];
-            std::vector<NeighborInfo> neighbor;
             XPlane vertPlane;
         };
 
@@ -70,6 +68,7 @@ namespace Boolean
     public:
         PBIList		inscts;
         VertexList  points;
+        std::set<RegularMesh::Index> insctMeshes;
 
     protected:
         void resolveIntersection(Triangle* pTri, std::vector<MyVertex::Index>* strayVertices = nullptr);

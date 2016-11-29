@@ -49,7 +49,8 @@ namespace Boolean
 	void GetLeafList(CSGTreeNode* root, std::vector<uint32_t>& list);
 	CSGTreeOld* ConvertToPositiveTree(const CSGTreeOld* tree);
 	Relation CompressCSGTree(CSGTreeOld* tree, uint32_t Id, Relation rel);
-	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output);
+	Relation ParsingCSGTree(MPMesh::Index meshId, Relation* tab, uint32_t nMesh, 
+        CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output);
 	CSGTreeNode* GetNextNode(CSGTreeNode* curNode, Relation rel, Relation &output);
 	CSGTreeNode* GetFirstNode(CSGTreeNode* root);
 	inline bool IsLeaf(CSGTreeNode* node) { return !(node->pLeft && node->pRight); }

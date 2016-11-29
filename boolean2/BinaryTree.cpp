@@ -566,7 +566,7 @@ namespace Boolean
         }
     }
 
-	Relation ParsingCSGTree(MPMesh* pMesh, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output)
+	Relation ParsingCSGTree(MPMesh::Index meshId, Relation* tab, uint32_t nMesh, CSGTreeNode* curTree, CSGTreeNode** leaves, TestTree& output)
 	{
 		for (uint32_t i = 0; i < nMesh; i++)
         {
@@ -576,7 +576,7 @@ namespace Boolean
             }
         }
 
-		CSGTreeNode *seed = leaves[pMesh->id()], *comp;
+		CSGTreeNode *seed = leaves[meshId], *comp;
 		int checkRel;
 		bool pass = true;
 		bool simple = true;

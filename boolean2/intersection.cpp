@@ -347,8 +347,12 @@ namespace Boolean
 		if (sres == NOT_INTERSECT || sres == COPLANAR)
 			return false;
 
-        t[0]->bIsInsct = true;
-        t[1]->bIsInsct = true;
+        for (int i = 0; i < 2; i++)
+        {
+            if (!t[i]->inscts)
+                t[i]->inscts = new FaceInsctData;
+            t[i]->inscts->insctMeshes.insert(i == 0 ? meshId[1] : meshId[0]);
+        }
 
 		Triangle::LocalVertexId vId[2][2]; // local Id
 		XPoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);

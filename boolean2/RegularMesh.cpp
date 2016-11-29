@@ -22,7 +22,7 @@ namespace Boolean
         return result;
     }
 
-    void RegularMesh::writeFile(RegularMesh & mesh, const char *fileName)
+    void RegularResultMesh::writeFile(RegularResultMesh & mesh, const char *fileName)
     {
         size_t nVertices = xvertices().size();
         std::vector<int> idmap(nVertices, -1);
@@ -36,7 +36,7 @@ namespace Boolean
         mesh.inverseMap.emplace_back(std::numeric_limits<uint32_t>::max(), 0);
         auto rItr = mesh.inverseMap.begin();
 
-        for (int i = 0; i < mesh.faces().size(); i++)
+        for (int i = 0; i < mesh.m_faces.size(); i++)
         {
             if (rItr->first == i)
                 inverse = true;
@@ -49,8 +49,7 @@ namespace Boolean
                     inverse = false;
             }
 
-            IPolygon* face = mesh.faces()[i];
-            if (!face->isValid()) continue;
+            IPolygon* face = mesh.m_faces[i];
 
             face->getVertices(tmp);
             iSlot.push_back(face->degree());
@@ -246,10 +245,7 @@ namespace Boolean
         auto fItr = ConstFaceIterator(*this);
         uint32_t count = 0;
         for (; fItr; ++fItr)
-        {
-            if (fItr.face()->isValid())
-                count++;
-        }
+            count++;
         return count;
     }
 

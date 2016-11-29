@@ -32,7 +32,6 @@ namespace Boolean
         virtual uint32_t edgeId(int i) const = 0;
         virtual MyVertex& vertex(int i)const;
         virtual uint32_t vertexId(int i)const = 0;
-        virtual bool isValid() const = 0;
 
         XPlane supportingPlane() const { assert(sPlane.isValid()); return sPlane; }
         XPlane sPlane;
@@ -71,24 +70,19 @@ namespace Boolean
         LocalVertexId getFaceLocalId(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*&);
         LocalVertexId getNonFaceLocalId(const XPoint& pt, PosTag tag, uint32_t*&);
 
-
 		// manipulate
 		void calcSupportingPlane();
 		void calcBoundingPlane();
 
         // state
-        bool isValid() const { return bIsValid; }
-        void invalidate() { bIsValid = false; }
         TYPE getType() const { return TRIANGLE; }
 
     protected:
         uint32_t eIds[3];
         uint32_t vIds[3];
 		XPlane bPlanes[3];
-        bool bIsValid = true;
 
     public:
-        bool bIsInsct = false;
         FaceInsctData* inscts = nullptr;
     };
 
@@ -111,7 +105,6 @@ namespace Boolean
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void getVertices(std::vector<MyVertex::Index>&) const;
         TYPE getType() const { return SUBPOLYGON; }
-        bool isValid() const { return true; }
 
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
@@ -126,11 +119,10 @@ namespace Boolean
 	{
 	public:
 		typedef IPolygon FaceT;
-        std::vector<std::pair<uint32_t, uint32_t>> inverseMap;
         typedef int SIndex;
         typedef uint32_t Index;
 
-	protected:
+    protected:
 		static  MemoryManager* memmgr;
 		std::vector<FaceT*>  m_faces;
 		uint32_t m_id;
@@ -139,7 +131,6 @@ namespace Boolean
 
 	public:
 		static RegularMesh* loadFromFile(const char*, uint32_t id);
-		static void writeFile(RegularMesh& mesh, const char*);
 
         RegularMesh() :m_center(0, 0, 0), m_scale(1, 1, 1) {}
 		RegularMesh(const XR::OffFile& file, uint32_t meshId); // triangle mesh
@@ -149,17 +140,32 @@ namespace Boolean
 		bool& inverse() { return m_bInverse; }
 		const bool& inverse() const { return m_bInverse; }
 		uint32_t id() const { return m_id; }
-
-        /// do not actually change te coordinates
-        void invCoords(const cyPointT& c, const cyPointT& s) { m_center = c; m_scale = s; }
-
-		// access
+	// access
 		std::vector<FaceT*>& faces() { return m_faces; }
 		const std::vector<FaceT*>& faces() const  {return m_faces; }
 
         // geometry info
 		void prepareBoolean();
 	};
+
+    class RegularResultMesh
+    {
+    public:
+        typedef int SIndex;
+        typedef uint32_t Index;
+
+        std::vector<Triangle*>  m_faces;
+        std::vector<Facet*>  m_subfaces;
+        std::vector<std::pair<uint32_t, uint32_t>> inverseMap;
+        cyPointT m_center, m_scale;
+
+
+        RegularResultMesh() :m_center(0, 0, 0), m_scale(1, 1, 1) {}
+        /// do not actually change te coordinates
+        void invCoords(const cyPointT& c, const cyPointT& s) { m_center = c; m_scale = s; }
+    public:
+        static void writeFile(RegularResultMesh& mesh, const char*);
+    };
 
     template<class Container>
     inline void Triangle::addTo(Container & c)
