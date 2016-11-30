@@ -2,7 +2,11 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
+#include <cmdline.h>
+
 #include "boolean.h"
+#include "cgaleval.h"
 
 std::stringstream getValidStream(std::ifstream& file)
 {
@@ -13,170 +17,121 @@ std::stringstream getValidStream(std::ifstream& file)
         if (line.size() && line[0] != ';')
             return (std::stringstream(line));
     }
+    throw std::exception();
 }
 
-int main()
+void TestByMethod(std::vector<std::string>& names, std::string& expr, const std::string& output, std::string method)
 {
+    if (method == "my")
+        test(names, expr, output);
+    else if (method == "cgal")
+        cgaleval(names, expr, output);
+}
+
+int main(int argc, char* argv[])
+{
+    cmdline::parser cmd_parser;
+    cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
+    cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "cgal", cmdline::oneof<std::string>("cgal", "my"));
+
+    cmd_parser.parse_check(argc, argv);
+    std::string config_filename = cmd_parser.get<std::string>("script");
+    std::string method = cmd_parser.get<std::string>("method");
+
     std::string expr;
     std::vector<std::string> names;
 
-    std::ifstream configFile(".\\mycsg.ini");
-    //std::ifstream configFile("D:\\Codes\\Boolean2016\\exps\\mycsg.ini");
-    if (!configFile.is_open())
+    if (false && argc == 1)
     {
-        if (true)
-        {
-            expr = "0+1";
-            names.clear();
-            names.push_back("../../models/box1.off");
-            names.push_back("../../models/box2.off");
-            test(names, expr, "D:/result1.off");
-
-            names.clear();
-            names.push_back("../../models/box1.off");
-            names.push_back("D:/offlib/box3.off");
-            test(names, expr, "D:/result2.off");
-
-            names.clear();
-            names.push_back("../../models/ball1.off");
-            names.push_back("../../models/ball2.off");
-            test(names, expr, "D:/result3.off");
-
-            names.clear();
-            names.push_back("../../models/ball1.off");
-            names.push_back("../../models/ball1.off");
-            test(names, expr, "D:/result4.off");
-
-            names.clear();
-            names.push_back("../../models/box-lean-1.off");
-            names.push_back("../../models/box-lean-2.off");
-            test(names, expr, "D:/result5.off");
-
-#ifndef _DEBUG
-            names.clear();
-            names.push_back("../../models/bunny.off");
-            names.push_back("../../models/dragon.off");
-            test(names, expr, "D:/result6.off");
-#endif // !_DEBUG
-
-            expr = "0+1+2";
-            names.clear();
-            names.push_back("../../models/box1.off");
-            names.push_back("../../models/box2.off");
-            names.push_back("../../models/boxm1.off");
-            test(names, expr, "D:/result7.off");
-
-            expr = "0+1+2";
-            names.clear();
-            names.push_back("../../models/box1.off");
-            names.push_back("../../models/box2.off");
-            names.push_back("../../models/box3.off");
-            test(names, expr, "D:/result8.off");
-
-            expr = "0*1";
-            names.clear();
-            names.push_back("../../models/box1.off");
-            names.push_back("../../models/tetrahedron.off");
-            test(names, expr, "D:/result9.off");
-
-            expr = "0";
-            char buffer[200];
-            for (int i = 1; i < 25; i++)
-            {
-                expr += "+";
-                expr += itoa(i, buffer, 10);
-            }
-
-            for (int i = 25; i < 50; i++)
-            {
-                expr += "-";
-                expr += itoa(i, buffer, 10);
-            }
-
-            names.clear();
-            for (int i = 0; i < 50; i++)
-            {
-                sprintf(buffer, "D:/Codes/Boolean2016/exps/data/ref_timing/t1_%d.off", i);
-                names.push_back(buffer);
-            }
-            test(names, expr, "D:/result10.off");
-        }
-
         expr = "0+1";
         names.clear();
         names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/buddha.off");
         names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/lion.off");
-        test(names, expr, "D:/result.off");
-
+        TestByMethod(names, expr, "D:/result.off", method);
         system("pause");
         return 0;
     }
 
-    int N = 0, nMesh;
+    std::ifstream configFile(config_filename);
+    if (!configFile.is_open())
+    {
+        std::cerr << "IO error: " << config_filename << std::endl;
+        return -1;
+    }
+    int nMesh;
     std::string name, output, line;
     std::stringstream buffer;
-
-    buffer = getValidStream(configFile);
-    buffer >> N;
-    for (int i = 0; i < N; i++)
+    
+    try
     {
-        nMesh = 0;
-        names.clear();
-        buffer = getValidStream(configFile);
-        buffer >> nMesh;
-        for (int j = 0; j < nMesh; j++)
+        while (1)
         {
+            nMesh = 0;
+            names.clear();
             buffer = getValidStream(configFile);
-            buffer >> name;
-            if (name[0] == '@')
+            buffer >> nMesh;
+            if (nMesh == 0 || configFile.eof()) break;
+
+            for (int j = 0; j < nMesh; j++)
             {
-                --j;
-                name = name.substr(1, name.length());
                 buffer = getValidStream(configFile);
-                int s, e;
-                char nameBuffer[512];
-                buffer >> s >> e;
-                for (int k = s; k <= e; k++, j++)
+                buffer >> name;
+                if (name[0] == '@')
                 {
-                    sprintf(nameBuffer, name.c_str(), k);
-                    names.push_back(nameBuffer);
+                    --j;
+                    name = name.substr(1, name.length());
+                    buffer = getValidStream(configFile);
+                    int s, e;
+                    char nameBuffer[512];
+                    buffer >> s >> e;
+                    for (int k = s; k <= e; k++, j++)
+                    {
+                        sprintf(nameBuffer, name.c_str(), k);
+                        names.push_back(nameBuffer);
+                    }
                 }
+                else names.push_back(name);
             }
-            else names.push_back(name);
-        }
-        // expr
-        buffer = getValidStream(configFile);
-        char first = buffer.peek();
-        if (first == '@')
-        {
-            buffer.get();
-            expr = "0";
-            int num, count = 1;
-            std::string opstr;
-            char opch;
-            while (1)
+            // expr
+            buffer = getValidStream(configFile);
+            char first = buffer.peek();
+            if (first == '@')
             {
-                buffer >> num >> opstr;
-                assert(opstr.size() == 1);
-                opch = opstr[0];
-                for (int j = 0; j < num; j++, count++)
+                buffer.get();
+                expr = "0";
+                int num, count = 1;
+                std::string opstr;
+                char opch;
+                while (1)
                 {
-                    expr += opch;
-                    expr += std::to_string(count);
+                    buffer >> num >> opstr;
+                    assert(opstr.size() == 1);
+                    opch = opstr[0];
+                    for (int j = 0; j < num; j++, count++)
+                    {
+                        expr += opch;
+                        expr += std::to_string(count);
+                    }
+                    if (buffer.eof()) break;
                 }
-                if (buffer.eof()) break;
             }
+            else buffer >> expr;
+
+            // output
+            buffer = getValidStream(configFile);
+            buffer >> output;
+
+            TestByMethod(names, expr, output, method);
         }
-        else buffer >> expr;
-
-        // output
-        buffer = getValidStream(configFile);
-        buffer >> output;
-
-        test(names, expr, output);
     }
+    catch (...)
+    {
+        std::cerr << "non-standard ends or error occurred.\n";
+    }
+
     configFile.close();
 
-    system("pause");
+    if (argc == 1)
+        system("pause");
     return 0;
 }

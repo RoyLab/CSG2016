@@ -140,7 +140,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\cgaleval\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -201,7 +201,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\cgaleval\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -222,7 +222,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Libs\common;..\boolean2\;..\cgaleval\;..\3rdparty\include;$(BOOST_INCLUDEDIR);$(CGAL_DIR)\include;$(CGAL_DIR)\auxiliary\gmp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -233,18 +233,19 @@
       <AdditionalDependencies>fade2D_vc12_Release.lib;OpenMeshCore.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).exe  D:\Codes\Boolean2016\exps\$(ProjectName).exe</Command>
+      <Command>copy $(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).exe  D:\Codes\Boolean2016\exps\mycsg.exe
+copy $(SolutionDir)$(ProjectName)\mycsg.ini D:\Codes\Boolean2016\exps\testcase.ini</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\GSMesh\GSMesh.vcxproj.filters" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\boolean2\boolean2.vcxproj">
       <Project>{857884dc-244e-495a-a3b9-7dc82815298b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\cgalEval\cgalEval.vcxproj">
+      <Project>{887daf25-87e8-442e-8be1-30eb72465fd2}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

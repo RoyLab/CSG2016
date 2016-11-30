@@ -5,6 +5,7 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{CD30337E-7BEF-4879-ABCB-100753CD402E}"
 	ProjectSection(ProjectDependencies) = postProject
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2} = {887DAF25-87E8-442E-8BE1-30EB72465FD2}
 		{9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3} = {9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3}
 	EndProjectSection
 EndProject
@@ -18,14 +19,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GUI", "GUI\GUI.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CSGBoolean", "CSGBoolean\CSGBoolean.vcxproj", "{857884DC-244E-495A-A3B9-7DC82815298B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0ECC0A21-3252-410C-976B-A281563E4A80}"
-	ProjectSection(SolutionItems) = preProject
-		Performance1.psess = Performance1.psess
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boolean2", "boolean2\boolean2.vcxproj", "{9AF37FD1-41BF-40A1-8FD3-EE2C44417EE3}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "..\..\..\Libs\common\Common.vcxproj", "{4B9BB635-BF1F-458E-8F7E-61C940002C71}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cgalEval", "cgalEval\cgalEval.vcxproj", "{887DAF25-87E8-442E-8BE1-30EB72465FD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -162,13 +160,30 @@ Global
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.profile|Win32.ActiveCfg = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.profile|Win32.Build.0 = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.profile|x64.ActiveCfg = Release|x64
-		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.profile|x64.Build.0 = Release|x64
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|Mixed Platforms.ActiveCfg = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|Mixed Platforms.Build.0 = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|Win32.ActiveCfg = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|Win32.Build.0 = Release|Win32
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|x64.ActiveCfg = Release|x64
 		{4B9BB635-BF1F-458E-8F7E-61C940002C71}.Release|x64.Build.0 = Release|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|Win32.Build.0 = Debug|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|x64.ActiveCfg = Debug|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Debug|x64.Build.0 = Debug|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|Mixed Platforms.ActiveCfg = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|Mixed Platforms.Build.0 = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|Win32.ActiveCfg = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|Win32.Build.0 = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|x64.ActiveCfg = profile|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.profile|x64.Build.0 = profile|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|Win32.ActiveCfg = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|Win32.Build.0 = Release|Win32
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|x64.ActiveCfg = Release|x64
+		{887DAF25-87E8-442E-8BE1-30EB72465FD2}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
