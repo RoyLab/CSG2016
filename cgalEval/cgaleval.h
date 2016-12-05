@@ -6,4 +6,5 @@
 
 
 extern "C" XRWY_DLL void cgaleval(std::vector<std::string>& names, std::string& expr, const std::string& output);
+extern "C" XRWY_DLL void corkeval(std::vector<std::string>& names, std::string& expr, const std::string& output);
 extern "C" XRWY_DLL void cgaleval_test();

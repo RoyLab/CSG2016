@@ -4,7 +4,7 @@
 #include <stack>
 #include <cassert>
 
-namespace boolean
+namespace csg
 {
     enum CsgOperator
     {

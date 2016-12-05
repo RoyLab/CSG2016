@@ -26,13 +26,15 @@ void TestByMethod(std::vector<std::string>& names, std::string& expr, const std:
         test(names, expr, output);
     else if (method == "cgal")
         cgaleval(names, expr, output);
+    else if (method == "cork")
+        corkeval(names, expr, output);
 }
 
 int main(int argc, char* argv[])
 {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
-    cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "cgal", cmdline::oneof<std::string>("cgal", "my"));
+    cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "cork", cmdline::oneof<std::string>("cgal", "my", "cork"));
 
     cmd_parser.parse_check(argc, argv);
     std::string config_filename = cmd_parser.get<std::string>("script");
