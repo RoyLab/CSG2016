@@ -15,7 +15,7 @@
 //#define USE_CGAL_PREDICATES
 //#define USE_CGAL_PREDICATES_CHECK
 
-#define NDEBUG
+//#define NDEBUG
 
 #ifdef XR_PROFILE
 

@@ -1,3 +1,4 @@
+#define CGAL_NO_ASSERTIONS
 #include <CGAL/Exact_rational.h>
 #include <CGAL/Cartesian.h>
 #include <CGAL/Nef_polyhedron_3.h>

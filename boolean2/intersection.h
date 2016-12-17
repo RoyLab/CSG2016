@@ -49,6 +49,9 @@ namespace Boolean
         bool isRefined() const { return bRefined; }
         uint32_t* point(const XPoint&);
 
+        void checkPBIByThrow() const;
+
+
 	public:
 		PBIList		inscts;
 		VertexList  points;
@@ -67,6 +70,8 @@ namespace Boolean
         void refine(void* pData);
         bool isRefined() const { return bRefined; }
         uint32_t* point(const XPoint&, MyEdge::SIndex eIdx);
+
+        void checkPBIByThrow() const;
 
     public:
         PBIList		inscts;

@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 
             outputfile << "carve -O \"";
             int mesh_number = 0;
-            bool number_flag = true;
+            bool number_flag = false;
             for (char ch : expr)
             {
                 if (std::isdigit(ch))
@@ -143,13 +143,17 @@ int main(int argc, char* argv[])
                     case '*':
                         outputfile << " & "; break;
                     default:
-                        outputfile << ch;
+                        outputfile << ' ' << ch << ' ';
                         break;
                     }
                 }
 
             }
-            outputfile << names.back();
+            if (mesh_number < names.size())
+            {
+                assert(mesh_number == names.size() - 1);
+                outputfile << names.back();
+            }
             outputfile << "\" > " << output;
             outputfile << std::endl;
         }

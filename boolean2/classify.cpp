@@ -212,7 +212,7 @@ namespace Boolean
                 break;
             }
         }
-        assert(repVertexId != INVALID_UINT32);
+        XR_assert(repVertexId != INVALID_UINT32);
         return repVertexId;
     }
 

@@ -466,6 +466,7 @@ namespace Boolean
         bRefined = true;
     }
 
+    // strayVertices是孤立点，从其他的三面交点处传过来的？
     bool checkIsolatedPart(Triangle* pTri, std::vector<MyVertex::Index>& strayVertices)
     {
         struct ColorVertex

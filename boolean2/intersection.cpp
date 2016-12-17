@@ -19,7 +19,6 @@ namespace Boolean
 			INTERSECT_ON_LINE,
 			INTERSECT_ON_POINT,
 			COPLANAR,
-			//LESS_THAN_INTERSECT_ON_POINT,
 			NOT_INTERSECT
 		};
 
@@ -483,6 +482,7 @@ namespace Boolean
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
                     assert(XLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
+                    assert(linearOrder(XLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
 
 					if (!t[i]->inscts)
 						t[i]->inscts = new FaceInsctData;
@@ -589,6 +589,17 @@ namespace Boolean
         Vertex v{ INVALID_UINT32, eIdx };
         points.push_back(v);
         return &points.back().vId;
+    }
+
+    void FaceInsctData::checkPBIByThrow() const
+    {
+        for (auto &pbiset : inscts)
+        {
+            for (const FacePBI &pbi : pbiset.second)
+            {
+
+            }
+        }
     }
 
 }

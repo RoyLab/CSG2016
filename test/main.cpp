@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
-    cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "cork", cmdline::oneof<std::string>("cgal", "my", "cork"));
+    cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "my", cmdline::oneof<std::string>("cgal", "my", "cork"));
 
     cmd_parser.parse_check(argc, argv);
     std::string config_filename = cmd_parser.get<std::string>("script");
@@ -64,8 +64,8 @@ int main(int argc, char* argv[])
     std::string name, output, line;
     std::stringstream buffer;
     
-    try
-    {
+    //try
+    //{
         while (1)
         {
             nMesh = 0;
@@ -125,11 +125,11 @@ int main(int argc, char* argv[])
 
             TestByMethod(names, expr, output, method);
         }
-    }
-    catch (...)
-    {
-        std::cerr << "non-standard ends or error occurred.\n";
-    }
+    //}
+    //catch (...)
+    //{
+    //    std::cerr << "non-standard ends or error occurred.\n";
+    //}
 
     configFile.close();
 
