@@ -5,14 +5,14 @@
 
 namespace Boolean
 {
-    MemoryManager MemoryManager::mgr;
+    GlobalData GlobalData::mgr;
 
-    MemoryManager * MemoryManager::getInstance()
+    GlobalData * GlobalData::getObject()
     {
         return &mgr;
     }
 
-    uint32_t MemoryManager::insertVertices(VPoint * begin, VPoint * end)
+    uint32_t GlobalData::insertVertices(VPoint * begin, VPoint * end)
     {
         int offset = points.size();
         int n = end - begin;
@@ -26,7 +26,7 @@ namespace Boolean
         return offset;
     }
 
-    uint32_t MemoryManager::insertVertex(XPoint & pt)
+    uint32_t GlobalData::insertVertex(PlanePoint & pt)
     {
         ppoints.push_back(pt);
         int vId =  ppoints.size() - 1;
@@ -36,7 +36,7 @@ namespace Boolean
         return vertices.size() - 1;
     }
 
-    uint32_t MemoryManager::getEdgeId(uint32_t a, uint32_t b, IPolygon * facePtr)
+    uint32_t GlobalData::getEdgeId(uint32_t a, uint32_t b, IPolygon * facePtr)
     {
         assert(a < xvertices().size());
         MyVertex& one = xvertex(a);
@@ -59,7 +59,7 @@ namespace Boolean
         return target;
     }
 
-    void MemoryManager::outputIntersection(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
+    void GlobalData::dumpIntersectionToXyzFile(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
     {
         std::ofstream file(fileName);
 
@@ -73,9 +73,9 @@ namespace Boolean
         file.close();
     }
 
-    void MemoryManager::clear()
+    void GlobalData::clear()
     {
-        planes.clear();
+        planebases.clear();
         edges.clear();
         vertices.clear();
         points.clear();
@@ -156,49 +156,38 @@ namespace Boolean
         return *this;
     }
 
-    int linearOrder(const XLine& l, const MyVertex& a, const MyVertex& b)
+    void mergeBrepVertices(VertexIndex to, VertexIndex from)
     {
-        int type = 0;
-        if (a.isPlaneRep()) type += 1;
-        if (b.isPlaneRep()) type += 2;
+        MyEdge& edge1 = fh[to]->edge((from + 1) % 3);
+        MyEdge& edge2 = fh[to]->edge((from + 2) % 3);
 
-        Oriented_side side;
-        switch (type)
+        if (edge1.ends[0] == *slots[to])
         {
-        case 0:
-            return l.linearOrder(a.point(), b.point());
-        case 1:
-            side = l.pickPositiveVertical(a.ppoint())
-                .orientation(b.point());
-            if (side == ON_POSITIVE_SIDE) return 1;
-            else if (side == ON_NEGATIVE_SIDE) return -1;
-            else return 0;
-        case 2:
-            side = l.pickPositiveVertical(b.ppoint())
-                .orientation(a.point());
-            if (side == ON_NEGATIVE_SIDE) return 1;
-            else if (side == ON_POSITIVE_SIDE) return -1;
-            else return 0;
-        case 3:
-            return l.linearOrder(a.ppoint(), b.ppoint());
-        default:
-            throw std::exception();
+            edge1.ends[0] = vid;
         }
-        return 0;
-    }
-
-    Oriented_side orientation(const XPlane& p, const MyVertex& v)
-    {
-        if (v.isPlaneRep())
-            return p.orientation(v.ppoint());
-        else return p.orientation(v.point());
-    }
-
-    XPlane pickPositiveVertical(const XLine &l, const MyVertex & v)
-    {
-        if (v.isPlaneRep())
-            return l.pickPositiveVertical(v.ppoint());
         else
-            return l.pickPositiveVertical(v.point());
+        {
+            if (edge1.ends[1] == *slots[to])
+                edge1.ends[1] = vid;
+        }
+
+        if (edge2.ends[0] == *slots[to])
+        {
+            edge2.ends[0] = vid;
+        }
+        else
+        {
+            if (edge2.ends[1] == *slots[to])
+                edge2.ends[1] = vid;
+        }
+
+        MyVertex& vRef = xvertex(*slots[(to + 1) % 2]),
+            &vMerge = xvertex(*slots[to]);
+
+        if (!vMerge.edges().empty())
+        {
+            vRef.edges().insert(vRef.edges().end(), vMerge.edges().begin(), vMerge.edges().end());
+            vMerge.edges().clear();
+        }
     }
 }

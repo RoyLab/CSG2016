@@ -4,61 +4,27 @@
 #include <set>
 #include <xlogger.h>
 #include "xmemory.h"
-#include "RegularMesh.h"
-#include "intersection.h"
+
 #include "XStruct.hpp"
 #include "XException.hpp"
+
+#include "hybrid_geometry.h"
 
 namespace Boolean
 {
     namespace
     {
-        struct PlaneVertex
-        {
-            XPlane plane;
-            MyVertex::Index id;
-        };
-
         // 用于传到sortObj里面去的辅助结构
-        struct EdgeAuxiliaryStructure
-        {
-            MyVertex::Index start, end;
-            XLine line;
-        };
-
-        struct LinOrderObj
-        {
-            bool operator()(const PlaneVertex& a, const PlaneVertex& b) const
-            {
-                int type = 0;
-                if (xvertex(a.id).isPlaneRep()) type += 1;
-                if (xvertex(b.id).isPlaneRep()) type += 2;
-
-                switch (type)
-                {
-                case 0:
-                    return line.linearOrder(xvertex(a.id).point(),
-                        xvertex(b.id).point()) > 0;
-                case 1:
-                    return a.plane.orientation(xvertex(b.id).point()) == ON_POSITIVE_SIDE;
-                case 2:
-                    return b.plane.orientation(xvertex(a.id).point()) == ON_NEGATIVE_SIDE;
-                case 3:
-                    return line.linearOrder(a.plane, b.plane) > 0;
-                default:
-                    throw std::exception();
-                }
-            }
-
-            XLine line;
-        };
+        //struct EdgeAuxiliaryStructure
+        //{
+        //    VertexIndex start, end;
+        //    PlaneLine line;
+        //};
 
         class TessGraph
         {
             struct Edge;
             struct Node;
-            typedef uint32_t EdgeIndex;
-            typedef uint32_t VertexIndex;
             enum Direction { D_NAN = 0, D_SEQ = 1, D_INV = 2, D_NODIR = 3 };
 
             struct Node
@@ -245,7 +211,7 @@ namespace Boolean
             std::vector<uint32_t> loop;
             std::vector<EdgeIndex> loopEdge;
             edgeStack.push(0);
-            auto pMem = MemoryManager::getInstance();
+            auto pMem = GlobalData::getObject();
 
             while (!edgeStack.empty())
             {
@@ -357,7 +323,7 @@ namespace Boolean
         }
         bool TessGraph::Edge::checkPlaneOrientation(const Triangle *pTri)
         {
-            XLine line(pTri->supportingPlane(), prep);
+            PlaneLine line(pTri->supportingPlane(), prep);
             if (linearOrder(line, xvertex(v[0]->first),
                 xvertex(v[1]->first)) > 0)
                 return true;
@@ -383,7 +349,7 @@ namespace Boolean
         for (int i = 0; i < points.size(); i++, vItr++)
             seqs[i].id = *vItr;
 
-        std::map<MyVertex::Index, XPlane> v2p;
+        std::map<VertexIndex, XPlane> v2p;
         for (auto& set : inscts)
         {
             for (auto &pbi : set.second)
@@ -425,7 +391,7 @@ namespace Boolean
         LinOrderObj orderObj = { data.line };
         std::sort(seqs.begin(), seqs.end(), orderObj);
         std::vector<EdgePBI> newPbi(points.size() + 1);
-        std::map<MyVertex::Index, uint32_t> idmap;
+        std::map<VertexIndex, uint32_t> idmap;
         idmap[data.start] = 0;
         idmap[data.end] = points.size() + 1;
         for (int i = 0; i < seqs.size(); i++)
@@ -467,17 +433,17 @@ namespace Boolean
     }
 
     // strayVertices是孤立点，从其他的三面交点处传过来的？
-    bool checkIsolatedPart(Triangle* pTri, std::vector<MyVertex::Index>& strayVertices)
+    bool checkIsolatedPart(Triangle* pTri, std::vector<VertexIndex>& strayVertices)
     {
         struct ColorVertex
         {
-            std::set<MyVertex::Index> neighbors;
+            std::set<VertexIndex> neighbors;
             int color = -1;
         } defaultCV;
 
         FaceInsctData* thiz = pTri->inscts;
         // initialize the graph
-        std::map<MyVertex::Index, ColorVertex> data;
+        std::map<VertexIndex, ColorVertex> data;
         for (auto& v : thiz->points)
             data[v.vId] = defaultCV;
 
@@ -491,13 +457,13 @@ namespace Boolean
         }
 
         // init vertex set
-        std::set<MyVertex::Index> edgeVertices;
+        std::set<VertexIndex> edgeVertices;
         for (int i = 0; i < 3; i++)
         {
             edgeVertices.insert(pTri->vertexId(i));
             MyEdge& edge = pTri->edge(i);
             if (!edge.inscts) continue;
-            for (MyVertex::Index vId : edge.inscts->points)
+            for (VertexIndex vId : edge.inscts->points)
                 edgeVertices.insert(vId);
         }
 
@@ -505,8 +471,8 @@ namespace Boolean
         int color = 0;
         uint32_t isoCount = MAX_MESH_COUNT;
         bool isIsolated = false, boolRes = false;
-        std::stack<MyVertex::Index> vStack;
-        std::vector<MyVertex::Index> history;
+        std::stack<VertexIndex> vStack;
+        std::vector<VertexIndex> history;
         for (auto& vItem : data)
         {
             if (vItem.second.color == -1)
@@ -517,7 +483,7 @@ namespace Boolean
                 vStack.push(vItem.first);
                 while (!vStack.empty())
                 {
-                    MyVertex::Index curVId = vStack.top();
+                    VertexIndex curVId = vStack.top();
                     vStack.pop();
                     auto& curV = data[curVId];
                     if (curV.color != -1) continue;
@@ -527,7 +493,7 @@ namespace Boolean
                         isIsolated = false;
 
                     curV.color = color;
-                    for (MyVertex::Index vId : curV.neighbors)
+                    for (VertexIndex vId : curV.neighbors)
                     {
                         if (data[vId].color == -1)
                             vStack.push(vId);
@@ -536,9 +502,9 @@ namespace Boolean
 
                 if (isIsolated)
                 {
-                    MyVertex::Index chooseVertex = INVALID_UINT32;
+                    VertexIndex chooseVertex = INVALID_UINT32;
                     MyEdge::SIndex eId = -1;
-                    for (MyVertex::Index vId : history)
+                    for (VertexIndex vId : history)
                     {
                         for (auto &v : thiz->points)
                         {
@@ -563,7 +529,7 @@ namespace Boolean
                         fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
                             xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
 
-                        XLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                        PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
                         fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
                         fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
                         assert(line.dot(fPbi.pends[0]) > 0);
@@ -593,7 +559,7 @@ namespace Boolean
 
     void removeOverlapPBI(FaceInsctData * thiz)
     {
-        std::map<MyVertex::Index, std::set<FacePBI*>> data;
+        std::map<VertexIndex, std::set<FacePBI*>> data;
         std::vector<decltype(thiz->inscts[0].begin())> garbage;
         for (auto &pbiSet : thiz->inscts)
         {
@@ -651,7 +617,7 @@ namespace Boolean
         return res;
     }
 
-    void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<MyVertex::Index>* strayVertices)
+    void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices)
     {
         XPlane triSp = pTri->supportingPlane();
         std::map<IndexPair, std::shared_ptr<FacePBITessData>> tessData;
@@ -674,7 +640,7 @@ namespace Boolean
                         {
                             if (side[0][0] == ON_ORIENTED_BOUNDARY) // 共线情况
                             {
-                                XLine line(triSp, pbi.vertPlane);
+                                PlaneLine line(triSp, pbi.vertPlane);
                                 assert(line.dot(pbi2.vertPlane) == 0.);
                                 Real dotRes = line.dot(pbi2.pends[0]);
                                 assert(dotRes != 0.);
@@ -741,7 +707,7 @@ namespace Boolean
                                 int addedTarget = side[0][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
                                 slots[1][0].id = pbi.ends[addedTarget];
                                 slots[1][0].plane = pbi.vertPlane;
-                                XLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
+                                PlaneLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
                             }
                             else
                             {
@@ -751,15 +717,15 @@ namespace Boolean
                                     int addedTarget = side[1][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
                                     slots[0][0].id = pbi2.ends[addedTarget];
                                     slots[0][0].plane = pbi2.vertPlane;
-                                    XLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
+                                    PlaneLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
                                 }
                                 else
                                 {
                                     assert(side[1][0] * side[1][1] == -1);
                                     // new vertex
                                     XPlane thirdPlane = pbi2.vertPlane;
-                                    XLine(triSp, pbi.vertPlane).makePositive(thirdPlane); // 似乎不需要，可以尝试注释这一句
-                                    XPoint newPoint(triSp, pbi.vertPlane, thirdPlane);
+                                    PlaneLine(triSp, pbi.vertPlane).makePositive(thirdPlane); // 似乎不需要，可以尝试注释这一句
+                                    PlanePoint newPoint(triSp, pbi.vertPlane, thirdPlane);
 
                                     uint32_t* newPos;
                                     newPos = point(newPoint, -1);
@@ -800,24 +766,24 @@ namespace Boolean
                                     // 所有的邻居都没有，那就真没有了
                                     if (minVal == INVALID_UINT32)
                                     {
-                                        minVal = MemoryManager::getInstance()->insertVertex(newPoint);
+                                        minVal = GlobalData::getObject()->insertVertex(newPoint);
                                     }
                                     for (uint32_t *pInt : vecs)
                                         *pInt = minVal;
 
                                     slots[0][0].id = minVal;
                                     slots[0][0].plane = pbi2.vertPlane;
-                                    XLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
+                                    PlaneLine(triSp, pbi.vertPlane).makePositive(slots[0][0].plane);
 
                                     slots[1][0].id = minVal;
                                     slots[1][0].plane = pbi.vertPlane;
-                                    XLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
+                                    PlaneLine(triSp, pbi2.vertPlane).makePositive(slots[1][0].plane);
                                 }
                             }
 
                         }
 
-                        if (slots[0][0].plane.isValid() || slots[0][1].plane.isValid())
+                        if (slots[0][0].plane.is_valid() || slots[0][1].plane.is_valid())
                         {
                             IndexPair pbiIndex = makePbiIndex(&pbi);
                             auto pbiData = tessData.find(pbiIndex);
@@ -833,14 +799,14 @@ namespace Boolean
                                 pbiData = insertRes.first;
                             }
 
-                            if (slots[0][0].plane.isValid())
+                            if (slots[0][0].plane.is_valid())
                                 pbiData->second->points.push_back(slots[0][0]);
 
-                            if (slots[0][1].plane.isValid())
+                            if (slots[0][1].plane.is_valid())
                                 pbiData->second->points.push_back(slots[0][1]);
                         }
 
-                        if (slots[1][0].plane.isValid() || slots[1][1].plane.isValid())
+                        if (slots[1][0].plane.is_valid() || slots[1][1].plane.is_valid())
                         {
                             IndexPair pbiIndex2 = makePbiIndex(&pbi2);
                             auto pbiData = tessData.find(pbiIndex2);
@@ -856,10 +822,10 @@ namespace Boolean
                                 pbiData = insertRes.first;
                             }
 
-                            if (slots[1][0].plane.isValid())
+                            if (slots[1][0].plane.is_valid())
                                 pbiData->second->points.push_back(slots[1][0]);
 
-                            if (slots[1][1].plane.isValid())
+                            if (slots[1][1].plane.is_valid())
                                 pbiData->second->points.push_back(slots[1][1]);
                         }
                     }
@@ -869,7 +835,7 @@ namespace Boolean
 
         if (strayVertices)
         {
-            for (MyVertex::Index strayV : *strayVertices)
+            for (VertexIndex strayV : *strayVertices)
             {
                 if (!xvertex(strayV).isPlaneRep()) continue; // 不合理，但是先这样吧
                 for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
@@ -893,7 +859,7 @@ namespace Boolean
                                 pbiData = insertRes.first;
                             }
 
-                            XLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                            PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
                             line.pickPositiveVertical(xvertex(strayV).ppoint());
                             pbiData->second->points.push_back(
                                 PlaneVertex{ line.pickPositiveVertical(xvertex(strayV).ppoint()), strayV });
@@ -907,7 +873,7 @@ namespace Boolean
         for (auto &pPair : tessData)
         {
             FacePBITessData* pData = pPair.second.get();
-            XLine line(triSp, pData->ptr->vertPlane);
+            PlaneLine line(triSp, pData->ptr->vertPlane);
             LinOrderObj orderObj = { line };
 
             auto &inserted = pData->points;
@@ -918,7 +884,7 @@ namespace Boolean
             }), inserted.end());
 
             std::vector<FacePBI> newPbi(inserted.size() + 1, *pData->ptr);
-            std::map<MyVertex::Index, uint32_t> idmap;
+            std::map<VertexIndex, uint32_t> idmap;
             idmap[pData->ptr->ends[0]] = 0;
             idmap[pData->ptr->ends[1]] = inserted.size() + 1;
             for (int i = 0; i < inserted.size(); i++)
@@ -948,20 +914,20 @@ namespace Boolean
         if (!isRefined() && inscts.size() >= 2)
             resolveIntersection(pTri);
 
-        std::vector<MyVertex::Index> strayVertices;
+        std::vector<VertexIndex> strayVertices;
         if (checkIsolatedPart(pTri, strayVertices))
             resolveIntersection(pTri, &strayVertices);
 
         bRefined = true;
     }
 
-    void tessellation(std::vector<RegularMesh*>& meshes)
+    void tessellation(std::vector<RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles)
     {
-        auto pMem = MemoryManager::getInstance();
-        auto& inscts = intersectTriangles();
+        auto pMem = GlobalData::getObject();
+        auto& inscts = insct_triangles;
         for (Triangle* pTri : inscts)
         {
-            assert(pTri->isAdded4Tess());
+            assert(pTri->add_as_insct_triangle);
             if (pTri->inscts)
                 pTri->inscts->refine((void*)pTri);
 
@@ -969,9 +935,9 @@ namespace Boolean
             {
                 EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
                 if (pTri->edge(i).faceOrientation(pTri) > 0)
-                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
+                    data.line = PlaneLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
                 else
-                    data.line = XLine(pTri->supportingPlane(), pTri->boundingPlane(i));
+                    data.line = PlaneLine(pTri->supportingPlane(), pTri->boundingPlane(i));
 
                 if (pTri->edge(i).inscts)
                     pTri->edge(i).inscts->refine((void*)&data);

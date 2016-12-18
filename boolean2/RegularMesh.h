@@ -5,14 +5,14 @@
 #include "global.h"
 #include "preps.h"
 #include "offio.h"
-#include "xmemory.h"
+#include "geoprimitive.h"
 
 namespace Boolean
 {
     class IPolygon
     {
     public:
-        enum TYPE {TRIANGLE, SUBPOLYGON};
+        enum TYPE {TRIANGLE, SUBPOLYGON, SUBPOLYGON_WITH_HOLE};
         int mark = UNVISITED;
 
     public:
@@ -24,8 +24,8 @@ namespace Boolean
 		uint32_t id() const { return m_id; }
         uint32_t meshId() const { return m_meshId; }
 
-        virtual void getVertices(std::vector<MyVertex::Index>&) const = 0;
-        virtual void getEdges(std::vector<MyEdge::Index>&) const;
+        virtual void getVertices(std::vector<VertexIndex>&) const = 0;
+        virtual void getEdges(std::vector<EdgeIndex>&) const;
         virtual TYPE getType() const = 0;
 
         virtual MyEdge& edge(int i) const;
@@ -34,7 +34,7 @@ namespace Boolean
         virtual uint32_t vertexId(int i)const = 0;
         virtual bool isValid() const = 0;
 
-        XPlane supportingPlane() const { assert(sPlane.isValid()); return sPlane; }
+        XPlane supportingPlane() const { assert(sPlane.is_valid()); return sPlane; }
         XPlane sPlane;
     protected:
         const uint32_t m_degree;
@@ -47,6 +47,7 @@ namespace Boolean
 		friend class RegularMesh;
     public:
 		FaceInsctData* inscts = nullptr;
+        bool add_as_insct_triangle = false;
 
 		Triangle(uint32_t meshId, uint32_t i): IPolygon(3, i, meshId) {}
         ~Triangle();
@@ -57,22 +58,19 @@ namespace Boolean
         cyPointT& point(int i) const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
-        void getVertices(std::vector<MyVertex::Index>&) const;
+        void getVertices(std::vector<VertexIndex>&) const;
         bool coherentEdge(int whichEdge) const; // 等价于MyEdge的faceOrientation
-        MyVertex::Index getTheOtherVertex(MyEdge::Index eId) const;
+        VertexIndex getTheOtherVertex(EdgeIndex eId) const;
 
 		// search
-        uint32_t findVertex(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*&);
-        uint32_t findNonFaceVertex(const XPoint& pt, PosTag tag, uint32_t*&);
+        uint32_t findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, uint32_t*&);
+        uint32_t findNonFaceVertex(const PlanePoint& pt, PosTag tag, uint32_t*&);
 
 		// manipulate
 		void calcSupportingPlane();
 		void calcBoundingPlane();
-        template <class Container>
-        void addTo(Container& c);
 
         // state
-        bool isAdded4Tess() const { return added; }
         bool isValid() const { return bIsValid; }
         void invalidate() { bIsValid = false; }
         TYPE getType() const { return TRIANGLE; }
@@ -84,7 +82,6 @@ namespace Boolean
 
 		XPlane bPlanes[3];
 
-        bool added = false;
         bool bIsValid = true;
 	};
 
@@ -105,7 +102,7 @@ namespace Boolean
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
-        void getVertices(std::vector<MyVertex::Index>&) const;
+        void getVertices(std::vector<VertexIndex>&) const;
         TYPE getType() const { return SUBPOLYGON; }
         bool isValid() const { return true; }
 
@@ -113,19 +110,18 @@ namespace Boolean
         uint32_t vertexId(int i) const { return vIds[i]; }
 
     protected:
-        std::vector<MyEdge::Index> eIds;
-        std::vector<MyVertex::Index> vIds;
+        std::vector<EdgeIndex> eIds;
+        std::vector<VertexIndex> vIds;
     };
 
-	class RegularMesh:
-		public ICSGMesh
+	class RegularMesh
 	{
 	public:
 		typedef IPolygon FaceT;
         std::vector<std::pair<uint32_t, uint32_t>> inverseMap;
 
 	protected:
-		static  MemoryManager* memmgr;
+		static  GlobalData* memmgr;
 		std::vector<FaceT*>  m_faces;
 		uint32_t m_id;
 		bool m_bInverse = false;
@@ -155,22 +151,17 @@ namespace Boolean
 		void prepareBoolean();
 	};
 
-    template<class Container>
-    inline void Triangle::addTo(Container & c)
-    {
-        if (isAdded4Tess())
-            return;
 
-        c.push_back(this);
-        added = true;
-    }
+    /////////////////////////////////////////////////////////////////////////////
+    // IMPLEMENTATION
+    /////////////////////////////////////////////////////////////////////////////
 
     template<class ForwardIterator>
     inline void SubPolygon::constructFromVertexList(const ForwardIterator & a, const ForwardIterator & b)
     {
         ForwardIterator itr = a;
-        MyVertex::Index v0, v1;
-        auto pMem = MemoryManager::getInstance();
+        VertexIndex v0, v1;
+        auto pMem = GlobalData::getObject();
 
         for (uint32_t i = 0; i < degree(); i++)
         {

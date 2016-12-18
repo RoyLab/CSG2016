@@ -50,35 +50,44 @@ namespace Boolean
         }
     }
 
-    XPlane::XPlane(const cyPointT & p, const cyPointT & q, const cyPointT & r)
-    {
-        xplanes().emplace_back(p, q, r);
-        setId(xplanes().size()-1);
-#ifdef PREP_DEBUG_INFO
-        debug();
-#endif
-        assert(has_on(p));
-        assert(has_on(q));
-        assert(has_on(r));
-    }
+//    XPlane::XPlane(const cyPointT & p, const cyPointT & q, const cyPointT & r)
+//    {
+//        xplanes().emplace_back(p, q, r);
+//        set_positive_from_id(xplanes().size()-1);
+//#ifdef PREP_DEBUG_INFO
+//        debug();
+//#endif
+//        assert(has_on(p));
+//        assert(has_on(q));
+//        assert(has_on(r));
+//    }
+//
+//    XPlane::XPlane(const PlaneLine & l, const cyPointT& p)
+//    {
+//        xplanes().emplace_back(l, p);
+//        set_positive_from_id(xplanes().size() - 1);
+//#ifdef PREP_DEBUG_INFO
+//        debug();
+//#endif
+//        assert(has_on(p));
+//    }
 
-    XPlane::XPlane(const XLine & l, const cyPointT& p)
+    void XPlane::setBase(const XPlaneBase & base)
     {
-        xplanes().emplace_back(l, p);
-        setId(xplanes().size() - 1);
+        xplanes().push_back(base);
+        set_positive_from_id(xplanes().size() - 1);
 #ifdef PREP_DEBUG_INFO
         debug();
 #endif
-        assert(has_on(p));
     }
 
     const XPlaneBase & XPlane::base() const
 	{
-        assert(id != 0);
-		return xplane(std::abs(id) - 1);
+        assert(id_ != 0);
+		return xplane(std::abs(id_) - 1);
 	}
 
-    Oriented_side XPlane::orientation(const XPoint & p) const
+    Oriented_side XPlane::orientation(const PlanePoint & p) const
     {
         const Real* mat[4] = { p.plane(0).data(), p.plane(1).data(),
             p.plane(2).data(), data() };
@@ -95,7 +104,7 @@ namespace Boolean
     Oriented_side XPlane::orientation(const cyPointT &p) const
     {
         Oriented_side res = base().orientation(p);
-        if (isInverse())
+        if (is_inverse())
         {
             switch (res)
             {
@@ -113,34 +122,34 @@ namespace Boolean
             return res;
     }
 
-    void XPlane::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
-    {
-        xplanes().emplace_back();
-        xplanes().back().setFromPEE(p, e0, e1);
-        setId(xplanes().size() - 1);
-#ifdef PREP_DEBUG_INFO
-        debug();
-#endif
-    }
+//    void XPlane::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
+//    {
+//        xplanes().emplace_back();
+//        xplanes().back().setFromPEE(p, e0, e1);
+//        set_positive_from_id(xplanes().size() - 1);
+//#ifdef PREP_DEBUG_INFO
+//        debug();
+//#endif
+//    }
 
-    int XLine::linearOrderNoCheck(const XPlane & a, const XPlane & b) const
+    int PlaneLine::linearOrderNoCheck(const XPlane & a, const XPlane & b) const
     {
-        const Real* mat[4] = { m_planes[0].data(),
-            m_planes[1].data(), b.data(), a.data() };
+        const Real* mat[4] = { planes_[0].data(),
+            planes_[1].data(), b.data(), a.data() };
 
         Real res = mat4x4det(mat);
-        res *= m_planes[0].signd() * m_planes[1].signd() * a.signd() * b.signd();
+        res *= planes_[0].signd() * planes_[1].signd() * a.signd() * b.signd();
         if (res > 0) return 1;
         if (res < 0) return -1;
         return 0;
     }
 
-    int XLine::linearOrder(const XPoint & a, const XPoint & b) const
+    int PlaneLine::linearOrder(const PlanePoint & a, const PlanePoint & b) const
     {
         XPlane pa, pb;
         for (int i = 0; i < 3; i++)
         {
-            if (sign(m_planes[0], m_planes[1], a.plane(i)) != 0)
+            if (sign(planes_[0], planes_[1], a.plane(i)) != 0)
             {
                 pa = a.plane(i);
                 break;
@@ -149,40 +158,40 @@ namespace Boolean
 
         for (int i = 0; i < 3; i++)
         {
-            if (sign(m_planes[0], m_planes[1], b.plane(i)) != 0)
+            if (sign(planes_[0], planes_[1], b.plane(i)) != 0)
             {
                 pb = b.plane(i);
                 break;
             }
         }
-        assert(pa.isValid() && pb.isValid());
+        assert(pa.is_valid() && pb.is_valid());
         return linearOrder(pa, pb);
     }
 
-    int XLine::linearOrder(const cyPointT& a, const cyPointT& b) const
+    int PlaneLine::linearOrder(const cyPointT& a, const cyPointT& b) const
     {
         cyPointT vec = b - a;
         if (vec.LengthSquared() == Real(0)) return 0;
 
-        const Real* mat[3] = { m_planes[0].data(), m_planes[1].data(), (Real*)&vec };
+        const Real* mat[3] = { planes_[0].data(), planes_[1].data(), (Real*)&vec };
 
         Real res = mat3x3det(mat);
-        res *= m_planes[0].signd() * m_planes[1].signd();
+        res *= planes_[0].signd() * planes_[1].signd();
         if (res > 0) return 1;
         else return -1;
     }
 
-    int XLine::linearOrder(const XPlane & a, const XPlane & b) const 
+    int PlaneLine::linearOrder(const XPlane & a, const XPlane & b) const 
     {
         auto a2 = a, b2 = b;
         makePositive(a2);
         makePositive(b2);
 
-        const Real* mat[4] = { m_planes[0].data(),
-            m_planes[1].data(), b2.data(), a2.data() };
+        const Real* mat[4] = { planes_[0].data(),
+            planes_[1].data(), b2.data(), a2.data() };
 
         Real res = mat4x4det(mat);
-        res *= m_planes[0].signd() * m_planes[1].signd() *
+        res *= planes_[0].signd() * planes_[1].signd() *
             a2.signd() * b2.signd();
 
         if (res > 0) return 1;
@@ -190,23 +199,23 @@ namespace Boolean
         return 0;
     }
 
-    void XLine::makePositive(XPlane & input) const
+    void PlaneLine::makePositive(XPlane & input) const
 	{
         Real res = dot(input);
         if (res < 0) input.inverse();
 	}
 
-    Real XLine::dot(const XPlane &input) const
+    Real PlaneLine::dot(const XPlane &input) const
     {
-        return sign(m_planes[0], m_planes[1], input);
+        return sign(planes_[0], planes_[1], input);
     }
 
-    XPlane XLine::pickPositiveVertical(const cyPointT & p) const
+    XPlane PlaneLine::pickPositiveVertical(const cyPointT & p) const
     {
-        return XPlane(*this, p);
+        return XPlane(XPlaneBase(*this, p));
     }
 
-    XPlane XLine::pickPositiveVertical(const XPoint & p) const
+    XPlane PlaneLine::pickPositiveVertical(const PlanePoint & p) const
     {
         for (int j = 0; j < 3; j++)
         {
@@ -221,14 +230,14 @@ namespace Boolean
         throw std::exception("cannnot find a proper plane");
     }
 
-    cyPointT XLine::approxNormal() const
+    cyPointT PlaneLine::approxNormal() const
     {
         vec3 normal;
-        vec3_mul_cross(normal, m_planes[0].data(), m_planes[1].data());
+        vec3_mul_cross(normal, planes_[0].data(), planes_[1].data());
         return cyPointT(normal);
     }
 
-    XPlaneBase::XPlaneBase(const XLine & l, const cyPointT & p)
+    XPlaneBase::XPlaneBase(const PlaneLine & l, const cyPointT & p)
     {
         cyPointT approxNormal = l.approxNormal();
         int maxIndex = 0;
@@ -243,25 +252,31 @@ namespace Boolean
             }
         }
 
-        for (int i = 0; i < 3; i++) m_data[i] = 0;
-        m_data[maxIndex] = std::copysign(1.0, approxNormal[maxIndex]);
-        m_data[3] = m_data[maxIndex] > 0? -p[maxIndex]: p[maxIndex];
+        for (int i = 0; i < 3; i++) data_[i] = 0;
+        data_[maxIndex] = std::copysign(1.0, approxNormal[maxIndex]);
+        data_[3] = data_[maxIndex] > 0? -p[maxIndex]: p[maxIndex];
     }
 
     XPlaneBase::XPlaneBase(const cyPointT &p, const cyPointT &q, const cyPointT & r)
     {
-        setFromPEE(p, q - p, r - p);
-    }
-
-    void XPlaneBase::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
-    {
+        cyPointT e0 = q - p, e1 = r - p;
         assert(fp_filter_check(reinterpret_cast<const Real*>(&e0), FP_EDGE_CHECK));
         assert(fp_filter_check(reinterpret_cast<const Real*>(&e1), FP_EDGE_CHECK));
 
         cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
         *thiz = (e0).Cross(e1);
-        m_data[3] = -thiz->Dot(p);
+        data_[3] = -thiz->Dot(p);
     }
+
+    //void XPlaneBase::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
+    //{
+    //    assert(fp_filter_check(reinterpret_cast<const Real*>(&e0), FP_EDGE_CHECK));
+    //    assert(fp_filter_check(reinterpret_cast<const Real*>(&e1), FP_EDGE_CHECK));
+
+    //    cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
+    //    *thiz = (e0).Cross(e1);
+    //    m_data[3] = -thiz->Dot(p);
+    //}
 
     Oriented_side XPlaneBase::orientation(const cyPointT & p) const
     {
@@ -275,16 +290,16 @@ namespace Boolean
 
     bool XPlaneBase::coplanar(const XPlaneBase & p) const
     {
-        const Real* mat[2] = { m_data, p.m_data };
+        const Real* mat[2] = { data_, p.data_ };
         if (mat2x2det(mat) != 0) return false;
 
-        const Real* mat2[2] = { m_data+1, p.m_data+1 };
+        const Real* mat2[2] = { data_+1, p.data_+1 };
         if (mat2x2det(mat2) != 0) return false;
 
         return true;
     }
 
-    bool XPoint::operator==(const XPoint &p) const
+    bool PlanePoint::operator==(const PlanePoint &p) const
     {
         //return m_pos == p.m_pos;
         return plane(0).orientation(p) == ON_ORIENTED_BOUNDARY
@@ -292,7 +307,7 @@ namespace Boolean
             && plane(2).orientation(p) == ON_ORIENTED_BOUNDARY;
     }
 
-    bool XPoint::operator==(const cyPointT & p) const
+    bool PlanePoint::operator==(const cyPointT & p) const
     {
         return plane(0).orientation(p) == ON_ORIENTED_BOUNDARY
             && plane(1).orientation(p) == ON_ORIENTED_BOUNDARY

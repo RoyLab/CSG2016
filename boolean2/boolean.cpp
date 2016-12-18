@@ -25,13 +25,14 @@
 namespace Boolean
 {
     extern int xrcount;
-    void tessellation(std::vector<Boolean::RegularMesh*>& meshes);
-    void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, MyVertex::Index);
+    void tessellation(std::vector<Boolean::RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles);
+    void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, VertexIndex);
+    void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&, std::vector<Triangle*> insct_triangles);
 
     void initContext() {}
     void releaseContext()
     {
-        MemoryManager::getInstance()->clear();
+        GlobalData::getObject()->clear();
     }
 
     bool collinear(const cyPointT& a, const cyPointT& b, const cyPointT& c)
@@ -42,7 +43,7 @@ namespace Boolean
     }
 
     // 取一个点，它的一度点不都在一个平面上
-    MyVertex::Index pickSeed(std::vector<MyVertex::Index>& seed)
+    VertexIndex pickSeed(std::vector<VertexIndex>& seed)
     {
         cyPointT basePoint[2];
         for (uint32_t i = 0; i < seed.size(); i++)
@@ -51,9 +52,9 @@ namespace Boolean
             basePoint[0] = vRef.point();
             auto eItr = vRef.edges.begin();
 
-            MyVertex::Index base[2];
+            VertexIndex base[2];
             MyEdge& edge = xedge(*eItr++);
-            MyVertex::Index theother =
+            VertexIndex theother =
                 edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
             base[0] = theother;
             basePoint[1] = xvertex(base[0]).point();
@@ -61,7 +62,7 @@ namespace Boolean
             while (1)
             {
                 MyEdge& edge = xedge(*eItr++);
-                MyVertex::Index theother =
+                VertexIndex theother =
                     edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
 
                 if (theother != base[0] && !collinear(basePoint[0], basePoint[1], xvertex(theother).point()))
@@ -80,7 +81,7 @@ namespace Boolean
             while (eItr != vRef.edges.end())
             {
                 MyEdge& edge = xedge(*eItr++);
-                MyVertex::Index theother =
+                VertexIndex theother =
                     edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
                 MyVertex& vRef2 = xvertex(theother);
                 if (!vRef2.isPlaneRep() && pbase.orientation(vRef2.point()) != ON_ORIENTED_BOUNDARY)
@@ -142,8 +143,8 @@ extern "C"
             exit(-1);
         }
 
-		MemoryManager* pMem = MemoryManager::getInstance();
-        std::vector<MyVertex::Index> xmins;
+		GlobalData* pMem = GlobalData::getObject();
+        std::vector<VertexIndex> xmins;
 		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), xmins);
 
         double logDieta = -2;
@@ -186,11 +187,12 @@ extern "C"
 
 
         XTIMER_HELPER(setClock("insct"));
-        doIntersection(meshes, intersectLeaves);
+        std::vector<Triangle*> insct_triangles;
+        doIntersection(meshes, intersectLeaves, insct_triangles);
         XLOG_INFO << "intersection test time: " << XTIMER_HELPER(milliseconds("insct")) << " ms";
 
         XTIMER_HELPER(setClock("tess"));
-        tessellation(meshes);
+        tessellation(meshes, insct_triangles);
         XLOG_INFO << "tessellation time: " << XTIMER_HELPER(milliseconds("tess")) << " ms";
 
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
@@ -198,7 +200,7 @@ extern "C"
         //RegularMesh::writeFile(*meshes[0], "D:/a.off");
 
         XTIMER_HELPER(setClock("classify"));
-        MyVertex::Index seed = pickSeed(xmins);
+        VertexIndex seed = pickSeed(xmins);
         doClassification(pOctree, pCsg, meshes, csgResult, seed);
         XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
         csgResult->invCoords(center, scale);

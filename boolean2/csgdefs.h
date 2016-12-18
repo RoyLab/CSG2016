@@ -3,18 +3,25 @@
 #include <cy/cyPoint.h>
 
 #include <CGAL\Exact_predicates_inexact_constructions_kernel.h>
-typedef CGAL::Exact_predicates_inexact_constructions_kernel Depick;
-
 #include <CGAL\Simple_cartesian.h>
-typedef CGAL::Simple_cartesian<double> Dipick;
-
 #include <CGAL\Iso_cuboid_3.h>
-
 #include <CGAL\Bbox_3.h>
-typedef CGAL::Bbox_3 Bbox_3;
+
+#include <climits>
 
 typedef uint64_t IndexPair;
 typedef int8_t Indicator;
+typedef double Real;
+
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Depick;
+typedef CGAL::Simple_cartesian<double> Dipick;
+
+typedef Depick CGALKernel;
+typedef typename CGALKernel::Triangle_3 CGALTriangle;
+typedef typename CGALKernel::Point_3 CGALPoint;
+
+typedef CGAL::Bbox_3 Bbox_3;
 
 static inline void MakeIndex(const uint32_t id[], IndexPair& indexPair)
 {
@@ -38,9 +45,12 @@ typedef double2 double2x2[2];
 typedef double3 double3x3[3];
 typedef double4 double4x4[4];
 
+const uint32_t INVALID_UINT32 = std::numeric_limits<uint32_t>::max();
+
 namespace Boolean
 {
     typedef cyPoint3<double> cyPointT;
+
 
     enum PosTag
     {

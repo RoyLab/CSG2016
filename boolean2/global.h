@@ -1,31 +1,28 @@
+/**  Forward declaration only */
 #pragma once
 #include <cstdint>
 #include <memory>
 
-typedef double Real;
 
 namespace Boolean
 {
-	typedef uint64_t IndexPair;
-	typedef int8_t Indicator;
-
-	class ICSGMesh
-	{
-	public:
-		virtual bool& inverse() = 0;
-		virtual const bool& inverse() const = 0;
-		virtual uint32_t id() const = 0;
-	};
     class Octree;
     class BSPTree;
+
 	class XPlane;
-	class XLine;
-	class XPoint;
+	class PlaneLine;
+	class PlanePoint;
+
+    class MyVertex;
+    class MyEdge;
+
+
 	class IPolygon;
 	class Triangle;
     class SubPolygon;
 	class RegularMesh;
-	class MemoryManager;
+
+	class GlobalData;
 
     struct NeighborInfo;
     struct FacePBI;
@@ -39,5 +36,4 @@ namespace Boolean
     class FaceInsctData;
 
     template <class T> struct AutoPtr : std::shared_ptr<T> {};
-    const uint32_t INVALID_UINT32 = uint32_t(-1);
 }

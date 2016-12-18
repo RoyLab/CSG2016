@@ -3,8 +3,6 @@
 #include <CGAL/intersection_3.h>
 #endif
 #include "global.h"
-#include "adaptive.h"
-
 
 namespace Boolean
 {
@@ -12,85 +10,89 @@ namespace Boolean
 	{
 	public:
         XPlaneBase() {}
-        XPlaneBase(const XLine& l, const cyPointT& p);
+        XPlaneBase(const PlaneLine& l, const cyPointT& p); // give a p-rep normal and a point, construct a approx plane on p
         XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
-        void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+        XPlaneBase(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+
         Oriented_side orientation(const cyPointT&) const;
         bool coplanar(const XPlaneBase&) const;
 
-		const Real& a() const { return m_data[0]; }
-		const Real& b() const { return m_data[1]; }
-		const Real& c() const { return m_data[2]; }
-		const Real& d() const { return m_data[3]; }
+		const Real& a() const { return data_[0]; }
+		const Real& b() const { return data_[1]; }
+		const Real& c() const { return data_[2]; }
+		const Real& d() const { return data_[3]; }
 
-        const Real* data() const { return m_data; }
-        Real* data() { return m_data; }
+        const Real* data() const { return data_; }
+        Real* data() { return data_; }
+
 	protected:
-		Real m_data[4];
+		Real data_[4];
 	};
 
 	class XPlane
 	{
 	public:
-		XPlane() : id(0) {
+		XPlane() : id_(0) {
 #ifdef PREP_DEBUG_INFO
-            m_data = nullptr;
+            data_ = nullptr;
 #endif
         }
 
-        XPlane(const cyPointT& p, const cyPointT& q, const cyPointT& r);
-        XPlane(const XLine& l, const cyPointT& p);
+        XPlane(const XPlaneBase& base) { setBase(base); }
+        void setBase(const XPlaneBase& base);
+        void set_positive_from_id(int i) { assert(i >= 0); id_ = i + 1; }
+        const Real* data() const { return base().data(); }
+        const XPlaneBase& base() const;
 
-#ifdef PREP_DEBUG_INFO
-        void debug() { m_data = data(); }
-#endif
-		bool isInverse() const { return id < 0; }
-		void inverse() { id = -id; }
-		XPlane opposite() const { return XPlane(-id); }
-        Real signd() const { return isInverse() ? -1.0 : 1.0; }
+		void inverse() { id_ = -id_; }
+		XPlane opposite() const { return XPlane(-id_); }
+        Real signd() const { return is_inverse() ? -1.0 : 1.0; }
         const Real* normal() const { return data(); }
-        uint32_t getId() const { return isValid() ? std::abs(id) - 1 : INVALID_UINT32; }
+        uint32_t absid() const { return is_valid() ? std::abs(id_) - 1 : INVALID_UINT32; }
 
-		bool isValid() const { return id != 0; }
-		const XPlaneBase& base() const;
-		const Real* data() const { return base().data(); }
+		bool is_valid() const { return id_ != 0; }
+        bool is_inverse() const { return id_ < 0; }
 
 		// predicates
-		Oriented_side orientation(const XPoint&) const;
+		Oriented_side orientation(const PlanePoint&) const;
         Oriented_side orientation(const cyPointT&) const;
-        bool has_on(const cyPointT& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
-        bool has_on(const XPoint& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
-        bool idEquals(const XPlane& p) const { return std::abs(id) == std::abs(p.id); }
 
-        void setId(int i) { assert(i >= 0); id = i + 1; }
-        void setFromPEE(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+        bool has_on(const cyPointT& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
+        bool has_on(const PlanePoint& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
+        bool id_equals(const XPlane& p) const { return std::abs(id_) == std::abs(p.id_); }
+
         bool coplanar(const XPlane& p) const { return base().coplanar(p.base()); }
+
+#ifdef PREP_DEBUG_INFO
+        void debug() { data_ = data(); }
+#endif
+
     protected:
-        XPlane(int i) : id(i) {
+        XPlane(int i) : id_(i) {
 #ifdef PREP_DEBUG_INFO
             debug();
 #endif  
         }
-        XPlane(int i, bool inv) : id(inv?i:-i) {
+        XPlane(int i, bool inv) : id_(inv?i:-i) {
 #ifdef PREP_DEBUG_INFO
             debug();
 #endif
         }
 
-		int id; // id = (realId+1) * sign
+		int id_; // id = (realId+1) * sign
 
 #ifdef PREP_DEBUG_INFO
-        const Real* m_data;
+        const Real* data_;
 #endif
 	};
 
 
-	class XLine
+	class PlaneLine
 	{
 	public:
-		XLine() {}
-		XLine(const XPlane& a, const XPlane& b) :
-			m_planes{ a, b } {
+		PlaneLine() {}
+		PlaneLine(const XPlane& a, const XPlane& b) :
+			planes_{ a, b } {
 #ifdef PREP_DEBUG_INFO
             vec3_mul_cross(normal, a.data(), b.data());
             vec3_norm(normal, normal);
@@ -100,12 +102,12 @@ namespace Boolean
 		// @return 1 a->b, 0 a=b, -1 b->a
         int linearOrder(const XPlane& a, const XPlane& b) const;
 		int linearOrderNoCheck(const XPlane& a, const XPlane& b) const;
-        int linearOrder(const XPoint& a, const XPoint& b) const;
+        int linearOrder(const PlanePoint& a, const PlanePoint& b) const;
         int linearOrder(const cyPointT& a, const cyPointT& b) const;
         void makePositive(XPlane& input) const;
         Real dot(const XPlane&) const;
         XPlane pickPositiveVertical(const cyPointT& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
-        XPlane pickPositiveVertical(const XPoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
+        XPlane pickPositiveVertical(const PlanePoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
         cyPointT approxNormal() const;
 
 #ifdef PREP_DEBUG_INFO
@@ -113,7 +115,7 @@ namespace Boolean
         vec3 normal;
 #endif
 	protected:
-		XPlane m_planes[2];
+		XPlane planes_[2];
 	};
 
 
@@ -131,10 +133,10 @@ namespace Boolean
     }
 
 
-	class XPoint
+	class PlanePoint
 	{
     public:
-        XPoint(const XPlane& a, const XPlane& b, const XPlane& c) :
+        PlanePoint(const XPlane& a, const XPlane& b, const XPlane& c) :
             m_planes{ a, b, c } {
             //m_pos = convertToPoint<Depeck>(a, b, c);
 #ifdef PREP_DEBUG_INFO
@@ -147,7 +149,7 @@ namespace Boolean
 	public:
         XPlane& plane(int i) { return m_planes[i]; }
         const XPlane& plane(int i) const { return m_planes[i]; }
-        bool operator==(const XPoint& p) const;
+        bool operator==(const PlanePoint& p) const;
         bool operator==(const cyPointT& p) const;
 
         cyPointT toVertexBased() const 

@@ -11,7 +11,7 @@ namespace Boolean
 {
 	using namespace XR;
 
-	MemoryManager* RegularMesh::memmgr;
+	GlobalData* RegularMesh::memmgr;
 
     RegularMesh * RegularMesh::loadFromFile(const char *fileName, uint32_t id)
     {
@@ -30,7 +30,7 @@ namespace Boolean
         std::vector<Real> vSlot;
         std::vector<int> iSlot;
         
-        std::vector<MyVertex::Index> tmp, iSlotBuffer;
+        std::vector<VertexIndex> tmp, iSlotBuffer;
         cyPointT tmpVec;
         bool inverse = false;
         mesh.inverseMap.emplace_back(std::numeric_limits<uint32_t>::max(), 0);
@@ -102,9 +102,9 @@ namespace Boolean
         m_id = id;
 
 		assert(file.isValid());
-		assert(!memmgr || memmgr == MemoryManager::getInstance());
+		assert(!memmgr || memmgr == GlobalData::getObject());
 		if (!memmgr)
-			memmgr = MemoryManager::getInstance();
+			memmgr = GlobalData::getObject();
 
 		cyPointT* pPts = reinterpret_cast<cyPointT*>(file.vertices.get());
 		int offset = memmgr->insertVertices(pPts, pPts + file.nVertices);
@@ -135,141 +135,8 @@ namespace Boolean
 
 	void RegularMesh::prepareBoolean()
 	{
-		assert(!memmgr || memmgr == MemoryManager::getInstance());
+		assert(!memmgr || memmgr == GlobalData::getObject());
 	}
-
-	bool MyVertex::findEdge(uint32_t other, uint32_t * result) const
-	{
-		for (auto& item : edges)
-		{
-			auto &e = xedge(item);
-			if (e.ends[0] == other || e.ends[1] == other)
-			{
-				if (result)
-					*result = item;
-				return true;
-			}
-		}
-		return false;
-	}
-
-    Oriented_side MyVertex::orientation(const XPlane & p) const
-    {
-        if (rep > 0)
-        {
-            return p.orientation(xpoint(rep - 1));
-        }
-        else
-        {
-            return p.orientation(xppoint((-rep) - 1));
-        }
-    }
-
-    bool MyVertex::operator==(const XPoint & p) const
-    {
-        if (isPlaneRep())
-            return xcppoint(id()) == p;
-        else
-            return p == xcpoint(id());
-    }
-
-    const XPoint & MyVertex::ppoint() const
-    {
-        if (!isValid() || !isPlaneRep())
-            throw std::exception();
-
-        return xppoint(id());
-    }
-
-    const cyPointT & MyVertex::point() const
-    {
-        if (!isValid() || isPlaneRep())
-            throw std::exception();
-
-        return xpoint(id());
-    }
-
-    MyEdge::~MyEdge()
-    {
-        //SAFE_DELETE(inscts);
-        //SAFE_DELETE(neighbor);
-    }
-
-    void MyEdge::addAjacentFace(MyVertex::Index s, MyVertex::Index e, IPolygon * fPtr)
-	{
-        int ori = 1;
-		if (s != ends[0]) ori = -1;
-
-        FaceIterator itr(*this);
-        for (; itr; ++itr)
-        {
-            if (!itr.face())
-            {
-                itr.faceHandle().ptr = fPtr;
-                itr.faceHandle().orientation = ori;
-                return;
-            }
-        }
-
-        //assert(0);
-        extrafhs.push_back(FH{ ori, fPtr });
-	}
-
-    int MyEdge::faceOrientation(const IPolygon * ptr) const
-    {
-        if (fhs[0].ptr == ptr) return fhs[0].orientation;
-        if (fhs[1].ptr == ptr) return fhs[1].orientation;
-
-        for (auto& fh : extrafhs)
-            if (fh.ptr == ptr) return fh.orientation;
-
-        return 0;
-    }
-
-    bool MyEdge::remove(const IPolygon *ptr)
-    {
-        FaceIterator itr(*this);
-        while (itr)
-        {
-            if (itr.face() == ptr)
-            {
-                itr.faceHandle().ptr = nullptr;
-                return true;
-            }
-            ++itr;
-        }
-        return false;
-    }
-
-    uint32_t MyEdge::faceCount() const
-    {
-        auto fItr = ConstFaceIterator(*this);
-        uint32_t count = 0;
-        for (; fItr; ++fItr)
-        {
-            if (fItr.face()->isValid())
-                count++;
-        }
-        return count;
-    }
-
-    MyVertex & MyEdge::theOtherVertex(MyVertex::Index thiz) const
-    {
-        return xvertex(theOtherVId(thiz));
-    }
-
-    MyVertex::Index MyEdge::theOtherVId(MyVertex::Index thiz) const
-    {
-        if (ends[0] == thiz)
-        {
-            return ends[1];
-        }
-        else
-        {
-            assert(ends[1] == thiz);
-            return ends[0];
-        }
-    }
 
     Triangle::~Triangle()
     {
@@ -282,7 +149,7 @@ namespace Boolean
         return xpoint(vIds[i]);
     }
 
-    void Triangle::getVertices(std::vector<MyVertex::Index>& output) const
+    void Triangle::getVertices(std::vector<VertexIndex>& output) const
     {
         assert(output.empty());
         output.resize(3);
@@ -298,7 +165,7 @@ namespace Boolean
         else return false;
     }
 
-    MyVertex::Index Triangle::getTheOtherVertex(MyEdge::Index eId) const
+    VertexIndex Triangle::getTheOtherVertex(EdgeIndex eId) const
     {
         for (int i = 0; i < 3; i++)
         {
@@ -307,7 +174,7 @@ namespace Boolean
         }
         throw std::exception("cannot find edge");
     }
-    uint32_t Triangle::findVertex(const XPoint& pt, MyEdge::Index eIdx, PosTag tag, uint32_t*& slot)
+    uint32_t Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, uint32_t*& slot)
     {
         assert(tag == INNER);
         if (!inscts) inscts = new FaceInsctData;
@@ -316,7 +183,7 @@ namespace Boolean
     }
 
 
-    uint32_t Triangle::findNonFaceVertex(const XPoint & pt, PosTag tag, uint32_t *&slot)
+    uint32_t Triangle::findNonFaceVertex(const PlanePoint & pt, PosTag tag, uint32_t *&slot)
     {
         EdgeInsctData **is;
         switch (tag)
@@ -353,7 +220,7 @@ namespace Boolean
 
     void Triangle::calcSupportingPlane()
     {
-        if (!sPlane.isValid())
+        if (!sPlane.is_valid())
         {
             sPlane = XPlane(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2]));
             assert(sPlane.has_on(xcpoint(vIds[0])));
@@ -364,9 +231,9 @@ namespace Boolean
 
     void Triangle::calcBoundingPlane()
     {
-        if (!bPlanes[0].isValid())
+        if (!bPlanes[0].is_valid())
         {
-            assert(sPlane.isValid());
+            assert(sPlane.is_valid());
             const cyPointT* tmp = 
                 reinterpret_cast<const cyPointT*>(sPlane.normal());
             auto normal = *tmp / tmp->Length() * 0.1;
@@ -402,7 +269,7 @@ namespace Boolean
         }
     }
 
-    void SubPolygon::getVertices(std::vector<MyVertex::Index>& output) const
+    void SubPolygon::getVertices(std::vector<VertexIndex>& output) const
     {
         assert(output.empty());
         output.resize(degree());
@@ -410,7 +277,7 @@ namespace Boolean
             output[i] = vIds[i];
     }
 
-    void IPolygon::getEdges(std::vector<MyEdge::Index>& output) const
+    void IPolygon::getEdges(std::vector<EdgeIndex>& output) const
     {
         assert(output.empty());
         output.resize(degree());

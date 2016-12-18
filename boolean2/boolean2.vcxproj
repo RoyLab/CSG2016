@@ -34,7 +34,9 @@
     <ClInclude Include="CGALext.h" />
     <ClInclude Include="csg.h" />
     <ClInclude Include="csgdefs.h" />
+    <ClInclude Include="geoprimitive.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="interfaces.h" />
     <ClInclude Include="intersection.h" />
     <ClInclude Include="triboxtest.hpp" />
     <ClInclude Include="UndirectedGraph.hpp" />
@@ -52,6 +54,7 @@
     <ClCompile Include="BSP.cpp" />
     <ClCompile Include="classify.cpp" />
     <ClCompile Include="csg.cpp" />
+    <ClCompile Include="geoprimitive.cpp" />
     <ClCompile Include="intersection.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="offio.cpp" />

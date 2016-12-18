@@ -13,7 +13,7 @@ namespace Boolean
 {
 	namespace
 	{
-		enum Sign
+		enum IntersectionType
 		{
 			UNKOWN = 0,
 			INTERSECT_ON_LINE,
@@ -85,7 +85,7 @@ namespace Boolean
 	typedef std::unordered_map<IndexPair, TriIdSet*> MeshIdTriIdMap;
 
 	/* A, B 的方向跟cross(ref, triangle)的方向一致 */
-	Sign compute_intervals_isectline(Oriented_side d[3], const Triangle &pr,
+	IntersectionType compute_intervals_isectline(Oriented_side d[3], const Triangle &pr,
 		PosTag& tagA, PosTag& tagB, XPlane& posA, XPlane& posB)
 	{
 		std::vector<int> zeroCount;
@@ -194,7 +194,7 @@ namespace Boolean
 		XPlane A, B;
 	};
 
-	Sign tri_tri_intersect(Triangle* t[2], TriTriInsctResult& result)
+	IntersectionType tri_tri_intersect(Triangle* t[2], TriTriInsctResult& result)
 	{
 		t[0]->calcSupportingPlane();
 		Oriented_side db[3];
@@ -220,12 +220,12 @@ namespace Boolean
 
 		PosTag tagA[2], tagB[2];
 		XPlane posA[2], posB[2];
-		Sign sign;
+		IntersectionType sign;
 
 		t[0]->calcBoundingPlane();
 		t[1]->calcBoundingPlane();
 
-		XLine line(t[0]->supportingPlane(), t[1]->supportingPlane());
+		PlaneLine line(t[0]->supportingPlane(), t[1]->supportingPlane());
 
 		/// 统一正方向cross(n0, n1)
 		// 规定cross(n1, n0)为正方向, 所以反过来传参数
@@ -294,13 +294,13 @@ namespace Boolean
 		return INTERSECT_ON_LINE;
 	}
 
-	uint32_t addAndMerge(Triangle* fh[2], XPoint& pt, PosTag tag[2])
+	uint32_t addAndMerge(Triangle* fh[2], PlanePoint& pt, PosTag tag[2])
 	{
-		auto pMem = MemoryManager::getInstance();
+		auto pMem = GlobalData::getObject();
 		uint32_t id[2];
-        uint32_t *slots[2];
+        VertexIndex *slots[2];
 
-        MyEdge::Index eIdx = INVALID_UINT32;
+        EdgeIndex eIdx = INVALID_UINT32;
         if (tag[0] == INNER)
         {
             assert(tag[1] != INNER);
@@ -324,7 +324,7 @@ namespace Boolean
             if (id[0] == INVALID_UINT32)
             {
                 // add new
-                uint32_t vid = pMem->insertVertex(pt);
+                VertexIndex vid = pMem->insertVertex(pt);
                 *(slots[0]) = *(slots[1]) = vid;
                 return vid;
             }
@@ -332,46 +332,21 @@ namespace Boolean
         }
         else
         {
-            uint32_t vid = std::min(id[0], id[1]);
+            VertexIndex vid = std::min(id[0], id[1]);
             // PATCH: if vertex coincidence, merging ids is required for both edge and triangle
-            // edges around the vertex also need to be merge, the slots is only the vId handle
+            // edges() around the vertex also need to be merge, the slots is only the vId handle
             if (is_vertex(tag[0]) && is_vertex(tag[1]))
             {
-                int tobeModify = 0;
-                if (id[0] == vid)
-                    tobeModify = 1;
-                int vTobeMerge = vertex_idx(tag[tobeModify]);
+                VertexIndex vertex_main = INVALID_UINT32, 
+                    vertex_aux = INVALID_UINT32;
 
-                MyEdge& edge1 = fh[tobeModify]->edge((vTobeMerge+1)%3);
-                MyEdge& edge2 = fh[tobeModify]->edge((vTobeMerge+2)%3);
-
-                if (edge1.ends[0] == *slots[tobeModify])
+                if (*slots[0] == vid)
                 {
-                    edge1.ends[0] = vid;
+                    mergeBrepVertices(*slots[0], *slots[1]);
                 }
                 else
                 {
-                    if (edge1.ends[1] == *slots[tobeModify])
-                        edge1.ends[1] = vid;
-                }
-
-                if (edge2.ends[0] == *slots[tobeModify])
-                {
-                    edge2.ends[0] = vid;
-                }
-                else
-                {
-                    if (edge2.ends[1] == *slots[tobeModify])
-                        edge2.ends[1] = vid;
-                }
-
-                MyVertex& vRef = xvertex(*slots[(tobeModify+1)%2]), 
-                    &vMerge = xvertex(*slots[tobeModify]);
-
-                if (!vMerge.edges.empty())
-                {
-                    vRef.edges.insert(vRef.edges.end(), vMerge.edges.begin(), vMerge.edges.end());
-                    vMerge.edges.clear();
+                    mergeBrepVertices(*slots[1], *slots[0]);
                 }
             }
 
@@ -388,20 +363,17 @@ namespace Boolean
 		/* 统一正方向cross(n0, n1) */
 		Triangle* t[2] = { fh0, fh1};
 		TriTriInsctResult insctRes;
-		Sign sres = tri_tri_intersect(t, insctRes);
+		IntersectionType sres = tri_tri_intersect(t, insctRes);
 
 		if (sres == NOT_INTERSECT || sres == COPLANAR)
 			return false;
 
-        fh0->addTo(intersectTriangles());
-        fh1->addTo(intersectTriangles());
-
 		uint32_t v[2];
-		XPoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);
+		PlanePoint A(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.A);
 		v[0] = addAndMerge(t, A, insctRes.tagA);
 		if (sres != INTERSECT_ON_POINT)
 		{
-			XPoint B(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.B);
+			PlanePoint B(fh0->supportingPlane(), fh1->supportingPlane(), insctRes.B);
 			v[1] = addAndMerge(t, B, insctRes.tagB);
 
 			int eId[2] = { -1, -1 };
@@ -433,7 +405,7 @@ namespace Boolean
                     int sequence = 1;
                     XPlane vertPlane = t[i]->boundingPlane(eId[i]);
                     if (t[i]->coherentEdge(eId[i])) vertPlane.inverse();
-                    XLine edgeLine(t[i]->supportingPlane(), vertPlane);
+                    PlaneLine edgeLine(t[i]->supportingPlane(), vertPlane);
                     if (edgeLine.dot(insctRes.A) < 0)
                     {
                         epbi.pends[0] = insctRes.B.opposite();
@@ -481,8 +453,8 @@ namespace Boolean
 
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
-                    assert(XLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
-                    assert(linearOrder(XLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
+                    assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
+                    assert(linearOrder(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
 
 					if (!t[i]->inscts)
 						t[i]->inscts = new FaceInsctData;
@@ -504,7 +476,7 @@ namespace Boolean
         return CGAL::do_intersect(tr0, tr1);
     }
 
-	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves)
+	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves, std::vector<Triangle*> insct_triangles)
 	{
 		AdjacentGraph *adjGraph = nullptr;
 		MeshIdTriIdMap antiOverlapMap;
@@ -556,6 +528,15 @@ namespace Boolean
 
                             if (insctTest(fh0, fh1, antiOverlapSet, meshId))
                             {
+                                Triangle* t[2] = {fh0, fh1};
+                                for (int i = 0; i < 2; i++)
+                                {
+                                    if (!t[i]->add_as_insct_triangle)
+                                    {
+                                        t[i]->add_as_insct_triangle = true;
+                                        insct_triangles.push_back(t[i]);
+                                    }
+                                }
                                 assert(cgalTriTriCheck(fh0, fh1));
 								adjGraph->setValue(meshId[0], meshId[1], true);
                             }
@@ -566,11 +547,11 @@ namespace Boolean
 		}
 	}
 
-    uint32_t * EdgeInsctData::point(const XPoint & p)
+    uint32_t * EdgeInsctData::point(const PlanePoint & p)
     {
         for (auto itr = points.begin(); itr != points.end(); itr++)
         {
-            if (xvertex(*itr) == p)
+            if (xvertex(*itr).isCoincident(p))
                 return &*itr;
         }
 
@@ -578,28 +559,16 @@ namespace Boolean
         return &points.back();
     }
 
-
-    uint32_t * FaceInsctData::point(const XPoint &p, MyEdge::SIndex eIdx)
+    uint32_t * FaceInsctData::point(const PlanePoint &p, EdgeSIndex eIdx)
     {
         for (auto itr = points.begin(); itr != points.end(); itr++)
         {
-            if (xvertex(itr->vId) == p)
+            if (xvertex(itr->vId).isCoincident(p))
                 return &itr->vId;
         }
         Vertex v{ INVALID_UINT32, eIdx };
         points.push_back(v);
         return &points.back().vId;
-    }
-
-    void FaceInsctData::checkPBIByThrow() const
-    {
-        for (auto &pbiset : inscts)
-        {
-            for (const FacePBI &pbi : pbiset.second)
-            {
-
-            }
-        }
     }
 
 }

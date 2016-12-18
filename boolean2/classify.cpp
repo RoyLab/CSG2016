@@ -17,7 +17,7 @@ namespace Boolean
 
     struct SSeed
     {
-        MyEdge::Index edgeId;
+        EdgeIndex edgeId;
         IPolygon* pFace = nullptr;
         AutoPtr<IIndicatorVector> eIndicators;
 
@@ -26,7 +26,7 @@ namespace Boolean
         SSeed& operator=(const SSeed& other);
     };
 
-    void calcEdgeIndicator(MyVertex::Index seedVertexId, MyEdge::Index seedEdgeId, 
+    void calcEdgeIndicator(VertexIndex seedVertexId, EdgeIndex seedEdgeId, 
         FullIndicatorVector& vInds, FullIndicatorVector& eInds)
     {
         for (size_t i = 0; i < vInds.getNumber(); i++)
@@ -35,7 +35,7 @@ namespace Boolean
         XLOG_ERROR << UNIMPLEMENTED_DECLARATION;
     }
 
-    void calcEdgeIndicatorByExtremity(MyVertex::Index seedId, SSeed& seed, FullIndicatorVector& inds, size_t nMesh)
+    void calcEdgeIndicatorByExtremity(VertexIndex seedId, SSeed& seed, FullIndicatorVector& inds, size_t nMesh)
     {
         FullIndicatorVector vInds(nMesh);
         MyVertex& seedV = xvertex(seedId);
@@ -131,7 +131,7 @@ namespace Boolean
         }
     }
 
-    MyVertex::Index GetRepVertex_SPOLY(MyEdge::Index edgeId, SubPolygon* polygon)
+    VertexIndex GetRepVertex_SPOLY(EdgeIndex edgeId, SubPolygon* polygon)
     {
         assert(orientation(polygon->supportingPlane(),(polygon->vertex(0))) == ON_ORIENTED_BOUNDARY);
         assert(orientation(polygon->supportingPlane(),(polygon->vertex(1))) == ON_ORIENTED_BOUNDARY);
@@ -151,7 +151,7 @@ namespace Boolean
         }
         assert(edgeIndexInFace != -1);
 
-        MyVertex::Index vIdInPlane;
+        VertexIndex vIdInPlane;
         XPlane boundPlane, tmpPlane;
         for (int i = 2; i < polygon->degree(); i++)
         {
@@ -188,13 +188,13 @@ namespace Boolean
                 }
                 if (flag) break;
             }
-            if (boundPlane.isValid()) break;
+            if (boundPlane.is_valid()) break;
         }
-        assert(boundPlane.isValid());
+        assert(boundPlane.is_valid());
 
         // correct the direction of bounding plane
-        XLine edgeLine(polygon->supportingPlane(), boundPlane);
-        assert(!polygon->supportingPlane().idEquals(boundPlane));
+        PlaneLine edgeLine(polygon->supportingPlane(), boundPlane);
+        assert(!polygon->supportingPlane().id_equals(boundPlane));
         int tmpSide = linearOrder(edgeLine, xvertex(polygon->vertexId((edgeIndexInFace + 1) % polygon->degree())),
             xvertex(polygon->vertexId(edgeIndexInFace)));
 
@@ -203,7 +203,7 @@ namespace Boolean
             boundPlane.inverse();
 
         // pick a correct rep vertex
-        MyVertex::Index repVertexId = INVALID_UINT32;
+        VertexIndex repVertexId = INVALID_UINT32;
         for (size_t i = 0; i < polygon->degree(); i++)
         {
             if (orientation(boundPlane, xvertex(polygon->vertexId(i))) == ON_POSITIVE_SIDE)
@@ -216,7 +216,7 @@ namespace Boolean
         return repVertexId;
     }
 
-    MyVertex::Index GetRepVertex_TRI(MyEdge::Index edgeId, Triangle* polygon)
+    VertexIndex GetRepVertex_TRI(EdgeIndex edgeId, Triangle* polygon)
     {
         MyEdge& edge = xedge(edgeId);
 
@@ -285,7 +285,7 @@ namespace Boolean
         }
 
         // find the represented vertex
-        MyVertex::Index repVertexId;
+        VertexIndex repVertexId;
         if (seed.pFace->getType() == IPolygon::TRIANGLE)
             repVertexId = GetRepVertex_TRI(seed.edgeId, (Triangle*)seed.pFace);
         else
@@ -330,7 +330,7 @@ namespace Boolean
 
     void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
         std::vector<RegularMesh*>& meshList, RegularMesh* result,
-        MyVertex::Index seedId)
+        VertexIndex seedId)
     {
         uint32_t nMesh = meshList.size();
         CSGTreeOld* tree = pCSG->auxiliary();
@@ -353,7 +353,7 @@ namespace Boolean
         Relation relation;
         TestTree dummyForest;
         std::vector<Relation> relTab(nMesh);
-        std::vector<MyEdge::Index> edges;
+        std::vector<EdgeIndex> edges;
 
         interQueue.push(tmpSeed);
         tmpSeed.pFace->mark = SEEDED0;

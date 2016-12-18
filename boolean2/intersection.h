@@ -43,11 +43,11 @@ namespace Boolean
     {
     public:
 		typedef std::map<uint32_t, std::list<EdgePBI>> PBIList;
-		typedef std::vector<MyVertex::Index> VertexList;
+		typedef std::vector<VertexIndex> VertexList;
 
 		void refine(void* pData);
         bool isRefined() const { return bRefined; }
-        uint32_t* point(const XPoint&);
+        uint32_t* point(const PlanePoint&);
 
         void checkPBIByThrow() const;
 
@@ -63,13 +63,13 @@ namespace Boolean
     class FaceInsctData
     {
     public:
-        struct Vertex { MyVertex::Index vId; MyEdge::SIndex eId; };
+        struct Vertex { VertexIndex vId; EdgeSIndex eId; };
         typedef std::map<uint32_t, std::list<FacePBI>> PBIList;
         typedef std::vector<Vertex> VertexList;
 
         void refine(void* pData);
         bool isRefined() const { return bRefined; }
-        uint32_t* point(const XPoint&, MyEdge::SIndex eIdx);
+        uint32_t* point(const PlanePoint&, EdgeSIndex eIdx);
 
         void checkPBIByThrow() const;
 
@@ -78,9 +78,7 @@ namespace Boolean
         VertexList  points;
 
     protected:
-        void resolveIntersection(Triangle* pTri, std::vector<MyVertex::Index>* strayVertices = nullptr);
+        void resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices = nullptr);
         bool		bRefined = false;
     };
-
-    void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&);
 }
