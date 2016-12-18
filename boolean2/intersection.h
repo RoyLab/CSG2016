@@ -49,9 +49,6 @@ namespace Boolean
         bool isRefined() const { return bRefined; }
         uint32_t* point(const PlanePoint&);
 
-        void checkPBIByThrow() const;
-
-
 	public:
 		PBIList		inscts;
 		VertexList  points;
@@ -63,6 +60,7 @@ namespace Boolean
     class FaceInsctData
     {
     public:
+        // eId: -1 means tess intersection, -2 means from by propagate at that stage
         struct Vertex { VertexIndex vId; EdgeSIndex eId; };
         typedef std::map<uint32_t, std::list<FacePBI>> PBIList;
         typedef std::vector<Vertex> VertexList;
@@ -70,8 +68,6 @@ namespace Boolean
         void refine(void* pData);
         bool isRefined() const { return bRefined; }
         uint32_t* point(const PlanePoint&, EdgeSIndex eIdx);
-
-        void checkPBIByThrow() const;
 
     public:
         PBIList		inscts;

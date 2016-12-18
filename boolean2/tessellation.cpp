@@ -2,13 +2,15 @@
 #include <list>
 #include <map>
 #include <set>
-#include <xlogger.h>
-#include "xmemory.h"
+#include <stack>
 
-#include "XStruct.hpp"
-#include "XException.hpp"
+#include <xlogger.h>
+#include <XStruct.hpp>
+#include <XException.hpp>
 
 #include "hybrid_geometry.h"
+#include "xmemory.h"
+#include "intersection.h"
 
 namespace Boolean
 {
@@ -21,55 +23,67 @@ namespace Boolean
         //    PlaneLine line;
         //};
 
+
+
         class TessGraph
         {
-            struct Edge;
-            struct Node;
-            enum Direction { D_NAN = 0, D_SEQ = 1, D_INV = 2, D_NODIR = 3 };
-
-            struct Node
-            {
-                enum { INVALID_INDEX = INVALID_UINT32 };
-                XR::RecursiveVector<EdgeIndex> edges;
-
-                EdgeIndex findnext(EdgeIndex) const;
-            };
-
-            typedef std::map<uint32_t, Node> NodeMap;
-
-            struct Edge
-            {
-                NodeMap::iterator v[2];
-                Direction dir;
-                XPlane prep;
-                ExternPtr PBIRep* pbi = nullptr;
-
-                VertexIndex startVertex() const { return v[0]->first; }
-                VertexIndex endVertex() const { return v[1]->first; }
-
-                bool checkPlaneOrientation(const Triangle*);
-            };
-        public:
-            struct SortObject /// clockwise
-            {
-                bool operator() (EdgeIndex i, EdgeIndex j);
-                const TessGraph* pTG;
-                VertexIndex node;
-            };
-
         public:
             TessGraph(const Triangle*);
             bool tessellate();
 
-        protected:
-            NodeMap m_nodes;
-            std::vector<Edge> m_edges;
-            const Triangle* mp_tri;
+        private:
+            enum Direction { 
+                D_NAN = 0, D_SEQ = 1, 
+                D_INV = 2, D_NODIR = 3 
+            };
+
+            typedef int ConnectionIndex;
+            typedef int NodeIndex;
+
+            struct Node
+            {
+                VertexIndex vertex_id;
+                EdgeIndex coincident_edge_id;
+                XR::RecursiveVector<ConnectionIndex> connections;
+                int color; // default -1
+            };
+
+            struct Connection
+            {
+                NodeIndex           ends[2];
+                Direction           dir;
+                XPlane              prep;
+                ExternPtr PBIRep*   pbi; // for neighborhood assgin
+                int                 color; // default -1
+            };
+
+            typedef std::vector<ConnectionIndex> ConnectionLoop;
+            typedef std::vector<NodeIndex> NodeLoop;
+
+            struct Loop
+            {
+                ConnectionLoop cloop;
+                NodeLoop nloop;
+            };
+            typedef std::vector<Loop> Component;
+
+        private:
+            ConnectionIndex theFirstConnection() const { return 0; }
+            VertexIndex end_point(const Connection& con, int i) const;
+            ConnectionIndex findnext(NodeIndex node, ConnectionIndex cur) const;
+            bool checkPlaneOrientation(const Connection& con, const XPlane& sp) const;
+            void nestedResolveAndExtractFaces(std::vector<Component*>&) const;
+            void extractFaces(Component* component) const;
+            void resolveIsolatedVertices() const;
+
+            std::vector<Node>       nodes_;
+            std::vector<Connection> connections_;
+            const Triangle*         triangle_;
         };
 
         TessGraph::TessGraph(const Triangle *tri)
         {
-            mp_tri = tri;
+            triangle_ = tri;
             Node node; Edge edge;
             for (int i = 0; i < 3; i++)
             {
@@ -109,11 +123,11 @@ namespace Boolean
                         edge.v[i0] = findres0;
                         edge.v[i1] = findres1;
                         edge.pbi = nullptr;
-                        m_edges.push_back(edge);
+                        connections_.push_back(edge);
                         assert(edge.checkPlaneOrientation(tri));
 
-                        edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
-                        edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                        edge.v[i0]->second.connections.push_back(connections_.size() - 1);
+                        edge.v[i1]->second.connections.push_back(connections_.size() - 1);
                     }
                     else XLOG_ERROR << "Cannot find vertex on tessellating triangle " 
                         << tri->meshId() << '/' << tri->id();
@@ -134,10 +148,10 @@ namespace Boolean
                             assert(edge.checkPlaneOrientation(tri));
 
                             edge.pbi = &ePBI;
-                            m_edges.push_back(edge);
+                            connections_.push_back(edge);
 
-                            edge.v[i0]->second.edges.push_back(m_edges.size() - 1);
-                            edge.v[i1]->second.edges.push_back(m_edges.size() - 1);
+                            edge.v[i0]->second.connections.push_back(connections_.size() - 1);
+                            edge.v[i1]->second.connections.push_back(connections_.size() - 1);
                         }
                         else XLOG_ERROR << "*Cannot find vertex on tessellating triangle "
                             << tri->meshId() << '/' << tri->id();
@@ -164,117 +178,292 @@ namespace Boolean
                         assert(edge.checkPlaneOrientation(tri));
 
                         edge.pbi = &fPBI;
-                        m_edges.push_back(edge);
-                        edge.v[0]->second.edges.push_back(m_edges.size() - 1);
-                        edge.v[1]->second.edges.push_back(m_edges.size() - 1);
+                        connections_.push_back(edge);
+                        edge.v[0]->second.connections.push_back(connections_.size() - 1);
+                        edge.v[1]->second.connections.push_back(connections_.size() - 1);
                     }
                     else XLOG_ERROR << "*Cannot find vertex on tessellating triangle "
                         << tri->meshId() << '/' << tri->id();
                 }
             }
-        }
 
-        bool checkSeq(std::vector<uint32_t>& vec, TessGraph::SortObject& sortObj)
-        {
-            for (int i = 1; i < vec.size(); i++)
-            {
-                if (!sortObj(vec[i - 1], vec[i]) && sortObj(vec[i], vec[i - 1]))
-                    return false;
-            }
-            return true;
-        }
-
-        bool TessGraph::tessellate()
-        {
-            bool error;
-            if (m_edges.size() < 3 || m_nodes.size() < 3)
-            {
-                XLOG_ERROR << "Invalid tess graph, triangle" << mp_tri->meshId() << "/" << mp_tri->id();
-                return false;
-            }
 
             // sort all node by circular order
-            SortObject sortObj = { this };
+            CircularOrderObj sortObj = { this };
             for (auto& nPair : m_nodes)
             {
                 auto &node = nPair.second;
                 sortObj.node = nPair.first;
-                std::quicksort(node.edges.begin(), node.edges.end(), sortObj);
-                assert(checkSeq(node.edges, sortObj));
+                std::quicksort(node.connections.begin(), node.connections.end(), sortObj);
+                assert(checkSeq(node.connections, sortObj));
+            }
+        }
+
+        bool TessGraph::tessellate()
+        {
+            std::stack<ConnectionIndex> edge_stack;
+
+            std::vector<Component*> components;
+            const int con_sz = connections_.size();
+            int color = -1;
+            for (int i = 0; i < con_sz; i++)
+            {
+                if (connections_[i].dir == D_NAN) continue;
+                edge_stack.push(i);
+
+                Component* cur_component = new Component();
+                components.push_back(cur_component);
+                ++color;
+                while (!edge_stack.empty())
+                {
+                    ConnectionIndex cur_con_idx = edge_stack.top();
+                    Connection& first_con = connections_[cur_con_idx];
+                    edge_stack.pop();
+
+                    if (first_con.dir == D_NAN) continue;
+
+                    NodeIndex headnode = -1, cur_node_idx = -1;
+                    if (first_con.dir != D_INV)
+                    {
+                        headnode = first_con.ends[0];
+                        cur_node_idx = first_con.ends[1];
+                    }
+                    else
+                    {
+                        headnode = first_con.ends[1];
+                        cur_node_idx = first_con.ends[0];
+                    }
+
+                    Loop cur_loop;
+                    while (1)
+                    {
+                        Direction sub_dir = D_SEQ;
+                        Connection& cur_con = connections_[cur_con_idx];
+                        if (cur_con.ends[0] != cur_node_idx)
+                            sub_dir = D_INV;
+
+                        if (cur_con.dir < 1 || cur_con.dir & sub_dir)
+                        {
+                            XLOG_ERROR << "Tessellation error: " << triangle_->meshId() << "/" << triangle_->id();
+                            throw 1;
+                        }
+                        cur_con.dir = Direction(cur_con.dir - sub_dir);
+
+                        // add to stack
+                        if (cur_con.dir != D_NAN)
+                            edge_stack.push(cur_con_idx);
+
+                        // add to loop
+                        cur_loop.nloop.push_back(cur_node_idx);
+                        cur_loop.cloop.push_back(cur_con_idx);
+
+                        //colorize
+                        nodes_[cur_node_idx].color = color;
+                        cur_con.color = color;
+
+                        // end loop
+                        if (cur_node_idx == headnode) break;
+
+                        // update
+                        cur_con_idx = findnext(cur_node_idx, cur_con_idx);
+                        cur_node_idx = (sub_dir == D_SEQ) ? cur_con.ends[1] : cur_con.ends[0];
+                    }
+                    cur_component->push_back(std::move(cur_loop));
+                }
             }
 
-            // tessellate
-            typedef uint32_t VeretxIndex;
-            NodeMap::iterator chead, curV;
-            EdgeIndex cedge;
-            std::stack<EdgeIndex> edgeStack;
-            std::vector<uint32_t> loop;
-            std::vector<EdgeIndex> loopEdge;
-            edgeStack.push(0);
-            auto pMem = GlobalData::getObject();
+            nestedResolveAndExtractFaces(components);
+            resolveIsolatedVertices();
 
-            while (!edgeStack.empty())
+            for (Component* component : components)
             {
-                if (m_edges[edgeStack.top()].dir == D_NAN)
+                delete component;
+            }
+
+            return true;
+        }
+
+        void TessGraph::nestedResolveAndExtractFaces(std::vector<Component*>& components) const
+        {
+            if (components.size() == 1)
+            {
+                extractFaces(components[0]);
+                return;
+            }
+
+            Component* outer_component = components[0];
+            MyVertex& anchor_vertex = triangle_->vertex(0);
+            for (int i = 1; i < components.size(); i++)
+            {
+                Component* cur_component = components[i];
+                NodeIndex chosen_node = -1;
+                for (Loop& loop : *cur_component)
                 {
-                    edgeStack.pop();
-                    continue;
-                }
-
-                cedge = edgeStack.top();
-                edgeStack.pop();
-
-                auto& eRef = m_edges[cedge];
-                assert(eRef.dir != D_NODIR);
-
-                loop.clear();
-                loopEdge.clear();
-                error = false;
-
-                chead = (eRef.dir == D_SEQ) ? eRef.v[0] : eRef.v[1];
-                curV = (eRef.dir == D_SEQ) ? eRef.v[1] : eRef.v[0];
-
-                loop.push_back(chead->first);
-                loopEdge.push_back(cedge);
-
-                while (curV != chead)
-                {
-                    cedge = curV->second.findnext(cedge);
-                    Edge& newEdge = m_edges[cedge];
-
-                    Direction dir = D_SEQ;
-                    if (newEdge.v[0] != curV)
-                        dir = D_INV;
-
-                    assert(newEdge.dir > 0 && (newEdge.dir & dir));
-                    if (newEdge.dir < 1)
+                    for (NodeIndex node_idx : loop.nloop)
                     {
-                        XLOG_ERROR << "Tessellation error: " << mp_tri->meshId() << "/" << mp_tri->id();
-                        error = true;
-                        break;
+                        if (nodes_[node_idx].coincident_edge_id >= 0)
+                        {
+                            chosen_node = node_idx;
+                            break;
+                        };
                     }
-                    newEdge.dir = Direction(newEdge.dir - dir);
-                    loop.push_back(curV->first);
-                    loopEdge.push_back(cedge);
-
-                    auto& eRef = m_edges[cedge];
-                    curV = (dir == D_SEQ) ? newEdge.v[1] : newEdge.v[0];
-
-                    if (newEdge.dir != D_NAN)
-                        edgeStack.push(cedge);
+                    if (chosen_node >= 0) break;
                 }
 
-                if (error) continue;
+                assert(chosen_node != -1);
+                EdgeIndex chosen_edge_idx = nodes_[chosen_node].coincident_edge_id;
+                MyEdge& chosen_edge = xedge(chosen_edge_idx);
 
+                XPlane split_plane(
+                    XPlaneBase( anchor_vertex.point(),
+                    xvertex(chosen_edge.ends[0]).point(),
+                    xvertex(chosen_edge.ends[1]).point()
+                    )
+                );
+
+                // TODO yesterday
+                struct ColorVertex
+                {
+                    std::set<VertexIndex> neighbors;
+                    int color = -1;
+                } defaultCV;
+
+                FaceInsctData* thiz = pTri->inscts;
+                // initialize the graph
+                std::map<VertexIndex, ColorVertex> data;
+                for (auto& v : thiz->points)
+                    data[v.vId] = defaultCV;
+
+                for (auto& pbiSet : thiz->inscts)
+                {
+                    for (FacePBI& fPbi : pbiSet.second)
+                    {
+                        data[fPbi.ends[0]].neighbors.insert(fPbi.ends[1]);
+                        data[fPbi.ends[1]].neighbors.insert(fPbi.ends[0]);
+                    }
+                }
+
+                // init vertex set
+                std::set<VertexIndex> edgeVertices;
+                for (int i = 0; i < 3; i++)
+                {
+                    edgeVertices.insert(pTri->vertexId(i));
+                    MyEdge& edge = pTri->edge(i);
+                    if (!edge.inscts) continue;
+                    for (VertexIndex vId : edge.inscts->points)
+                        edgeVertices.insert(vId);
+                }
+
+                // colorization
+                int color = 0;
+                uint32_t isoCount = MAX_MESH_COUNT;
+                bool isIsolated = false, boolRes = false;
+                std::stack<VertexIndex> vStack;
+                std::vector<VertexIndex> history;
+                for (auto& vItem : data)
+                {
+                    if (vItem.second.color == -1)
+                    {
+                        ++color;
+                        isIsolated = true;
+                        assert(vStack.empty());
+                        vStack.push(vItem.first);
+                        while (!vStack.empty())
+                        {
+                            VertexIndex curVId = vStack.top();
+                            vStack.pop();
+                            auto& curV = data[curVId];
+                            if (curV.color != -1) continue;
+
+                            history.push_back(curVId);
+                            if (edgeVertices.find(curVId) != edgeVertices.end())
+                                isIsolated = false;
+
+                            curV.color = color;
+                            for (VertexIndex vId : curV.neighbors)
+                            {
+                                if (data[vId].color == -1)
+                                    vStack.push(vId);
+                            }
+                        }
+
+                        if (isIsolated)
+                        {
+                            VertexIndex chooseVertex = INVALID_UINT32;
+                            MyEdge::SIndex eId = -1;
+                            for (VertexIndex vId : history)
+                            {
+                                for (auto &v : thiz->points)
+                                {
+                                    if (v.vId == vId)
+                                    {
+                                        chooseVertex = vId;
+                                        eId = v.eId;
+                                        break;
+                                    }
+                                }
+
+                                if (eId >= 0) break;
+                            }
+                            assert(eId != -1);
+                            if (eId >= 0)
+                            {
+                                FacePBI fPbi;
+                                fPbi.ends[0] = pTri->vertexId(0);
+                                fPbi.ends[1] = chooseVertex;
+
+                                MyEdge& crossEdgeRef = xedge(eId);
+                                fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
+                                    xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
+
+                                PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
+                                fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
+                                fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
+                                assert(line.dot(fPbi.pends[0]) > 0);
+                                assert(line.dot(fPbi.pends[1]) > 0);
+                                if (line.linearOrderNoCheck(fPbi.pends[0], fPbi.pends[1]) < 0)
+                                {
+                                    std::swap(fPbi.ends[0], fPbi.ends[1]);
+                                    std::swap(fPbi.pends[0], fPbi.pends[1]);
+                                }
+
+                                assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
+                                thiz->inscts[isoCount++].push_back(fPbi);
+                            }
+                            else
+                            {
+                                assert(eId == -2 && history.size() == 1);
+                                strayVertices.push_back(history[0]);
+                            }
+                            boolRes = true;
+                        }
+                        history.clear();
+                    }
+                }
+
+                return boolRes;
+            }
+        }
+
+        void TessGraph::extractFaces(Component* component) const
+        {
+            for (Loop& loop : *component)
+            {
                 // add subpolygon
-                const uint32_t n = loop.size();
-                SubPolygon *spoly = new SubPolygon(mp_tri->meshId(), n);
-                spoly->constructFromVertexList(loop.begin(), loop.end());
+                const int degree = loop.cloop.size();
+                SubPolygon *spoly = new SubPolygon(triangle_->meshId(), degree);
+
+                std::vector<VertexIndex> vertices(degree);
+                for (int i = 0; i < degree; i++)
+                {
+                    vertices[i] = nodes_[loop.nloop[i]].vertex_id;
+                }
+                spoly->constructFromVertexList(vertices.begin(), vertices.end());
 
                 // add neighborInfo
-                for (uint32_t i = 0; i < n; i++)
+                for (int i = 0; i < degree; i++)
                 {
-                    auto* pbi = m_edges[loopEdge[i]].pbi;
+                    PBIRep* pbi = connections_[loop.cloop[i]].pbi;
                     if (pbi && !pbi->neighbor.empty())
                     {
                         auto &nSourse = pbi->neighbor;
@@ -285,43 +474,157 @@ namespace Boolean
                     }
                 }
 
-                spoly->sPlane = mp_tri->supportingPlane();
+                spoly->sPlane = triangle_->supportingPlane();
+                xmeshlist()[triangle_->meshId()]->faces().push_back(spoly);
+            }
+            
+        }
+
+        void TessGraph::resolveIsolatedVertices() const
+        {
+            bool first_detect = true;
+            for (int i = 0; i < nodes_.size(); i++)
+            {
+                if (!nodes_[i].visited)
+                {
+                    if (first_detect)
+                    {
+                        first_detect = false;
+                        XLOG_DEBUG << "Detect isolated vertex" << triangle_->meshId() << "/" << triangle_->id();
+                        XLOG_DEBUG << "However, I did nothing.";
+                    }
+                }
+            }
+        }
+
+        bool TessGraph::tessellate2()
+        {
+            bool error;
+            if (connections_.size() < 3 || m_nodes.size() < 3)
+            {
+                XLOG_ERROR << "Invalid tess graph, triangle" << triangle_->meshId() << "/" << triangle_->id();
+                return false;
+            }
+
+            // tessellate
+            typedef uint32_t VeretxIndex;
+            NodeMap::iterator head_node, curV;
+            EdgeIndex cur_con_idx;
+            std::stack<ConnectionIndex> edgeStack;
+            std::vector<uint32_t> loop;
+            std::vector<ConnectionIndex> cur_loop.cloop;
+            edgeStack.push(theFirstConnection());
+            GlobalData* pMem = GlobalData::getObject();
+
+            while (!edgeStack.empty())
+            {
+                if (connections_[edgeStack.top()].dir == D_NAN)
+                {
+                    edgeStack.pop();
+                    continue;
+                }
+
+                cur_con_idx = edgeStack.top();
+                edgeStack.pop();
+
+                auto& cur_con = connections_[cur_con_idx];
+                assert(cur_con.dir != D_NODIR);
+
+                loop.clear();
+                cur_loop.cloop.clear();
+                error = false;
+
+                head_node = (cur_con.dir == D_SEQ) ? cur_con.v[0] : cur_con.v[1];
+                curV = (cur_con.dir == D_SEQ) ? cur_con.v[1] : cur_con.v[0];
+
+                loop.push_back(head_node->first);
+                cur_loop.cloop.push_back(cur_con_idx);
+
+                while (curV != head_node)
+                {
+                    cur_con_idx = curV->second.findnext(cur_con_idx);
+                    Edge& cur_con = connections_[cur_con_idx];
+
+                    Direction dir = D_SEQ;
+                    if (cur_con.v[0] != curV)
+                        dir = D_INV;
+
+                    assert(cur_con.dir > 0 && (cur_con.dir & dir));
+                    if (cur_con.dir < 1)
+                    {
+                        XLOG_ERROR << "Tessellation error: " << triangle_->meshId() << "/" << triangle_->id();
+                        error = true;
+                        break;
+                    }
+                    cur_con.dir = Direction(cur_con.dir - dir);
+                    loop.push_back(curV->first);
+                    cur_loop.cloop.push_back(cur_con_idx);
+
+                    auto& cur_con = connections_[cur_con_idx];
+                    curV = (dir == D_SEQ) ? cur_con.v[1] : cur_con.v[0];
+
+                    if (cur_con.dir != D_NAN)
+                        edgeStack.push(cur_con_idx);
+                }
+
+                if (error) continue;
+
+                // add subpolygon
+                const uint32_t n = loop.size();
+                SubPolygon *spoly = new SubPolygon(triangle_->meshId(), n);
+                spoly->constructFromVertexList(loop.begin(), loop.end());
+
+                // add neighborInfo
+                for (uint32_t i = 0; i < n; i++)
+                {
+                    auto* pbi = connections_[cur_loop.cloop[i]].pbi;
+                    if (pbi && !pbi->neighbor.empty())
+                    {
+                        auto &nSourse = pbi->neighbor;
+                        auto &nTarget = spoly->edge(i).neighbor;
+                        if (!nTarget)
+                            nTarget = new std::vector<NeighborInfo>;
+                        nTarget->insert(nTarget->end(), nSourse.begin(), nSourse.end());
+                    }
+                }
+
+                spoly->sPlane = triangle_->supportingPlane();
                 pMem->addSubPolygon(spoly);
             }
             return true;
         }
 
-        bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
+        //bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
+        //{
+        //    if (i == j) return false;
+
+        //    auto &ei = pTG->m_edges[i];
+        //    auto &ej = pTG->m_edges[j];
+
+        //    auto sp = pTG->mp_tri->supportingPlane();
+        //    XPlane ep[2] = { ei.prep, ej.prep };
+
+        //    if (ei.startVertex() != node)
+        //        ep[0].inverse();
+
+        //    if (ej.startVertex() != node)
+        //        ep[1].inverse();
+
+        //    Real res = sign(sp, ep[0], ep[1]);
+        //    //assert(res != Real(0));
+        //    return res < Real(0);
+        //}
+
+        TessGraph::ConnectionIndex TessGraph::Node::findnext(ConnectionIndex now) const
         {
-            if (i == j) return false;
-
-            auto &ei = pTG->m_edges[i];
-            auto &ej = pTG->m_edges[j];
-
-            auto sp = pTG->mp_tri->supportingPlane();
-            XPlane ep[2] = { ei.prep, ej.prep };
-
-            if (ei.startVertex() != node)
-                ep[0].inverse();
-
-            if (ej.startVertex() != node)
-                ep[1].inverse();
-
-            Real res = sign(sp, ep[0], ep[1]);
-            //assert(res != Real(0));
-            return res < Real(0);
-        }
-
-        TessGraph::EdgeIndex TessGraph::Node::findnext(EdgeIndex now) const
-        {
-            for (int i = 0; i < edges.size(); i++)
+            for (int i = 0; i < connections.size(); i++)
             {
-                if (edges[i] == now)
-                    return edges[i + 1];
+                if (connections[i] == now)
+                    return connections[i + 1];
             }
-            return INVALID_INDEX;
+            return INVALID_UINT32;
         }
-        bool TessGraph::Edge::checkPlaneOrientation(const Triangle *pTri)
+        bool TessGraph::Connection::checkPlaneOrientation(const Triangle *pTri)
         {
             PlaneLine line(pTri->supportingPlane(), prep);
             if (linearOrder(line, xvertex(v[0]->first),
@@ -743,9 +1046,9 @@ namespace Boolean
                                         {
                                             if (neiInfo.type == NeighborInfo::Edge)
                                             {
-                                                MyEdge& eRef = xedge(neiInfo.neighborEdgeId);
-                                                assert(eRef.inscts);
-                                                newPos = eRef.inscts->point(newPoint);
+                                                MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
+                                                assert(cur_con.inscts);
+                                                newPos = cur_con.inscts->point(newPoint);
                                             }
                                             else
                                             {

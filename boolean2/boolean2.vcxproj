@@ -36,6 +36,7 @@
     <ClInclude Include="csgdefs.h" />
     <ClInclude Include="geoprimitive.h" />
     <ClInclude Include="global.h" />
+    <ClInclude Include="hybrid_geometry.h" />
     <ClInclude Include="interfaces.h" />
     <ClInclude Include="intersection.h" />
     <ClInclude Include="triboxtest.hpp" />
@@ -56,6 +57,7 @@
     <ClCompile Include="csg.cpp" />
     <ClCompile Include="geoprimitive.cpp" />
     <ClCompile Include="intersection.cpp" />
+    <ClCompile Include="hybrid_geometry.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="offio.cpp" />
     <ClCompile Include="precompile.cpp">

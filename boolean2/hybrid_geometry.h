@@ -17,6 +17,7 @@ namespace Boolean
         {
             const MyVertex* vertex;
             XPlane plane;
+            int id;
         };
 
         bool operator()(const Item& a, const Item& b) const
@@ -45,12 +46,15 @@ namespace Boolean
         PlaneLine line_;
     };
 
-    struct CircularOrderObj /// clockwise
+
+    /// clockwise, to correctly sort, we have to use quicksort
+    struct CircularOrderObj
     {
     public:
         struct Item
         {
             XPlane prep;
+            int id;
         };
 
         bool operator() (const Item& i, const Item& j) const
@@ -58,6 +62,16 @@ namespace Boolean
             Real res = sign(supporting_plane_, i.prep, j.prep);
             assert(res != Real(0));
             return res < Real(0);
+        }
+
+        bool checkSeq(std::vector<Item>& vec) const
+        {
+            for (int i = 1; i < vec.size(); i++)
+            {
+                if (!(*this)(vec[i - 1], vec[i]) && (*this)(vec[i], vec[i - 1]))
+                    return false;
+            }
+            return true;
         }
 
     private:
