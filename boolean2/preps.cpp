@@ -132,7 +132,7 @@ namespace Boolean
 //#endif
 //    }
 
-    int PlaneLine::linearOrderNoCheck(const XPlane & a, const XPlane & b) const
+    int PlaneLine::linear_order_unsafe(const XPlane & a, const XPlane & b) const
     {
         const Real* mat[4] = { planes_[0].data(),
             planes_[1].data(), b.data(), a.data() };
@@ -144,7 +144,39 @@ namespace Boolean
         return 0;
     }
 
-    int PlaneLine::linearOrder(const PlanePoint & a, const PlanePoint & b) const
+    int PlaneLine::linear_order_unsafe(const XPlane & a, const PlanePoint & b) const
+    {
+        Oriented_side res = a.orientation(b);
+        switch (res)
+        {
+        case ON_NEGATIVE_SIDE:
+            return -1;
+        case ON_ORIENTED_BOUNDARY:
+            return 0;
+        case ON_POSITIVE_SIDE:
+            return 1;
+        default:
+            throw 1;
+        }
+    }
+
+    int PlaneLine::linear_order_unsafe(const PlanePoint & a, const XPlane & b) const
+    {
+        Oriented_side res = b.orientation(a);
+        switch (res)
+        {
+        case ON_NEGATIVE_SIDE:
+            return 1;
+        case ON_ORIENTED_BOUNDARY:
+            return 0;
+        case ON_POSITIVE_SIDE:
+            return -1;
+        default:
+            throw 1;
+        }
+    }
+
+    int PlaneLine::linear_order(const PlanePoint & a, const PlanePoint & b) const
     {
         XPlane pa, pb;
         for (int i = 0; i < 3; i++)
@@ -165,10 +197,24 @@ namespace Boolean
             }
         }
         assert(pa.is_valid() && pb.is_valid());
-        return linearOrder(pa, pb);
+        return linear_order(pa, pb);
     }
 
-    int PlaneLine::linearOrder(const cyPointT& a, const cyPointT& b) const
+    int PlaneLine::linear_order(const PlanePoint & a, const XPlane & b) const
+    {
+        XPlane b_copy = b;
+        if (dot(b) < 0) b_copy.inverse();
+        return linear_order_unsafe(a, b_copy);
+    }
+
+    int PlaneLine::linear_order(const XPlane & a, const PlanePoint & b) const
+    {
+        XPlane a_copy = a;
+        if (dot(a) < 0) a_copy.inverse();
+        return linear_order_unsafe(a_copy, b);
+    }
+
+    int PlaneLine::linear_order(const cyPointT& a, const cyPointT& b) const
     {
         cyPointT vec = b - a;
         if (vec.LengthSquared() == Real(0)) return 0;
@@ -181,11 +227,11 @@ namespace Boolean
         else return -1;
     }
 
-    int PlaneLine::linearOrder(const XPlane & a, const XPlane & b) const 
+    int PlaneLine::linear_order(const XPlane & a, const XPlane & b) const 
     {
         auto a2 = a, b2 = b;
-        makePositive(a2);
-        makePositive(b2);
+        make_positive(a2);
+        make_positive(b2);
 
         const Real* mat[4] = { planes_[0].data(),
             planes_[1].data(), b2.data(), a2.data() };
@@ -199,7 +245,7 @@ namespace Boolean
         return 0;
     }
 
-    void PlaneLine::makePositive(XPlane & input) const
+    void PlaneLine::make_positive(XPlane & input) const
 	{
         Real res = dot(input);
         if (res < 0) input.inverse();
@@ -210,12 +256,12 @@ namespace Boolean
         return sign(planes_[0], planes_[1], input);
     }
 
-    XPlane PlaneLine::pickPositiveVertical(const cyPointT & p) const
+    XPlane PlaneLine::pick_positive_vertical_plane(const cyPointT & p) const
     {
         return XPlane(XPlaneBase(*this, p));
     }
 
-    XPlane PlaneLine::pickPositiveVertical(const PlanePoint & p) const
+    XPlane PlaneLine::pick_positive_vertical_plane(const PlanePoint & p) const
     {
         for (int j = 0; j < 3; j++)
         {
@@ -268,15 +314,15 @@ namespace Boolean
         data_[3] = -thiz->Dot(p);
     }
 
-    //void XPlaneBase::setFromPEE(const cyPointT & p, const cyPointT & e0, const cyPointT & e1)
-    //{
-    //    assert(fp_filter_check(reinterpret_cast<const Real*>(&e0), FP_EDGE_CHECK));
-    //    assert(fp_filter_check(reinterpret_cast<const Real*>(&e1), FP_EDGE_CHECK));
+    XPlaneBase::XPlaneBase(const cyPointT & p, const cyPointT & e0, const cyPointT & e1, int)
+    {
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&e0), FP_EDGE_CHECK));
+        assert(fp_filter_check(reinterpret_cast<const Real*>(&e1), FP_EDGE_CHECK));
 
-    //    cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
-    //    *thiz = (e0).Cross(e1);
-    //    m_data[3] = -thiz->Dot(p);
-    //}
+        cyPointT* thiz = reinterpret_cast<cyPointT*>(this);
+        *thiz = (e0).Cross(e1);
+        data_[3] = -thiz->Dot(p);
+    }
 
     Oriented_side XPlaneBase::orientation(const cyPointT & p) const
     {

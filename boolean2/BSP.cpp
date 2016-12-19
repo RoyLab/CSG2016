@@ -9,11 +9,6 @@ namespace Boolean
         mp_root = buildRecursion(faces);
     }
 
-    void BSPTree::build(std::vector<IPolygon*>& faces)
-    {
-        assert(0);
-    }
-
     void BSPTree::reset()
     {
         SAFE_DELETE(mp_root);

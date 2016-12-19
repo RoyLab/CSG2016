@@ -58,6 +58,7 @@
     <ClCompile Include="geoprimitive.cpp" />
     <ClCompile Include="intersection.cpp" />
     <ClCompile Include="hybrid_geometry.cpp" />
+    <ClCompile Include="intersection_refine.cpp" />
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="offio.cpp" />
     <ClCompile Include="precompile.cpp">

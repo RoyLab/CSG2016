@@ -1,12 +1,18 @@
 #pragma once
 #include <vector>
 #include <macros.h>
+#include <deque>
 #include "preps.h"
 #include "global.h"
 #include "RegularMesh.h"
 
 namespace Boolean
 {
+    enum VertexType
+    {
+        V_Plane, V_PlanePoint, VI_Point
+    };
+
     struct CsgOption
     {
         bool triangulation = false;
@@ -15,7 +21,7 @@ namespace Boolean
     class GlobalData
     {
     public:
-        std::vector<XPlaneBase>     planebases;
+        std::deque<XPlaneBase>      planebases;
         std::vector<PlanePoint>	    ppoints;
 
         std::vector<cyPointT>	    points;
@@ -62,13 +68,13 @@ namespace Boolean
 
     inline const XPlaneBase& xcplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }
     inline XPlaneBase& xplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }
-    inline std::vector<XPlaneBase>& xplanes() { return GlobalData::getObject()->planebases; }
+    inline std::deque<XPlaneBase>& xplanes() { return GlobalData::getObject()->planebases; }
 
     inline const std::vector<RegularMesh*>& xcmeshlist() { return GlobalData::getObject()->meshes; }
     inline std::vector<RegularMesh*>& xmeshlist() { return GlobalData::getObject()->meshes; }
 
     /// more  gramma sugar
-    inline int linearOrder(const PlaneLine& l, VertexIndex a, VertexIndex b) { return linearOrder(l, xvertex(a), xvertex(b)); }
-    inline Oriented_side orientation(const XPlane& p, VertexIndex v) { return orientation(p, xvertex(v)); }
+    //inline int linear_order(const PlaneLine& l, VertexIndex a, VertexIndex b) { return linear_order(l, xvertex(a), xvertex(b)); }
+    //inline Oriented_side orientation(const XPlane& p, VertexIndex v) { return orientation(p, xvertex(v)); }
 
 }

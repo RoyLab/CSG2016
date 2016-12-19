@@ -2,6 +2,7 @@
 #include <CGAL/Point_3.h>
 #include <cstring>
 
+#include "adaptive.h"
 #include "RegularMesh.h"
 #include "xmemory.h"
 #include "offio.h"
@@ -222,7 +223,7 @@ namespace Boolean
     {
         if (!sPlane.is_valid())
         {
-            sPlane = XPlane(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2]));
+            sPlane = XPlane(XPlaneBase(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2])));
             assert(sPlane.has_on(xcpoint(vIds[0])));
             assert(sPlane.has_on(xcpoint(vIds[1])));
             assert(sPlane.has_on(xcpoint(vIds[2])));
@@ -236,16 +237,16 @@ namespace Boolean
             assert(sPlane.is_valid());
             const cyPointT* tmp = 
                 reinterpret_cast<const cyPointT*>(sPlane.normal());
-            auto normal = *tmp / tmp->Length() * 0.1;
+            cyPointT normal = *tmp / tmp->Length() * 0.1;
             fp_filter_edge(reinterpret_cast<Real*>(&normal));
 
-            auto& p = xpoint(vIds[0]);
-            auto& q = xpoint(vIds[1]);
-            auto& r = xpoint(vIds[2]);
+            cyPointT& p = xpoint(vIds[0]);
+            cyPointT& q = xpoint(vIds[1]);
+            cyPointT& r = xpoint(vIds[2]);
 
-            bPlanes[0].setFromPEE(q, normal, r - q);
-            bPlanes[1].setFromPEE(r, normal, p - r);
-            bPlanes[2].setFromPEE(p, normal, q - p);
+            bPlanes[0].setBase(XPlaneBase(q, normal, r - q, 0));
+            bPlanes[1].setBase(XPlaneBase(r, normal, p - r, 0));
+            bPlanes[2].setBase(XPlaneBase(p, normal, q - p, 0));
 
             assert(bPlanes[0].orientation(p) == ON_POSITIVE_SIDE);
             assert(bPlanes[0].orientation(q) == ON_ORIENTED_BOUNDARY);

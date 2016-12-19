@@ -28,6 +28,7 @@ namespace Boolean
 
 		std::vector<NeighborInfo> neighbor;
 
+        virtual int is_derived_cls() const { return false; }
 		virtual ~PBIRep() {}
     };
 
@@ -35,14 +36,15 @@ namespace Boolean
 
 	struct FacePBI: public PBIRep
 	{
-		XPlane vertPlane;
-        //std::list<Triangle*> pTris; // ≤ªø…÷ÿ∏¥
+        int is_derived_cls() const { return true; }
+        XPlane vertPlane;
 	};
 
     class EdgeInsctData
     {
     public:
-		typedef std::map<uint32_t, std::list<EdgePBI>> PBIList;
+        typedef std::list<EdgePBI> PBIList;
+        typedef std::map<uint32_t, PBIList> PBILists;
 		typedef std::vector<VertexIndex> VertexList;
 
 		void refine(void* pData);
@@ -50,7 +52,50 @@ namespace Boolean
         uint32_t* point(const PlanePoint&);
 
 	public:
-		PBIList		inscts;
+        class PbiPairIterator
+        {
+        public:
+            PbiPairIterator(EdgeInsctData* target);
+            void operator++();
+            operator bool() const;
+
+        private:
+            PBILists::iterator outer_end_, inner_end_;
+            PBILists::iterator outer_cur_, inner_cur_;
+
+            PBIList::iterator outer_pbi_end_, inner_pbi_end_;
+            PBIList::iterator outer_pbi_cur_, inner_pbi_cur_;
+        };
+
+        class PbiIterator
+        {
+        public:
+            PbiIterator(EdgeInsctData* target);
+            void operator++();
+            EdgePBI* operator->() const;
+            EdgePBI* pointer() const;
+            operator bool() const;
+
+        private:
+            PBILists::iterator end_;
+            PBILists::iterator cur_;
+
+            PBIList::iterator pbi_end_;
+            PBIList::iterator pbi_cur_;
+        };
+
+        PbiPairIterator pbi_pair_begin()
+        {
+            return PbiPairIterator(this);
+        }
+
+        PbiIterator pbi_begin()
+        {
+            return PbiIterator(this);
+        }
+
+
+        PBILists	inscts;
 		VertexList  points;
 
     protected:
@@ -62,7 +107,8 @@ namespace Boolean
     public:
         // eId: -1 means tess intersection, -2 means from by propagate at that stage
         struct Vertex { VertexIndex vId; EdgeSIndex eId; };
-        typedef std::map<uint32_t, std::list<FacePBI>> PBIList;
+        typedef std::list<FacePBI> PBIList;
+        typedef std::map<uint32_t, PBIList> PBILists;
         typedef std::vector<Vertex> VertexList;
 
         void refine(void* pData);
@@ -70,7 +116,49 @@ namespace Boolean
         uint32_t* point(const PlanePoint&, EdgeSIndex eIdx);
 
     public:
-        PBIList		inscts;
+        class PbiPairIterator
+        {
+        public:
+            PbiPairIterator(FaceInsctData* target);
+            void operator++();
+            operator bool() const;
+
+        private:
+            PBILists::iterator outer_end_, inner_end_;
+            PBILists::iterator outer_cur_, inner_cur_;
+
+            PBIList::iterator outer_pbi_end_, inner_pbi_end_;
+            PBIList::iterator outer_pbi_cur_, inner_pbi_cur_;
+        };
+
+        class PbiIterator
+        {
+        public:
+            PbiIterator(FaceInsctData* target);
+            void operator++();
+            FacePBI* operator->() const;
+            EdgePBI* pointer() const;
+            operator bool() const;
+
+        private:
+            PBILists::iterator end_;
+            PBILists::iterator cur_;
+
+            PBIList::iterator pbi_end_;
+            PBIList::iterator pbi_cur_;
+        };
+
+        PbiPairIterator pbi_pair_begin()
+        {
+            return PbiPairIterator(this);
+        }
+
+        PbiIterator pbi_begin()
+        {
+            return PbiIterator(this);
+        }
+
+        PBILists    inscts;
         VertexList  points;
 
     protected:

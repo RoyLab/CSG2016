@@ -12,8 +12,8 @@
 #define PREP_DEBUG_INFO
 #endif
 
-//#define USE_CGAL_PREDICATES
-//#define USE_CGAL_PREDICATES_CHECK
+#define USE_CGAL_PREDICATES
+#define USE_CGAL_PREDICATES_CHECK
 
 //#define NDEBUG
 

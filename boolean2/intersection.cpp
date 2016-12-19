@@ -234,15 +234,15 @@ namespace Boolean
 		// 规定cross(n0, n1)为正方向
 		sign = compute_intervals_isectline(db, *t[1], tagA[1], tagB[1], posA[1], posB[1]);
 
-        line.linearOrderNoCheck(posA[1], posB[1]);
+        line.linear_order_unsafe(posA[1], posB[1]);
 
         posB[0].inverse();
         posB[1].inverse();
 
-		assert(line.linearOrder(posA[0], posB[0]) >= 0);
-		assert(line.linearOrder(posA[1], posB[1]) >= 0);
+		assert(line.linear_order(posA[0], posB[0]) >= 0);
+		assert(line.linear_order(posA[1], posB[1]) >= 0);
 
-		int cmpA0B1 = line.linearOrderNoCheck(posA[0], posB[1]);
+		int cmpA0B1 = line.linear_order_unsafe(posA[0], posB[1]);
 		if (cmpA0B1 < 0) return NOT_INTERSECT;
 		if (cmpA0B1 == 0)
 		{
@@ -252,7 +252,7 @@ namespace Boolean
 			return INTERSECT_ON_POINT;
 		}
 
-		int cmpA1B0 = line.linearOrderNoCheck(posA[1], posB[0]);
+		int cmpA1B0 = line.linear_order_unsafe(posA[1], posB[0]);
 		if (cmpA1B0 < 0) return NOT_INTERSECT;
 		if (cmpA1B0 == 0)
 		{
@@ -262,8 +262,8 @@ namespace Boolean
 			return INTERSECT_ON_POINT;
 		}
 
-		int Acmp = line.linearOrderNoCheck(posA[0], posA[1]);
-		int Bcmp = line.linearOrderNoCheck(posB[0], posB[1]);
+		int Acmp = line.linear_order_unsafe(posA[0], posA[1]);
+		int Bcmp = line.linear_order_unsafe(posB[0], posB[1]);
 
 		PosTag defaultTag[2] = { INNER, INNER };
 		for (size_t i = 0; i < 2; i++)
@@ -287,10 +287,10 @@ namespace Boolean
 		result.tagB[1] = Bcmp <= 0 ? tagB[1] : defaultTag[1];
 		result.B = Bcmp <= 0 ? posB[1] : posB[0];
 
-        if (line.linearOrderNoCheck(result.A, result.B) == 0)
+        if (line.linear_order_unsafe(result.A, result.B) == 0)
             return INTERSECT_ON_POINT;
 
-        assert(line.linearOrderNoCheck(result.A, result.B) > 0);
+        assert(line.linear_order_unsafe(result.A, result.B) > 0);
 		return INTERSECT_ON_LINE;
 	}
 
@@ -424,7 +424,7 @@ namespace Boolean
 
                     assert(edgeLine.dot(epbi.pends[0]) > 0);
                     assert(edgeLine.dot(epbi.pends[1]) > 0);
-                    assert(edgeLine.linearOrder(epbi.pends[0], epbi.pends[1]) > 0);
+                    assert(edgeLine.linear_order(epbi.pends[0], epbi.pends[1]) > 0);
 
 					if (!edge->inscts)
 						edge->inscts = new EdgeInsctData;
@@ -453,8 +453,8 @@ namespace Boolean
 
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
                     assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
-                    assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linearOrder(fpbi.pends[0], fpbi.pends[1]) > 0);
-                    assert(linearOrder(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
+                    assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linear_order(fpbi.pends[0], fpbi.pends[1]) > 0);
+                    assert(linear_order(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
 
 					if (!t[i]->inscts)
 						t[i]->inscts = new FaceInsctData;

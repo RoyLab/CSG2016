@@ -12,7 +12,7 @@ namespace Boolean
         XPlaneBase() {}
         XPlaneBase(const PlaneLine& l, const cyPointT& p); // give a p-rep normal and a point, construct a approx plane on p
         XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
-        XPlaneBase(const cyPointT& p, const cyPointT& e0, const cyPointT& e1);
+        XPlaneBase(const cyPointT& p, const cyPointT& e0, const cyPointT& e1, int);
 
         Oriented_side orientation(const cyPointT&) const;
         bool coplanar(const XPlaneBase&) const;
@@ -100,14 +100,34 @@ namespace Boolean
         }
 
 		// @return 1 a->b, 0 a=b, -1 b->a
-        int linearOrder(const XPlane& a, const XPlane& b) const;
-		int linearOrderNoCheck(const XPlane& a, const XPlane& b) const;
-        int linearOrder(const PlanePoint& a, const PlanePoint& b) const;
-        int linearOrder(const cyPointT& a, const cyPointT& b) const;
-        void makePositive(XPlane& input) const;
+        int linear_order(const XPlane& a, const XPlane& b) const;
+        int linear_order(const PlanePoint& a, const XPlane& b) const;
+        int linear_order(const XPlane& a, const PlanePoint& b) const;
+
+        int linear_order(const cyPointT& a, const cyPointT& b) const;
+        int linear_order(const PlanePoint& a, const cyPointT& b) const;
+        int linear_order(const cyPointT& a, const PlanePoint& b) const;
+
+        int linear_order(const XPlane& a, const cyPointT& b) const;
+        int linear_order(const cyPointT& a, const XPlane& b) const;
+
+        int linear_order(const PlanePoint& a, const PlanePoint& b) const;
+
+        int linear_order_unsafe(const XPlane& a, const XPlane& b) const;
+        int linear_order_unsafe(const XPlane& a, const PlanePoint& b) const;
+        int linear_order_unsafe(const PlanePoint& a, const XPlane& b) const;
+
+        int linear_order_unsafe(const PlanePoint& a, const cyPointT& b) const;
+        int linear_order_unsafe(const cyPointT& a, const PlanePoint& b) const;
+
+        int linear_order_unsafe(const XPlane& a, const cyPointT& b) const;
+        int linear_order_unsafe(const cyPointT& a, const XPlane& b) const;
+
+        void make_positive(XPlane& input) const;
         Real dot(const XPlane&) const;
-        XPlane pickPositiveVertical(const cyPointT& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
-        XPlane pickPositiveVertical(const PlanePoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
+        XPlane pick_positive_vertical_plane(const cyPointT& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
+        XPlane pick_positive_vertical_plane(const PlanePoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
+        void inverse();
         cyPointT approxNormal() const;
 
 #ifdef PREP_DEBUG_INFO

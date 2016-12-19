@@ -51,7 +51,7 @@ namespace Boolean
         IPolygon* ptr = nullptr;
     };
 
-    struct MyEdge
+    class MyEdge
     {
     public:
 

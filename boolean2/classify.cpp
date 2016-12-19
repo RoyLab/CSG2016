@@ -195,7 +195,7 @@ namespace Boolean
         // correct the direction of bounding plane
         PlaneLine edgeLine(polygon->supportingPlane(), boundPlane);
         assert(!polygon->supportingPlane().id_equals(boundPlane));
-        int tmpSide = linearOrder(edgeLine, xvertex(polygon->vertexId((edgeIndexInFace + 1) % polygon->degree())),
+        int tmpSide = linear_order(edgeLine, xvertex(polygon->vertexId((edgeIndexInFace + 1) % polygon->degree())),
             xvertex(polygon->vertexId(edgeIndexInFace)));
 
         assert(tmpSide != 0);

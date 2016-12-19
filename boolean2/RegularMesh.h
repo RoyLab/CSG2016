@@ -80,11 +80,11 @@ namespace Boolean
         uint32_t eIds[3];
         uint32_t vIds[3];
 
-		XPlane bPlanes[3];
+        // normal point to inside, edge orientation incoherent with sp x bp
+		XPlane bPlanes[3]; 
 
         bool bIsValid = true;
 	};
-
 
     template <class CGALPointT>
     CGALPointT convertToCGALPoint(const cyPointT& pt)
