@@ -4,6 +4,7 @@
 
 #include <xlogger.h>
 #include "adaptive.h"
+#include "Octree.h"
 #include "intersection.h"
 #include "UndirectedGraph.hpp"
 #include "RegularMesh.h"
@@ -398,7 +399,7 @@ namespace Boolean
 
 				if (eId[i] > -1)
 				{
-					EdgePBI epbi;
+					EdgePbi epbi;
 					MyEdge* edge = &t[i]->edge(eId[i]);
 
                     // let it be the same sequence as edge vertex's
@@ -408,23 +409,23 @@ namespace Boolean
                     PlaneLine edgeLine(t[i]->supportingPlane(), vertPlane);
                     if (edgeLine.dot(insctRes.A) < 0)
                     {
-                        epbi.pends[0] = insctRes.B.opposite();
-                        epbi.pends[1] = insctRes.A.opposite();
+                        //epbi.pends[0] = insctRes.B.opposite();
+                        //epbi.pends[1] = insctRes.A.opposite();
                         epbi.ends[0] = v[1];
                         epbi.ends[1] = v[0];
                     }
                     else
                     {
-                        epbi.pends[0] = insctRes.A;
-                        epbi.pends[1] = insctRes.B;
+                        //epbi.pends[0] = insctRes.A;
+                        //epbi.pends[1] = insctRes.B;
                         epbi.ends[0] = v[0];
                         epbi.ends[1] = v[1];
                     }
                     epbi.neighbor.push_back(ninfo);
 
-                    assert(edgeLine.dot(epbi.pends[0]) > 0);
-                    assert(edgeLine.dot(epbi.pends[1]) > 0);
-                    assert(edgeLine.linear_order(epbi.pends[0], epbi.pends[1]) > 0);
+                    //assert(edgeLine.dot(epbi.pends[0]) > 0);
+                    //assert(edgeLine.dot(epbi.pends[1]) > 0);
+                    //assert(edgeLine.linear_order(epbi.pends[0], epbi.pends[1]) > 0);
 
 					if (!edge->inscts)
 						edge->inscts = new EdgeInsctData;
@@ -432,7 +433,7 @@ namespace Boolean
 				}
 				else
 				{
-					FacePBI fpbi;
+					FacePbi fpbi;
 					fpbi.vertPlane = t[i2]->supportingPlane();
                     if (sign(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
                     {
@@ -547,16 +548,17 @@ namespace Boolean
 		}
 	}
 
-    uint32_t * EdgeInsctData::point(const PlanePoint & p)
+    VertexIndex * EdgeInsctData::point(const PlanePoint & p, const XPlane & plane)
     {
         for (auto itr = points.begin(); itr != points.end(); itr++)
         {
-            if (xvertex(*itr).isCoincident(p))
-                return &*itr;
+            if (xvertex(itr->vertex_idx).isCoincident(p))
+                return &itr->vertex_idx;
         }
 
-        points.push_back(INVALID_UINT32);
-        return &points.back();
+        points.push_back(Vertex{ INVALID_UINT32, plane });
+        line.make_positive(points.back().plane_rep);
+        return &(points.back().vertex_idx);
     }
 
     uint32_t * FaceInsctData::point(const PlanePoint &p, EdgeSIndex eIdx)
@@ -570,5 +572,4 @@ namespace Boolean
         points.push_back(v);
         return &points.back().vId;
     }
-
 }

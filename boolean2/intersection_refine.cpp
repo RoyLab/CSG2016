@@ -1,242 +1,914 @@
 #include "precompile.h"
+
+#include <map>
+#include <set>
+
+#include <xstruct.hpp>
+
 #include "intersection.h"
 #include "hybrid_geometry.h"
 
 namespace Boolean
 {
-    void EdgeInsctData::refine(void* pData)
+
+    namespace
+    {
+        IndexPair makePbiIndex(const PbiRep* rep)
+        {
+            IndexPair res;
+            MakeIndex(rep->ends, res);
+            return res;
+        }
+
+        struct LinOrderItem : public LinOrderObjDefaultItem
+        {
+            VertexIndex vertex_idx;
+        };
+    }
+
+
+    void EdgeInsctData::refine(Triangle* triangle, int which_edge)
     {
         if (isRefined()) return;
 
-        std::vector<PlaneVertex> seqs(points.size());
-        auto vItr = points.begin();
-        for (int i = 0; i < points.size(); i++, vItr++)
-            seqs[i].id = *vItr;
-
-        std::map<VertexIndex, XPlane> v2p;
-        for (auto& set : inscts)
+        PlaneLine plane_rep_edge(triangle->supportingPlane(), triangle->boundingPlane(which_edge));
+        if (triangle->edge(which_edge).faceOrientation(triangle) > 0)
         {
-            for (auto &pbi : set.second)
-            {
-                v2p[pbi.ends[0]] = pbi.pends[0];
-                v2p[pbi.ends[1]] = pbi.pends[1];
-            }
+            plane_rep_edge.inverse();
         }
 
-        EdgeAuxiliaryStructure data = *(EdgeAuxiliaryStructure*)(pData);
-        // assign each vertex a plane and the corresponding id
+        // construct sorting array
+        std::vector<LinOrderItem> seqs(points.size());
+        auto vertex_itr = points.begin();
         for (int i = 0; i < points.size(); i++)
         {
-            auto res0 = v2p.find(seqs[i].id);
-            if (res0 == v2p.end())
+            seqs[i].vertex_idx = vertex_itr->vertex_idx;
+            MyVertex& vertex = xvertex(vertex_itr->vertex_idx);
+            if (vertex.isPlaneRep())
             {
-                // some vertex cannot be assigned a valid plane
-                // therefore we should find it manually from Plane Triples
-                auto &vRef = xvertex(seqs[i].id);
-                if (vRef.isPlaneRep())
-                {
-                    auto& xpointRef = vRef.ppoint();
-                    for (int j = 0; j < 3; j++)
-                    {
-                        Real fres = data.line.dot(xpointRef.plane(j));
-                        if (fres == Real(0)) continue;
-
-                        if (fres > 0)
-                            seqs[i].plane = xpointRef.plane(j);
-                        else if (fres < 0)
-                            seqs[i].plane = xpointRef.plane(j).opposite();
-                        break;
-                    }
-                }
+                seqs[i].plane = vertex_itr->plane_rep;
             }
-            else seqs[i].plane = res0->second;
+            else
+            {
+                seqs[i].point = vertex.point();
+                seqs[i].plane = XPlane();
+            }
+
+            vertex_itr++;
         }
 
-        LinOrderObj orderObj = { data.line };
+        //std::map<VertexIndex, XPlane> vertex_id_plane_dict;
+        //for (auto& set : inscts)
+        //{
+        //    for (auto &pbi : set.second)
+        //    {
+        //        vertex_id_plane_dict[pbiItr->ends[0]] = pbiItr->pends[0];
+        //        vertex_id_plane_dict[pbiItr->ends[1]] = pbiItr->pends[1];
+        //    }
+        //}
+
+        //// assign each vertex a plane and the corresponding id
+        //for (int i = 0; i < points.size(); i++)
+        //{
+        //    auto res0 = vertex_id_plane_dict.find(seqs[i].id);
+        //    if (res0 == vertex_id_plane_dict.end())
+        //    {
+        //        // some vertex cannot be assigned a valid plane
+        //        // therefore we should find it manually from Plane Triples
+        //        auto &vRef = xvertex(seqs[i].id);
+        //        if (vRef.isPlaneRep())
+        //        {
+        //            auto& xpointRef = vRef.ppoint();
+        //            for (int j = 0; j < 3; j++)
+        //            {
+        //                Real fres = data.line.dot(xpointRef.plane(j));
+        //                if (fres == Real(0)) continue;
+
+        //                if (fres > 0)
+        //                    seqs[i].plane = xpointRef.plane(j);
+        //                else if (fres < 0)
+        //                    seqs[i].plane = xpointRef.plane(j).opposite();
+        //                break;
+        //            }
+        //        }
+        //    }
+        //    else seqs[i].plane = res0->second;
+        //}
+
+        LinOrderObj<LinOrderItem> orderObj(plane_rep_edge);
         std::sort(seqs.begin(), seqs.end(), orderObj);
-        std::vector<EdgePBI> newPbi(points.size() + 1);
-        std::map<VertexIndex, uint32_t> idmap;
-        idmap[data.start] = 0;
-        idmap[data.end] = points.size() + 1;
+
+        // construct new pbis
+        PbiList new_pbis;
+        std::map<VertexIndex, PbiList::size_type> vertex_vecidx_dict;
+        const MyEdge& edge = triangle->edge(which_edge);
+        vertex_vecidx_dict[edge.ends[0]] = 0;
+        vertex_vecidx_dict[edge.ends[1]] = points.size() + 1;
         for (int i = 0; i < seqs.size(); i++)
         {
-            idmap[seqs[i].id] = i + 1;
-            newPbi[i].ends[1] = seqs[i].id;
-            newPbi[i + 1].ends[0] = seqs[i].id;
-            newPbi[i].pends[1] = seqs[i].plane;
-            newPbi[i + 1].pends[0] = seqs[i].plane;
+            vertex_vecidx_dict[seqs[i].vertex_idx] = i + 1;
+            new_pbis[i].ends[1] = seqs[i].vertex_idx;
+            new_pbis[i + 1].ends[0] = seqs[i].vertex_idx;
         }
-        newPbi[0].ends[0] = data.start;
-        newPbi[points.size()].ends[1] = data.end;
 
-        // add pbi intersections' neighborInfo into newly constructed pbi.
-        for (auto& set : inscts)
+        new_pbis[0].ends[0] = edge.ends[0];
+        new_pbis.back().ends[1] = edge.ends[1];
+
+        //for (int i = 0; i < seqs.size(); i++)
+        //{
+        //    vertex_vecidx_dict[seqs[i].id] = i + 1;
+        //    newPbi[i].ends[1] = seqs[i].id;
+        //    newPbi[i + 1].ends[0] = seqs[i].id;
+        //}
+        //newPbi[0].ends[0] = data.start;
+        //newPbi[points.size()].ends[1] = data.end;
+
+        // add pbi intersections' neighborInfo into newly constructed pbi
+        for (auto pbi_itr = pbi_begin(); pbi_itr; ++pbi_itr)
         {
-            for (auto &pbi : set.second)
+            assert(vertex_vecidx_dict.find(pbi_itr->ends[0]) != vertex_vecidx_dict.end());
+            assert(vertex_vecidx_dict.find(pbi_itr->ends[1]) != vertex_vecidx_dict.end());
+
+            int start = vertex_vecidx_dict[pbi_itr->ends[0]];
+            int last = vertex_vecidx_dict[pbi_itr->ends[1]];
+
+            assert(start < last);
+            for (int i = start; i < last; i++)
             {
-                assert(idmap.find(pbi.ends[0]) != idmap.end());
-                assert(idmap.find(pbi.ends[1]) != idmap.end());
-
-                uint32_t start = idmap[pbi.ends[0]];
-                uint32_t last = idmap[pbi.ends[1]];
-
-                assert(start < last);
-                for (int i = start; i < last; i++)
-                {
-                    assert(pbi.neighbor.size() == 1);
-                    newPbi[i].neighbor.push_back(*pbi.neighbor.begin());
-                }
+                assert(pbi_itr->neighbor.size() == 1);
+                new_pbis[i].neighbor.push_back(*pbi_itr->neighbor.begin());
             }
         }
+
+        //// add pbi intersections' neighborInfo into newly constructed pbiItr->
+        //for (auto& set : inscts)
+        //{
+        //    for (auto &pbi : set.second)
+        //    {
+        //        assert(vertex_vecidx_dict.find(pbiItr->ends[0]) != vertex_vecidx_dict.end());
+        //        assert(vertex_vecidx_dict.find(pbiItr->ends[1]) != vertex_vecidx_dict.end());
+
+        //        uint32_t start = vertex_vecidx_dict[pbiItr->ends[0]];
+        //        uint32_t last = vertex_vecidx_dict[pbiItr->ends[1]];
+
+        //        assert(start < last);
+        //        for (int i = start; i < last; i++)
+        //        {
+        //            assert(pbiItr->neighbor.size() == 1);
+        //            new_pbis[i].neighbor.push_back(*pbiItr->neighbor.begin());
+        //        }
+        //    }
+        //}
+
         inscts.clear();
-        auto& slot = inscts[INVALID_UINT32];
-        for (int i = 0; i < newPbi.size(); i++)
-            slot.push_back(newPbi[i]);
+        inscts[INVALID_UINT32].swap(new_pbis);
 
         bRefined = true;
     }
 
-    // strayVertices是孤立点，从其他的三面交点处传过来的？
-    bool checkIsolatedPart(Triangle* pTri, std::vector<VertexIndex>& strayVertices)
+
+    //// strayVertices是孤立点，从其他的三面交点处传过来的？
+    //bool checkIsolatedPart(Triangle* pTri, std::vector<VertexIndex>& strayVertices)
+    //{
+    //    struct ColorVertex
+    //    {
+    //        std::set<VertexIndex> neighbors;
+    //        int color = -1;
+    //    } defaultCV;
+
+    //    FaceInsctData* thiz = pTri->inscts;
+    //    // initialize the graph
+    //    std::map<VertexIndex, ColorVertex> data;
+    //    for (auto& v : thiz->points)
+    //        data[v.vId] = defaultCV;
+
+    //    for (auto& pbiSet : thiz->inscts)
+    //    {
+    //        for (FacePbi& fPbi : pbiSet.second)
+    //        {
+    //            data[fPbi.ends[0]].neighbors.insert(fPbi.ends[1]);
+    //            data[fPbi.ends[1]].neighbors.insert(fPbi.ends[0]);
+    //        }
+    //    }
+
+    //    // init vertex set
+    //    std::set<VertexIndex> edgeVertices;
+    //    for (int i = 0; i < 3; i++)
+    //    {
+    //        edgeVertices.insert(pTri->vertexId(i));
+    //        MyEdge& edge = pTri->edge(i);
+    //        if (!edge.inscts) continue;
+    //        for (VertexIndex vId : edge.inscts->points)
+    //            edgeVertices.insert(vId);
+    //    }
+
+    //    // colorization
+    //    int color = 0;
+    //    uint32_t isoCount = MAX_MESH_COUNT;
+    //    bool isIsolated = false, boolRes = false;
+    //    std::stack<VertexIndex> vStack;
+    //    std::vector<VertexIndex> history;
+    //    for (auto& vItem : data)
+    //    {
+    //        if (vItem.second.color == -1)
+    //        {
+    //            ++color;
+    //            isIsolated = true;
+    //            assert(vStack.empty());
+    //            vStack.push(vItem.first);
+    //            while (!vStack.empty())
+    //            {
+    //                VertexIndex curVId = vStack.top();
+    //                vStack.pop();
+    //                auto& curV = data[curVId];
+    //                if (curV.color != -1) continue;
+
+    //                history.push_back(curVId);
+    //                if (edgeVertices.find(curVId) != edgeVertices.end())
+    //                    isIsolated = false;
+
+    //                curV.color = color;
+    //                for (VertexIndex vId : curV.neighbors)
+    //                {
+    //                    if (data[vId].color == -1)
+    //                        vStack.push(vId);
+    //                }
+    //            }
+
+    //            if (isIsolated)
+    //            {
+    //                VertexIndex chooseVertex = INVALID_UINT32;
+    //                MyEdge::SIndex eId = -1;
+    //                for (VertexIndex vId : history)
+    //                {
+    //                    for (auto &v : thiz->points)
+    //                    {
+    //                        if (v.vId == vId)
+    //                        {
+    //                            chooseVertex = vId;
+    //                            eId = v.eId;
+    //                            break;
+    //                        }
+    //                    }
+
+    //                    if (eId >= 0) break;
+    //                }
+    //                assert(eId != -1);
+    //                if (eId >= 0)
+    //                {
+    //                    FacePbi fPbi;
+    //                    fPbi.ends[0] = pTri->vertexId(0);
+    //                    fPbi.ends[1] = chooseVertex;
+
+    //                    MyEdge& crossEdgeRef = xedge(eId);
+    //                    fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
+    //                        xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
+
+    //                    PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
+    //                    fPbi.pends[0] = pick_positive_vertical_plane(line, xvertex(fPbi.ends[0]));
+    //                    fPbi.pends[1] = pick_positive_vertical_plane(line, xvertex(fPbi.ends[1]));
+    //                    assert(line.dot(fPbi.pends[0]) > 0);
+    //                    assert(line.dot(fPbi.pends[1]) > 0);
+    //                    if (line.linear_order_unsafe(fPbi.pends[0], fPbi.pends[1]) < 0)
+    //                    {
+    //                        std::swap(fPbi.ends[0], fPbi.ends[1]);
+    //                        std::swap(fPbi.pends[0], fPbi.pends[1]);
+    //                    }
+
+    //                    assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
+    //                    thiz->inscts[isoCount++].push_back(fPbi);
+    //                }
+    //                else
+    //                {
+    //                    assert(eId == -2 && history.size() == 1);
+    //                    strayVertices.push_back(history[0]);
+    //                }
+    //                boolRes = true;
+    //            }
+    //            history.clear();
+    //        }
+    //    }
+
+    //    return boolRes;
+    //}
+
+
+    namespace
     {
-        struct ColorVertex
-        {
-            std::set<VertexIndex> neighbors;
-            int color = -1;
-        } defaultCV;
 
-        FaceInsctData* thiz = pTri->inscts;
-        // initialize the graph
-        std::map<VertexIndex, ColorVertex> data;
-        for (auto& v : thiz->points)
-            data[v.vId] = defaultCV;
-
-        for (auto& pbiSet : thiz->inscts)
+        struct ResolveAuxInfo
         {
-            for (FacePBI& fPbi : pbiSet.second)
+            XPlane        splane, plane_a0, plane_a1, plane_b0, plane_b1;
+            VertexIndex   a0, a1, b0, b1;
+        };
+
+        class InsctResolveObj :
+            public IResolveLineIntersection<
+                MyVertex, MyVertex,
+                MyVertex, MyVertex>
+        {
+        public:
+            InsctResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts) :
+                item_(&item), counts_(&counts) {}
+
+            void resolve(
+                Oriented_side side[4],
+                const XPlane& plane_a, const XPlane& plane_b,
+                const MyVertex& a0, const MyVertex& a1,
+                const MyVertex& b0, const MyVertex& b1)
             {
-                data[fPbi.ends[0]].neighbors.insert(fPbi.ends[1]);
-                data[fPbi.ends[1]].neighbors.insert(fPbi.ends[0]);
-            }
-        }
-
-        // init vertex set
-        std::set<VertexIndex> edgeVertices;
-        for (int i = 0; i < 3; i++)
-        {
-            edgeVertices.insert(pTri->vertexId(i));
-            MyEdge& edge = pTri->edge(i);
-            if (!edge.inscts) continue;
-            for (VertexIndex vId : edge.inscts->points)
-                edgeVertices.insert(vId);
-        }
-
-        // colorization
-        int color = 0;
-        uint32_t isoCount = MAX_MESH_COUNT;
-        bool isIsolated = false, boolRes = false;
-        std::stack<VertexIndex> vStack;
-        std::vector<VertexIndex> history;
-        for (auto& vItem : data)
-        {
-            if (vItem.second.color == -1)
-            {
-                ++color;
-                isIsolated = true;
-                assert(vStack.empty());
-                vStack.push(vItem.first);
-                while (!vStack.empty())
+                LinOrderItem* item = nullptr;
+                if (side[0] * side[1] == 0)
                 {
-                    VertexIndex curVId = vStack.top();
-                    vStack.pop();
-                    auto& curV = data[curVId];
-                    if (curV.color != -1) continue;
-
-                    history.push_back(curVId);
-                    if (edgeVertices.find(curVId) != edgeVertices.end())
-                        isIsolated = false;
-
-                    curV.color = color;
-                    for (VertexIndex vId : curV.neighbors)
+                    if (side[2] * side[3] == 0)
                     {
-                        if (data[vId].color == -1)
-                            vStack.push(vId);
+                        // 相交于某个顶点，不用split
+                        return;
                     }
+                    assert(side[2] * side[3] == -1);
+
+                    /// put point of a into b
+                    LinOrderItem& item = item_->at(2 + counts_->at(1)++);
+                    item.vertex_idx = (side[0] == ON_ORIENTED_BOUNDARY ? aux_->a0 : aux_->a1);
+                    item.plane = plane_a;
+
+                    PlaneLine line(aux_->splane, plane_b);
+                    make_good(line, xvertex(item.vertex_idx), &item);
                 }
-
-                if (isIsolated)
+                else
                 {
-                    VertexIndex chooseVertex = INVALID_UINT32;
-                    MyEdge::SIndex eId = -1;
-                    for (VertexIndex vId : history)
+                    assert(side[0] * side[1] == -1);
+                    if (side[2] * side[3] == 0)
                     {
-                        for (auto &v : thiz->points)
-                        {
-                            if (v.vId == vId)
-                            {
-                                chooseVertex = vId;
-                                eId = v.eId;
-                                break;
-                            }
-                        }
+                        LinOrderItem& item = item_->at(counts_->at(0)++);
+                        item.vertex_idx = (side[2] == ON_ORIENTED_BOUNDARY ? aux_->b0 : aux_->b1);
+                        item.plane = plane_b;
 
-                        if (eId >= 0) break;
-                    }
-                    assert(eId != -1);
-                    if (eId >= 0)
-                    {
-                        FacePBI fPbi;
-                        fPbi.ends[0] = pTri->vertexId(0);
-                        fPbi.ends[1] = chooseVertex;
-
-                        MyEdge& crossEdgeRef = xedge(eId);
-                        fPbi.vertPlane = XPlane(pTri->vertex(0).point(),
-                            xvertex(crossEdgeRef.ends[0]).point(), xvertex(crossEdgeRef.ends[1]).point());
-
-                        PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
-                        fPbi.pends[0] = pickPositiveVertical(line, xvertex(fPbi.ends[0]));
-                        fPbi.pends[1] = pickPositiveVertical(line, xvertex(fPbi.ends[1]));
-                        assert(line.dot(fPbi.pends[0]) > 0);
-                        assert(line.dot(fPbi.pends[1]) > 0);
-                        if (line.linear_order_unsafe(fPbi.pends[0], fPbi.pends[1]) < 0)
-                        {
-                            std::swap(fPbi.ends[0], fPbi.ends[1]);
-                            std::swap(fPbi.pends[0], fPbi.pends[1]);
-                        }
-
-                        assert(thiz->inscts.find(isoCount) == thiz->inscts.end());
-                        thiz->inscts[isoCount++].push_back(fPbi);
+                        PlaneLine line(aux_->splane, plane_a);
+                        make_good(line, xvertex(item.vertex_idx), &item);
                     }
                     else
                     {
-                        assert(eId == -2 && history.size() == 1);
-                        strayVertices.push_back(history[0]);
-                    }
-                    boolRes = true;
-                }
-                history.clear();
-            }
-        }
+                        assert(side[2] * side[3] == -1);
+                        // new vertex
+                        XPlane thirdPlane = plane_b;
+                        PlaneLine(aux_->splane, plane_a).make_positive(thirdPlane); // 似乎不需要，可以尝试注释这一句
+                        PlanePoint newPoint(aux_->splane, plane_a, thirdPlane);
 
-        return boolRes;
+                        VertexIndex* newPos;
+                        newPos = insct_->point(newPoint, -1);
+                        std::vector<VertexIndex*> vecs;
+                        vecs.push_back(newPos);
+
+                        VertexIndex minVal = *newPos;
+
+                        // 去所有的邻居看一看
+
+                        // yesterday
+                        for (int i = 0; i < 2; i++)
+                        {
+                            int i2 = (i + 1) % 2;
+                            for (NeighborInfo& neiInfo : twoPbiPtr[i]->neighbor)
+                            {
+                                if (neiInfo.type == NeighborInfo::Edge)
+                                {
+                                    MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
+                                    assert(cur_con.inscts);
+                                    newPos = cur_con.inscts->point(newPoint, twoPbiPtr[i2]->vertPlane);
+                                }
+                                else
+                                {
+                                    assert(neiInfo.type == NeighborInfo::Face);
+                                    assert(neiInfo.pTrangle->inscts);
+                                    int eId = -1;
+                                    if (twoPbiPtr[i2]->neighbor.empty())
+                                        eId = -2;
+
+                                    newPos = neiInfo.pTrangle->inscts->point(newPoint, eId);
+                                }
+                                if (*newPos < minVal)
+                                    minVal = *newPos;
+                                vecs.push_back(newPos);
+                            }
+                        }
+
+                        // 所有的邻居都没有，那就真没有了
+                        if (minVal == INVALID_UINT32)
+                        {
+                            minVal = GlobalData::getObject()->insertVertex(newPoint);
+                        }
+                        for (uint32_t *pInt : vecs)
+                            *pInt = minVal;
+
+                        LinOrderItem& item = item_->at(counts_->at(0)++);
+                        slots[0][0].id = minVal;
+                        slots[0][0].plane = pbiItr2->vertPlane;
+                        PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(slots[0][0].plane);
+
+                        LinOrderItem& item = item_->at(counts_->at(1)++);
+                        slots[1][0].id = minVal;
+                        slots[1][0].plane = pbiItr->vertPlane;
+                        PlaneLine(triangle->supportingPlane(), pbiItr2->vertPlane).make_positive(slots[1][0].plane);
+                    }
+                }
+            }
+
+            void make_good(const PlaneLine& line, const MyVertex& vertex, LinOrderItem* item)
+            {
+                if (!vertex.isPlaneRep())
+                {
+                    item->plane = XPlane();
+                    item->point = vertex.point();
+                }
+                else
+                {
+                    line.make_positive(item->plane);
+                }
+
+                //if (side[0][0] * side[0][1] == 0)
+                //{
+                //    if (side[1][0] * side[1][1] == 0) // 相交于某个顶点，不用split
+                //        continue;
+
+                //    int addedTarget = side[0][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
+                //    slots[1][0].id = pbiItr->ends[addedTarget];
+                //    slots[1][0].plane = pbiItr->vertPlane;
+                //    PlaneLine(triangle->supportingPlane(), pbiItr2->vertPlane).make_positive(slots[1][0].plane);
+                //}
+                //else
+                //{
+                //    assert(side[0][0] * side[0][1] == -1);
+                //    if (side[1][0] * side[1][1] == 0)
+                //    {
+                //        int addedTarget = side[1][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
+                //        slots[0][0].id = pbiItr2->ends[addedTarget];
+                //        slots[0][0].plane = pbiItr2->vertPlane;
+                //        PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(slots[0][0].plane);
+                //    }
+                //    else
+                //    {
+                //        assert(side[1][0] * side[1][1] == -1);
+                //        // new vertex
+                //        XPlane thirdPlane = pbiItr2->vertPlane;
+                //        PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(thirdPlane); // 似乎不需要，可以尝试注释这一句
+                //        PlanePoint newPoint(triangle->supportingPlane(), pbiItr->vertPlane, thirdPlane);
+
+                //        uint32_t* newPos;
+                //        newPos = point(newPoint, -1);
+                //        std::vector<uint32_t*> vecs;
+                //        vecs.push_back(newPos);
+                //        uint32_t minVal = *newPos;
+
+                //        // 去所有的邻居看一看
+                //        FacePbi* twoPbiPtr[2] = { &pbi, &pbi2 };
+
+                //        for (int i = 0; i < 2; i++)
+                //        {
+                //            int i2 = (i + 1) % 2;
+                //            for (NeighborInfo& neiInfo : twoPbiPtr[i]->neighbor)
+                //            {
+                //                if (neiInfo.type == NeighborInfo::Edge)
+                //                {
+                //                    MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
+                //                    assert(cur_con.inscts);
+                //                    newPos = cur_con.inscts->point(newPoint);
+                //                }
+                //                else
+                //                {
+                //                    assert(neiInfo.type == NeighborInfo::Face);
+                //                    assert(neiInfo.pTrangle->inscts);
+                //                    int eId = -1;
+                //                    if (twoPbiPtr[i2]->neighbor.empty())
+                //                        eId = -2;
+
+                //                    newPos = neiInfo.pTrangle->inscts->point(newPoint, eId);
+                //                }
+                //                if (*newPos < minVal)
+                //                    minVal = *newPos;
+                //                vecs.push_back(newPos);
+                //            }
+                //        }
+
+                //        // 所有的邻居都没有，那就真没有了
+                //        if (minVal == INVALID_UINT32)
+                //        {
+                //            minVal = GlobalData::getObject()->insertVertex(newPoint);
+                //        }
+                //        for (uint32_t *pInt : vecs)
+                //            *pInt = minVal;
+
+                //        slots[0][0].id = minVal;
+                //        slots[0][0].plane = pbiItr2->vertPlane;
+                //        PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(slots[0][0].plane);
+
+                //        slots[1][0].id = minVal;
+                //        slots[1][0].plane = pbiItr->vertPlane;
+                //        PlaneLine(triangle->supportingPlane(), pbiItr2->vertPlane).make_positive(slots[1][0].plane);
+                //    }
+
+            }
+        private:
+            std::array<LinOrderItem, 4>* item_;
+            std::array<int, 2>* counts_;
+            ResolveAuxInfo*      aux_;
+            FaceInsctData*        insct_;
+            FacePbi* twoPbiPtr[2];
+        };
+
+        class CoplanarResolveObj : public IResolveLineIntersection<
+            MyVertex, MyVertex, MyVertex, MyVertex>
+        {
+        public:
+            CoplanarResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts) :
+                item_(&item), counts_(&counts) {}
+
+            void resolve(Oriented_side side[4],
+                const XPlane& plane_a, const XPlane& plane_b,
+                const MyVertex& a0, const MyVertex& a1,
+                const MyVertex& b0, const MyVertex& b1)
+            {
+                PlaneLine line(aux_->splane, plane_a);
+                Real dotRes = line.dot(aux_->plane_b0);
+                assert(dotRes != 0);
+                bool inverseLine = dotRes > 0 ? false : true;
+
+                if (inverseLine)
+                {
+                    aux_->plane_b0.inverse();
+                    aux_->plane_b1.inverse();
+                    std::swap(aux_->plane_b0, aux_->plane_b1);
+                }
+
+                assert(check_orientation(line));
+
+                // linear order 计算overlap
+                if (line.linear_order_unsafe(aux_->plane_b0, aux_->plane_a1) <= 0 ||
+                    line.linear_order_unsafe(aux_->plane_a0, aux_->plane_b1) <= 0)
+                {
+                    return;
+                }
+
+                int compRes[2] = {
+                    line.linear_order_unsafe(aux_->plane_a0, aux_->plane_b0),
+                    line.linear_order_unsafe(aux_->plane_a1, aux_->plane_b1),
+                };
+
+                // must not be coincident
+                assert(!(compRes[0] == 0 && compRes[1] == 0));
+
+                // ------ a
+                //   ---- b
+                if (compRes[0] > 0)
+                {
+                    LinOrderItem& item = item_->at(counts_->at(0)++);
+                    item.vertex_idx = aux_->b0;
+                    if (b0.isPlaneRep())
+                    {
+                        item.plane = aux_->plane_b0;
+                    }
+                    else
+                    {
+                        item.plane = XPlane();
+                        item.point = b0.point();
+                    }
+                }
+                else if (compRes[0] < 0)
+                {
+                    LinOrderItem& item = item_->at(2+counts_->at(1)++);
+                    item.vertex_idx = aux_->a0;
+                    if (a0.isPlaneRep())
+                    {
+                        item.plane = aux_->plane_a0;
+                        item.plane.inverse();
+                    }
+                    else
+                    {
+                        item.plane = XPlane();
+                        item.point = a0.point();
+                    }
+                }
+
+                // ----   a
+                // ------ b
+                if (compRes[1] > 0)
+                {
+                    LinOrderItem& item = item_->at(2+counts_->at(1)++);
+                    item.vertex_idx = aux_->a1;
+                    if (a1.isPlaneRep())
+                    {
+                        item.plane = aux_->plane_a1;
+                        item.plane.inverse();
+                    }
+                    else
+                    {
+                        item.plane = XPlane();
+                        item.point = a1.point();
+                    }
+                }
+                else if (compRes[1] < 0)
+                {
+                    LinOrderItem& item = item_->at(counts_->at(0)++);
+                    item.vertex_idx = aux_->b1;
+                    if (b1.isPlaneRep())
+                    {
+                        item.plane = aux_->plane_b1;
+                    }
+                    else
+                    {
+                        item.plane = XPlane();
+                        item.point = b1.point();
+                    }
+                }
+
+                //PlaneLine line(triangle->supportingPlane(), pbiItr->vertPlane);
+                //assert(line.dot(pbiItr2->vertPlane) == 0.);
+                //Real dotRes = line.dot(pbiItr2->pends[0]);
+                //assert(dotRes != 0.);
+                //bool inverseLine = dotRes > 0 ? false : true;
+
+                //PlaneVertex pbi2ends[2] = { { pbiItr2->pends[0], pbiItr2->ends[0] },{ pbiItr2->pends[1], pbiItr2->ends[1] } };
+                //if (inverseLine)
+                //{
+                //    pbi2ends[0].plane.inverse();
+                //    pbi2ends[1].plane.inverse();
+                //    std::swap(pbi2ends[0], pbi2ends[1]);
+                //}
+
+                //// linear order 计算overlap
+                //assert(line.linear_order(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
+                //assert(line.linear_order_unsafe(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
+                //if (line.linear_order_unsafe(pbi2ends[0].plane, pbiItr->pends[1]) <= 0 ||
+                //    line.linear_order_unsafe(pbiItr->pends[0], pbi2ends[1].plane) <= 0)
+                //    continue;
+
+                //int compRes[2] = {
+                //    line.linear_order_unsafe(pbiItr->pends[0], pbi2ends[0].plane),
+                //    line.linear_order_unsafe(pbiItr->pends[1], pbi2ends[1].plane),
+                //};
+
+                //assert(!(compRes[0] == 0 && compRes[1] == 0));
+
+                //if (compRes[0] > 0)
+                //    slots[0][0] = pbi2ends[0];
+                //else if (compRes[0] < 0)
+                //{
+                //    slots[1][0].id = pbiItr->ends[0];
+                //    slots[1][0].plane = pbiItr->pends[0];
+                //    if (inverseLine) slots[1][0].plane.inverse();
+                //}
+
+                //if (compRes[1] > 0)
+                //{
+                //    slots[1][1].id = pbiItr->ends[1];
+                //    slots[1][1].plane = pbiItr->pends[1];
+                //    if (inverseLine) slots[1][1].plane.inverse();
+                //}
+                //else if (compRes[1] < 0)
+                //    slots[0][1] = pbi2ends[1];
+            }
+
+        private:
+            bool check_orientation(const PlaneLine& line) const
+            {
+                if ((line.dot(aux_->plane_a0) > 0) &&
+                    (line.dot(aux_->plane_a1) > 0) &&
+                    (line.dot(aux_->plane_b0) > 0) &&
+                    (line.dot(aux_->plane_b1) > 0) &&
+                    (line.linear_order_unsafe(aux_->plane_a0, aux_->plane_a1) > 0) &&
+                    (line.linear_order_unsafe(aux_->plane_b0, aux_->plane_b1) > 0))
+                    return true;
+                return false;
+            }
+
+            std::array<LinOrderItem, 4>*    item_;
+            std::array<int, 2>*             counts_;
+            ResolveAuxInfo*                  aux_;
+        };
     }
 
-    void removeOverlapPBI(FaceInsctData * thiz)
+    void FaceInsctData::resolveIntersection(Triangle* triangle)
+    //void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices)
     {
-        std::map<VertexIndex, std::set<FacePBI*>> data;
-        std::vector<decltype(thiz->inscts[0].begin())> garbage;
-        for (auto &pbiSet : thiz->inscts)
+        struct FacePbiTessData
         {
-            for (auto pbiItr = pbiSet.second.begin(); pbiItr != pbiSet.second.end(); ++pbiItr)
+            PbiList::iterator pbi_itr;
+            PbiList* container_itr;
+            std::vector<LinOrderItem> points;
+        };
+
+        typedef PbiLists::iterator PbiListsItr;
+        typedef PbiList::iterator PbiListItr;
+
+        std::map<IndexPair, FacePbiTessData*> tessData;
+        for (PbiListsItr setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
+        {
+            PbiListsItr setItr2 = setItr; ++setItr2;
+            for (; setItr2 != inscts.end(); ++setItr2)
             {
-                FacePBI& pbi = *pbiItr;
-                bool found = false;
-                for (auto alreadyHere : data[pbi.ends[0]]) // search in current graph
+                for (PbiListItr pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
                 {
-                    if (alreadyHere->ends[0] == pbi.ends[1] ||
-                        alreadyHere->ends[1] == pbi.ends[1]) // if has
+                    for (PbiListItr pbiItr2 = setItr2->second.begin(); pbiItr2 != setItr2->second.end(); ++pbiItr2)
                     {
-                        for (NeighborInfo& nInfo : pbi.neighbor)
+                        PbiListItr pbi_itrs[2] = { pbiItr, pbiItr2 };
+                        PbiListsItr set_itrs[2] = { setItr, setItr2 };
+
+                        std::array<LinOrderItem, 4> insct_item_slots;
+                        std::array<int,2> insct_count{ 0, 0 };
+                        InsctResolveObj insct_obj(insct_item_slots, insct_count);
+                        CoplanarResolveObj coplanar_obj(insct_item_slots, insct_count);
+
+                        LineInsctResultType insct_res = plane_based_line_intersection(
+                            pbiItr->vertPlane, pbiItr2->vertPlane,
+                            xvertex(pbi_itrs[0]->ends[0]), xvertex(pbi_itrs[0]->ends[1]),
+                            xvertex(pbi_itrs[0]->ends[0]), xvertex(pbi_itrs[0]->ends[1]),
+                            &insct_obj, &coplanar_obj
+                        );
+
+                        if (insct_res == No_Intersect) continue;
+                        assert(insct_count[0] <= 2 && insct_count[1] <= 2);
+
+                        for (int i = 0; i < 2; ++i)
+                        {
+                            if (insct_count[i] == 0) continue;
+
+                            IndexPair pbiIndex = makePbiIndex(&*pbi_itrs[i]);
+                            auto pbi_search_result = tessData.find(pbiIndex);
+                            if (pbi_search_result == tessData.end())
+                            {
+                                FacePbiTessData *tessItem = new FacePbiTessData;
+                                tessItem->container_itr = &(set_itrs[i]->second);
+                                tessItem->pbi_itr = pbi_itrs[i];
+
+                                auto insertRes = tessData.insert(
+                                    decltype(tessData)::value_type(
+                                        pbiIndex, tessItem
+                                    )
+                                );
+
+                                assert(insertRes.second); // insertion succeed
+                                pbi_search_result = insertRes.first;
+                            }
+
+                            for (int j = 0; j < insct_count[i]; ++j)
+                            {
+                                pbi_search_result->second->points.
+                                    push_back(insct_item_slots[2*i+j]);
+                            }
+                        }
+
+                        //if (slots[0][0].plane.is_valid() || slots[0][1].plane.is_valid())
+                        //{
+                        //    IndexPair pbiIndex = makePbiIndex(&pbi);
+                        //    auto pbiData = tessData.find(pbiIndex);
+                        //    if (pbiData == tessData.end())
+                        //    {
+                        //        FacePbiTessData *tessItem = new FacePbiTessData;
+                        //        tessItem->pContainer = &setItr->second;
+                        //        tessItem->ptr = pbiItr;
+                        //        auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
+                        //            std::shared_ptr<FacePbiTessData>(tessItem)));
+
+                        //        assert(insertRes.second);
+                        //        pbiData = insertRes.first;
+                        //    }
+
+                        //    if (slots[0][0].plane.is_valid())
+                        //        pbiData->second->points.push_back(slots[0][0]);
+
+                        //    if (slots[0][1].plane.is_valid())
+                        //        pbiData->second->points.push_back(slots[0][1]);
+                        //}
+
+                        //if (slots[1][0].plane.is_valid() || slots[1][1].plane.is_valid())
+                        //{
+                        //    IndexPair pbiIndex2 = makePbiIndex(&pbi2);
+                        //    auto pbiData = tessData.find(pbiIndex2);
+                        //    if (pbiData == tessData.end())
+                        //    {
+                        //        FacePbiTessData *tessItem = new FacePbiTessData;
+                        //        tessItem->pContainer = &setItr2->second;
+                        //        tessItem->ptr = pbiItr2;
+                        //        auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex2,
+                        //            std::shared_ptr<FacePbiTessData>(tessItem)));
+
+                        //        assert(insertRes.second);
+                        //        pbiData = insertRes.first;
+                        //    }
+
+                        //    if (slots[1][0].plane.is_valid())
+                        //        pbiData->second->points.push_back(slots[1][0]);
+
+                        //    if (slots[1][1].plane.is_valid())
+                        //        pbiData->second->points.push_back(slots[1][1]);
+                        //}
+
+                    } // loop 4
+                } // loop 3
+            } // loop 2
+        } // outer loop
+
+        //if (strayVertices)
+        //{
+        //    for (VertexIndex strayV : *strayVertices)
+        //    {
+        //        if (!xvertex(strayV).isPlaneRep()) continue; // 不合理，但是先这样吧
+        //        for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
+        //        {
+        //            for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
+        //            {
+        //                FacePbi& fPbi = *pbiItr;
+        //                if (fPbi.vertPlane.has_on(xvertex(strayV).ppoint()))
+        //                {
+        //                    IndexPair pbiIndex = makePbiIndex(&fPbi);
+        //                    auto pbiData = tessData.find(pbiIndex);
+        //                    if (pbiData == tessData.end())
+        //                    {
+        //                        FacePbiTessData *tessItem = new FacePbiTessData;
+        //                        tessItem->pContainer = &setItr->second;
+        //                        tessItem->ptr = pbiItr;
+        //                        auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
+        //                            std::shared_ptr<FacePbiTessData>(tessItem)));
+
+        //                        assert(insertRes.second);
+        //                        pbiData = insertRes.first;
+        //                    }
+
+        //                    PlaneLine line(triangle->supportingPlane(), fPbi.vertPlane);
+        //                    line.pick_positive_vertical_plane(xvertex(strayV).ppoint());
+        //                    pbiData->second->points.push_back(
+        //                        PlaneVertex{ line.pick_positive_vertical_plane(xvertex(strayV).ppoint()), strayV });
+        //                    break; // 如果需要加两个以上的fpbi的话，这个点应该已经被探测出来了
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+
+        for (auto &item : tessData)
+        {
+            FacePbiTessData* tess_pbi_info = item.second;
+            PlaneLine line(triangle->supportingPlane(), tess_pbi_info->pbi_itr->vertPlane);
+
+            LinOrderObj<LinOrderItem> orderObj(line);
+            auto &inserted = tess_pbi_info->points;
+            std::sort(inserted.begin(), inserted.end(), orderObj);
+
+            // coincident vertex can be generated from '-|-' situation
+            inserted.erase(
+                std::unique(
+                    inserted.begin(),
+                    inserted.end(),
+                    [](const LinOrderItem &a, const LinOrderItem &b)->bool {
+                        return a.vertex_idx == b.vertex_idx;
+                    }
+                ),
+                inserted.end()
+            );
+
+            // template inherent prep, neighbor
+            FacePbi template_insct_data = *tess_pbi_info->pbi_itr;
+            template_insct_data.pends[0] = XPlane();
+            template_insct_data.pends[1] = XPlane();
+
+            std::vector<FacePbi> newPbi(inserted.size() + 1, template_insct_data);
+            std::map<VertexIndex, uint32_t> vertex_vecidx_dict;
+            vertex_vecidx_dict[tess_pbi_info->pbi_itr->ends[0]] = 0;
+            vertex_vecidx_dict[tess_pbi_info->pbi_itr->ends[1]] = inserted.size() + 1;
+            for (int i = 0; i < inserted.size(); i++)
+            {
+                vertex_vecidx_dict[inserted[i].vertex_idx] = i + 1;
+                newPbi[i].ends[1] = inserted[i].vertex_idx;
+                newPbi[i + 1].ends[0] = inserted[i].vertex_idx;
+            }
+            newPbi[0].ends[0] = tess_pbi_info->pbi_itr->ends[0];
+            newPbi.back().ends[1] = tess_pbi_info->pbi_itr->ends[1];
+
+            PbiList* pbi_list = tess_pbi_info->container_itr;
+            XR::vec_quick_delete(tess_pbi_info->pbi_itr, *pbi_list);
+            pbi_list->insert(pbi_list->end(), newPbi.begin(), newPbi.end());
+            newPbi.clear();
+        }
+    }
+
+    void FaceInsctData::removeOverlapPbi()
+    {
+        typedef PbiList::iterator PbiIterator;
+        std::map<VertexIndex, std::set<PbiIterator>> sparse_graph;
+        //std::vector<decltype(inscts[0].begin())> garbage;
+
+        for (auto &insct_itr : inscts)
+        {
+            auto& pbi_list = insct_itr.second;
+            std::vector<PbiIterator> garbage;
+            for (PbiIterator pbi_itr = pbi_list.begin(); pbi_itr != pbi_list.end(); ++pbi_itr)
+            {
+                bool found = false;
+                for (PbiIterator alreadyHere : sparse_graph[pbi_itr->ends[0]]) // search in current graph
+                {
+                    if (alreadyHere->ends[0] == pbi_itr->ends[1] ||
+                        alreadyHere->ends[1] == pbi_itr->ends[1]) // if has
+                    {
+                        for (NeighborInfo& nInfo : pbi_itr->neighbor)
                         {
                             bool unique = true; // search if the neighInfo is already there, == std::find
                             for (NeighborInfo& nInfo2 : alreadyHere->neighbor)
@@ -260,328 +932,83 @@ namespace Boolean
 
                 if (found)
                 {
-                    garbage.push_back(pbiItr);
+                    garbage.push_back(pbi_itr);
                     continue;
                 }
-
-                data[pbi.ends[0]].insert(&pbi);
-                data[pbi.ends[1]].insert(&pbi);
-            }
-
-            for (auto& pbiItr : garbage)
-                pbiSet.second.erase(pbiItr);
-            garbage.clear();
-        }
-    }
-
-    IndexPair makePbiIndex(const PBIRep* rep)
-    {
-        IndexPair res;
-        MakeIndex(rep->ends, res);
-        return res;
-    }
-
-    void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices)
-    {
-        XPlane triSp = pTri->supportingPlane();
-        std::map<IndexPair, std::shared_ptr<FacePBITessData>> tessData;
-        for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
-        {
-            auto setItr2 = setItr; ++setItr2;
-            for (; setItr2 != inscts.end(); ++setItr2)
-            {
-                for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
+                else
                 {
-                    FacePBI& pbi = *pbiItr;
-                    for (auto pbiItr2 = setItr2->second.begin(); pbiItr2 != setItr2->second.end(); ++pbiItr2)
-                    {
-                        PlaneVertex slots[2][2]; // 需要添加的顶点
-                        FacePBI& pbi2 = *pbiItr2;
-                        Oriented_side side[2][2];
-                        side[0][0] = orientation(pbi2.vertPlane, pbi.ends[0]);
-                        side[0][1] = orientation(pbi2.vertPlane, pbi.ends[1]);
-                        if (side[0][0] == side[0][1])
-                        {
-                            if (side[0][0] == ON_ORIENTED_BOUNDARY) // 共线情况
-                            {
-                                PlaneLine line(triSp, pbi.vertPlane);
-                                assert(line.dot(pbi2.vertPlane) == 0.);
-                                Real dotRes = line.dot(pbi2.pends[0]);
-                                assert(dotRes != 0.);
-                                bool inverseLine = dotRes > 0 ? false : true;
-
-                                PlaneVertex pbi2ends[2] = { { pbi2.pends[0], pbi2.ends[0] },{ pbi2.pends[1], pbi2.ends[1] } };
-                                if (inverseLine)
-                                {
-                                    pbi2ends[0].plane.inverse();
-                                    pbi2ends[1].plane.inverse();
-                                    std::swap(pbi2ends[0], pbi2ends[1]);
-                                }
-
-                                // linear order 计算overlap
-                                assert(line.linear_order(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
-                                assert(line.linear_order_unsafe(pbi2ends[0].plane, pbi2ends[1].plane) > 0);
-                                if (line.linear_order_unsafe(pbi2ends[0].plane, pbi.pends[1]) <= 0 ||
-                                    line.linear_order_unsafe(pbi.pends[0], pbi2ends[1].plane) <= 0)
-                                    continue;
-
-                                int compRes[2] = {
-                                    line.linear_order_unsafe(pbi.pends[0], pbi2ends[0].plane),
-                                    line.linear_order_unsafe(pbi.pends[1], pbi2ends[1].plane),
-                                };
-
-                                assert(!(compRes[0] == 0 && compRes[1] == 0));
-
-                                if (compRes[0] > 0)
-                                    slots[0][0] = pbi2ends[0];
-                                else if (compRes[0] < 0)
-                                {
-                                    slots[1][0].id = pbi.ends[0];
-                                    slots[1][0].plane = pbi.pends[0];
-                                    if (inverseLine) slots[1][0].plane.inverse();
-                                }
-
-                                if (compRes[1] > 0)
-                                {
-                                    slots[1][1].id = pbi.ends[1];
-                                    slots[1][1].plane = pbi.pends[1];
-                                    if (inverseLine) slots[1][1].plane.inverse();
-                                }
-                                else if (compRes[1] < 0)
-                                    slots[0][1] = pbi2ends[1];
-                            }
-                            else continue;
-                        }
-                        else
-                        {
-                            side[1][0] = orientation(pbi.vertPlane, pbi2.ends[0]);
-                            side[1][1] = orientation(pbi.vertPlane, pbi2.ends[1]);
-
-                            if (side[1][0] == side[1][1])
-                            {
-                                assert(side[1][0] != ON_ORIENTED_BOUNDARY);//如果是共线情况，在前面应当已经被测试到
-                                continue; // 不相交
-                            }
-
-                            if (side[0][0] * side[0][1] == 0)
-                            {
-                                if (side[1][0] * side[1][1] == 0) // 相交于某个顶点，不用split
-                                    continue;
-
-                                int addedTarget = side[0][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
-                                slots[1][0].id = pbi.ends[addedTarget];
-                                slots[1][0].plane = pbi.vertPlane;
-                                PlaneLine(triSp, pbi2.vertPlane).make_positive(slots[1][0].plane);
-                            }
-                            else
-                            {
-                                assert(side[0][0] * side[0][1] == -1);
-                                if (side[1][0] * side[1][1] == 0)
-                                {
-                                    int addedTarget = side[1][0] == ON_ORIENTED_BOUNDARY ? 0 : 1;
-                                    slots[0][0].id = pbi2.ends[addedTarget];
-                                    slots[0][0].plane = pbi2.vertPlane;
-                                    PlaneLine(triSp, pbi.vertPlane).make_positive(slots[0][0].plane);
-                                }
-                                else
-                                {
-                                    assert(side[1][0] * side[1][1] == -1);
-                                    // new vertex
-                                    XPlane thirdPlane = pbi2.vertPlane;
-                                    PlaneLine(triSp, pbi.vertPlane).make_positive(thirdPlane); // 似乎不需要，可以尝试注释这一句
-                                    PlanePoint newPoint(triSp, pbi.vertPlane, thirdPlane);
-
-                                    uint32_t* newPos;
-                                    newPos = point(newPoint, -1);
-                                    std::vector<uint32_t*> vecs;
-                                    vecs.push_back(newPos);
-                                    uint32_t minVal = *newPos;
-
-                                    // 去所有的邻居看一看
-                                    FacePBI* twoPbiPtr[2] = { &pbi, &pbi2 };
-
-                                    for (int i = 0; i < 2; i++)
-                                    {
-                                        int i2 = (i + 1) % 2;
-                                        for (NeighborInfo& neiInfo : twoPbiPtr[i]->neighbor)
-                                        {
-                                            if (neiInfo.type == NeighborInfo::Edge)
-                                            {
-                                                MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
-                                                assert(cur_con.inscts);
-                                                newPos = cur_con.inscts->point(newPoint);
-                                            }
-                                            else
-                                            {
-                                                assert(neiInfo.type == NeighborInfo::Face);
-                                                assert(neiInfo.pTrangle->inscts);
-                                                int eId = -1;
-                                                if (twoPbiPtr[i2]->neighbor.empty())
-                                                    eId = -2;
-
-                                                newPos = neiInfo.pTrangle->inscts->point(newPoint, eId);
-                                            }
-                                            if (*newPos < minVal)
-                                                minVal = *newPos;
-                                            vecs.push_back(newPos);
-                                        }
-                                    }
-
-                                    // 所有的邻居都没有，那就真没有了
-                                    if (minVal == INVALID_UINT32)
-                                    {
-                                        minVal = GlobalData::getObject()->insertVertex(newPoint);
-                                    }
-                                    for (uint32_t *pInt : vecs)
-                                        *pInt = minVal;
-
-                                    slots[0][0].id = minVal;
-                                    slots[0][0].plane = pbi2.vertPlane;
-                                    PlaneLine(triSp, pbi.vertPlane).make_positive(slots[0][0].plane);
-
-                                    slots[1][0].id = minVal;
-                                    slots[1][0].plane = pbi.vertPlane;
-                                    PlaneLine(triSp, pbi2.vertPlane).make_positive(slots[1][0].plane);
-                                }
-                            }
-
-                        }
-
-                        if (slots[0][0].plane.is_valid() || slots[0][1].plane.is_valid())
-                        {
-                            IndexPair pbiIndex = makePbiIndex(&pbi);
-                            auto pbiData = tessData.find(pbiIndex);
-                            if (pbiData == tessData.end())
-                            {
-                                FacePBITessData *tessItem = new FacePBITessData;
-                                tessItem->pContainer = &setItr->second;
-                                tessItem->ptr = pbiItr;
-                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
-                                    std::shared_ptr<FacePBITessData>(tessItem)));
-
-                                assert(insertRes.second);
-                                pbiData = insertRes.first;
-                            }
-
-                            if (slots[0][0].plane.is_valid())
-                                pbiData->second->points.push_back(slots[0][0]);
-
-                            if (slots[0][1].plane.is_valid())
-                                pbiData->second->points.push_back(slots[0][1]);
-                        }
-
-                        if (slots[1][0].plane.is_valid() || slots[1][1].plane.is_valid())
-                        {
-                            IndexPair pbiIndex2 = makePbiIndex(&pbi2);
-                            auto pbiData = tessData.find(pbiIndex2);
-                            if (pbiData == tessData.end())
-                            {
-                                FacePBITessData *tessItem = new FacePBITessData;
-                                tessItem->pContainer = &setItr2->second;
-                                tessItem->ptr = pbiItr2;
-                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex2,
-                                    std::shared_ptr<FacePBITessData>(tessItem)));
-
-                                assert(insertRes.second);
-                                pbiData = insertRes.first;
-                            }
-
-                            if (slots[1][0].plane.is_valid())
-                                pbiData->second->points.push_back(slots[1][0]);
-
-                            if (slots[1][1].plane.is_valid())
-                                pbiData->second->points.push_back(slots[1][1]);
-                        }
-                    }
+                    sparse_graph[pbi_itr->ends[0]].insert(pbi_itr);
+                    sparse_graph[pbi_itr->ends[1]].insert(pbi_itr);
                 }
             }
-        }
 
-        if (strayVertices)
-        {
-            for (VertexIndex strayV : *strayVertices)
+            const int number_of_overlap = garbage.size();
+            for (auto& pbi_itr : garbage)
             {
-                if (!xvertex(strayV).isPlaneRep()) continue; // 不合理，但是先这样吧
-                for (auto setItr = inscts.begin(); setItr != inscts.end(); ++setItr)
-                {
-                    for (auto pbiItr = setItr->second.begin(); pbiItr != setItr->second.end(); ++pbiItr)
-                    {
-                        FacePBI& fPbi = *pbiItr;
-                        if (fPbi.vertPlane.has_on(xvertex(strayV).ppoint()))
-                        {
-                            IndexPair pbiIndex = makePbiIndex(&fPbi);
-                            auto pbiData = tessData.find(pbiIndex);
-                            if (pbiData == tessData.end())
-                            {
-                                FacePBITessData *tessItem = new FacePBITessData;
-                                tessItem->pContainer = &setItr->second;
-                                tessItem->ptr = pbiItr;
-                                auto insertRes = tessData.insert(decltype(tessData)::value_type(pbiIndex,
-                                    std::shared_ptr<FacePBITessData>(tessItem)));
-
-                                assert(insertRes.second);
-                                pbiData = insertRes.first;
-                            }
-
-                            PlaneLine line(pTri->supportingPlane(), fPbi.vertPlane);
-                            line.pick_positive_vertical_plane(xvertex(strayV).ppoint());
-                            pbiData->second->points.push_back(
-                                PlaneVertex{ line.pickPositiveVertical(xvertex(strayV).ppoint()), strayV });
-                            break; // 如果需要加两个以上的fpbi的话，这个点应该已经被探测出来了
-                        }
-                    }
-                }
+                XR::vec_quick_delete(pbi_itr, pbi_list);
             }
         }
 
-        for (auto &pPair : tessData)
-        {
-            FacePBITessData* pData = pPair.second.get();
-            PlaneLine line(triSp, pData->ptr->vertPlane);
-            LinOrderObj orderObj = { line };
+        //for (auto &pbiSet : thiz->inscts)
+        //{
+        //    for (auto pbiItr = pbiSet.second.begin(); pbiItr != pbiSet.second.end(); ++pbiItr)
+        //    {
+        //        FacePbi& pbi = *pbiItr;
+        //        bool found = false;
+        //        for (auto alreadyHere : data[pbiItr->ends[0]]) // search in current graph
+        //        {
+        //            if (alreadyHere->ends[0] == pbiItr->ends[1] ||
+        //                alreadyHere->ends[1] == pbiItr->ends[1]) // if has
+        //            {
+        //                for (NeighborInfo& nInfo : pbiItr->neighbor)
+        //                {
+        //                    bool unique = true; // search if the neighInfo is already there, == std::find
+        //                    for (NeighborInfo& nInfo2 : alreadyHere->neighbor)
+        //                    {
+        //                        if (nInfo.neighborMeshId == nInfo.neighborMeshId)
+        //                        {
+        //                            unique = false;
+        //                            break;
+        //                        }
+        //                    }
 
-            auto &inserted = pData->points;
-            std::sort(inserted.begin(), inserted.end(), orderObj);
-            inserted.erase(std::unique(inserted.begin(), inserted.end(),
-                [](const PlaneVertex &a, const PlaneVertex &b)->bool {
-                return a.id == b.id;
-            }), inserted.end());
+        //                    if (unique)
+        //                    {
+        //                        alreadyHere->neighbor.push_back(nInfo);
+        //                    }
+        //                }
+        //                found = true;
+        //                break;
+        //            }
+        //        }
 
-            std::vector<FacePBI> newPbi(inserted.size() + 1, *pData->ptr);
-            std::map<VertexIndex, uint32_t> idmap;
-            idmap[pData->ptr->ends[0]] = 0;
-            idmap[pData->ptr->ends[1]] = inserted.size() + 1;
-            for (int i = 0; i < inserted.size(); i++)
-            {
-                idmap[inserted[i].id] = i + 1;
-                newPbi[i].ends[1] = inserted[i].id;
-                newPbi[i + 1].ends[0] = inserted[i].id;
-                newPbi[i].pends[1] = inserted[i].plane;
-                newPbi[i + 1].pends[0] = inserted[i].plane;
-            }
-            newPbi[0].ends[0] = pData->ptr->ends[0];
-            newPbi[inserted.size()].ends[1] = pData->ptr->ends[1];
+        //        if (found)
+        //        {
+        //            garbage.push_back(pbiItr);
+        //            continue;
+        //        }
 
-            pData->pContainer->erase(pData->ptr);
-            pData->pContainer->insert(pData->pContainer->end(), newPbi.begin(), newPbi.end());
-            newPbi.clear();
-        }
+        //        data[pbiItr->ends[0]].insert(&pbi);
+        //        data[pbiItr->ends[1]].insert(&pbi);
+        //    }
 
-        removeOverlapPBI(this);
+        //    for (auto& pbiItr : garbage)
+        //        pbiSet.second.erase(pbiItr);
+        //    garbage.clear();
+        //}
+
     }
 
-
-    void FaceInsctData::refine(void* pData)
+    void FaceInsctData::refine(Triangle* triangle)
     {
-        removeOverlapPBI(this);
-        Triangle* pTri = reinterpret_cast<Triangle*>(pData);
-        if (!isRefined() && inscts.size() >= 2)
-            resolveIntersection(pTri);
+        if (isRefined()) return;
 
-        std::vector<VertexIndex> strayVertices;
-        if (checkIsolatedPart(pTri, strayVertices))
-            resolveIntersection(pTri, &strayVertices);
-
+        removeOverlapPbi();
+        if (inscts.size() >= 2)
+        {
+            resolveIntersection(triangle);
+            removeOverlapPbi();
+        }
         bRefined = true;
     }
 }

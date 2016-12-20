@@ -1,4 +1,6 @@
 #include "precompile.h"
+#include <xgeometry.h>
+
 #include "xmemory.h"
 #include "RegularMesh.h"
 
@@ -12,7 +14,7 @@ namespace Boolean
         return &mgr;
     }
 
-    uint32_t GlobalData::insertVertices(VPoint * begin, VPoint * end)
+    uint32_t GlobalData::insertVertices(cyPointT * begin, cyPointT * end)
     {
         int offset = points.size();
         int n = end - begin;
@@ -80,10 +82,6 @@ namespace Boolean
         vertices.clear();
         points.clear();
         ppoints.clear();
-        insctTris.clear();
-        for (SubPolygon* spoly : subpolys)
-            delete spoly;
-        subpolys.clear();
     }
 
     MyEdge::ConstFaceIterator & MyEdge::ConstFaceIterator::operator++()

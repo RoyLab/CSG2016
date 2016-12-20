@@ -16,17 +16,9 @@ namespace Boolean
         case 0:
             return l.linear_order(a.point(), b.point());
         case 1:
-            side = l.pick_positive_vertical_plane(a.ppoint())
-                .orientation(b.point());
-            if (side == ON_POSITIVE_SIDE) return 1;
-            else if (side == ON_NEGATIVE_SIDE) return -1;
-            else return 0;
+            return l.linear_order(a.ppoint(), b.point());
         case 2:
-            side = l.pick_positive_vertical_plane(b.ppoint())
-                .orientation(a.point());
-            if (side == ON_NEGATIVE_SIDE) return 1;
-            else if (side == ON_POSITIVE_SIDE) return -1;
-            else return 0;
+            return l.linear_order(a.point(), b.ppoint());
         case 3:
             return l.linear_order(a.ppoint(), b.ppoint());
         default:
@@ -35,14 +27,7 @@ namespace Boolean
         return 0;
     }
 
-    Oriented_side orientation(const XPlane& p, const MyVertex& v)
-    {
-        if (v.isPlaneRep())
-            return p.orientation(v.ppoint());
-        else return p.orientation(v.point());
-    }
-
-    XPlane pickPositiveVertical(const PlaneLine &l, const MyVertex & v)
+    XPlane pick_positive_vertical_plane(const PlaneLine &l, const MyVertex & v)
     {
         if (v.isPlaneRep())
             return l.pick_positive_vertical_plane(v.ppoint());

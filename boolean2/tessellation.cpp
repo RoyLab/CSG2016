@@ -1,17 +1,35 @@
 #include "precompile.h"
-#include <list>
 #include <map>
 #include <set>
 #include <stack>
 
 #include <xlogger.h>
 #include <XStruct.hpp>
-#include <XException.hpp>
 
 #include "hybrid_geometry.h"
 #include "xmemory.h"
 #include "intersection.h"
-#include "BSP.h"
+
+//bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
+//{
+//    if (i == j) return false;
+
+//    auto &ei = pTG->m_edges[i];
+//    auto &ej = pTG->m_edges[j];
+
+//    auto sp = pTG->mp_tri->supportingPlane();
+//    XPlane ep[2] = { ei.prep, ej.prep };
+
+//    if (ei.startVertex() != node)
+//        ep[0].inverse();
+
+//    if (ej.startVertex() != node)
+//        ep[1].inverse();
+
+//    Real res = sign(sp, ep[0], ep[1]);
+//    //assert(res != Real(0));
+//    return res < Real(0);
+//}
 
 namespace Boolean
 {
@@ -46,7 +64,7 @@ namespace Boolean
                 NodeIndex           ends[2];
                 Direction           dir;
                 XPlane              prep;
-                ExternPtr PBIRep*   pbi; // for neighborhood assgin
+                ExternPtr PbiRep*   pbi; // for neighborhood assgin
 
                 int                 loop_index_left;
                 int                 loop_index_right;
@@ -72,6 +90,7 @@ namespace Boolean
                 NodeLoop nloop;
                 bool nested;
             };
+            typedef std::vector<Loop> Component;
 
             struct LoopLocation
             {
@@ -99,13 +118,10 @@ namespace Boolean
                 FaceIterator face_begin() { return FaceIterator(this); }
             };
 
-
-            typedef std::vector<Loop> Component;
-
         private:
             ConnectionIndex theFirstConnection() const { return 0; }
             //VertexIndex end_point(const Connection& con, int i) const;
-            ConnectionIndex findnext(NodeIndex node, ConnectionIndex cur) const;
+            ConnectionIndex findnext(const Node& node, ConnectionIndex cur) const;
             bool checkPlaneOrientation(const Connection& con, const XPlane& sp) const;
             void nestedResolveAndExtractFaces(std::vector<Component*>&) const;
             void extract_face(const Loop& loop) const;
@@ -119,7 +135,12 @@ namespace Boolean
                 return comp[loc.component_idx]->at(loc.loop_idx);
             }
 
-            void addConnection(std::map<VertexIndex, NodeIndex>&, VertexIndex a, VertexIndex b, PBIRep* pbi, Direction dir, XPlane prep);
+            VertexIndex get_vertex_idx(NodeIndex node_idx) const
+            {
+                return nodes_[node_idx].vertex_id;
+            }
+
+            void addConnection(std::map<VertexIndex, NodeIndex>&, VertexIndex a, VertexIndex b, PbiRep* pbi, Direction dir, XPlane prep);
 
             std::vector<Node>       nodes_;
             std::vector<Connection> connections_;
@@ -127,6 +148,35 @@ namespace Boolean
             int                     face_pbi_offset_;
         };
 
+
+        class ResolveObj :
+            public IResolveLineIntersection<
+            PlanePoint, cyPointT,
+            MyVertex, MyVertex
+            >
+        {
+        public:
+            void resolve(Oriented_side side[4], const XPlane& a, const XPlane&b,
+                const PlanePoint& a0, const cyPointT& a1,
+                const MyVertex& b0, const MyVertex& b1);
+
+            bool is_vertex_intersection() const { return insct_node_id > -1; }
+            VertexIndex get_intersect_node_id() const
+            {
+#ifdef XR_DEBUG
+                if (!is_vertex_intersection())
+                {
+                    throw 1;
+                }
+#endif
+                return static_cast<VertexIndex>(insct_node_id);
+            }
+
+        private:
+            VertexSIndex insct_node_id;
+        };
+
+        // impl start
         TessGraph::TessGraph(const Triangle *tri)
         {
             triangle_ = tri;
@@ -136,15 +186,15 @@ namespace Boolean
             {
                 node.vertex_id = triangle_->vertexId(i);
                 nodes_.push_back(node);
-                vertex_node_dict[node.vertex_id] = nodes_.size() - 1;
+                vertex_node_dict[node.vertex_id] = static_cast<int>(nodes_.size() - 1);
 
                 MyEdge& e = triangle_->edge(i);
                 if (!e.inscts) continue;
-                for (VertexIndex vId : e.inscts->points)
+                for (auto vertex : e.inscts->points)
                 {
-                    node.vertex_id = vId;
+                    node.vertex_id = vertex.vertex_idx;
                     nodes_.push_back(node);
-                    vertex_node_dict[node.vertex_id] = nodes_.size() - 1;
+                    vertex_node_dict[node.vertex_id] = static_cast<int>(nodes_.size() - 1);
                 }
             }
 
@@ -155,7 +205,7 @@ namespace Boolean
                     node.vertex_id = v.vId;
                     node.coincident_edge_id = v.eId;
                     nodes_.push_back(node);
-                    vertex_node_dict[node.vertex_id] = nodes_.size() - 1;
+                    vertex_node_dict[node.vertex_id] = static_cast<int>(nodes_.size() - 1);
                 }
             }
 
@@ -175,7 +225,7 @@ namespace Boolean
                 else
                 {
                     auto pbi_itr = e.inscts->pbi_begin();
-                    while(pbi_itr)
+                    while (pbi_itr)
                     {
                         addConnection(vertex_node_dict, pbi_itr->ends[i0],
                             pbi_itr->ends[i1], pbi_itr.pointer(), D_SEQ, prep);
@@ -193,8 +243,13 @@ namespace Boolean
             }
 
             // sort all node by circular order
-            std::vector<CircularOrderObj::Item> sort_array;
-            CircularOrderObj sortObj(triangle_->supportingPlane());
+            struct CircularItem : public CircularOrderObjDefaultItem
+            {
+                int id;
+            };
+
+            std::vector<CircularItem> sort_array;
+            CircularOrderObj<CircularItem> sortObj(triangle_->supportingPlane());
             for (int node_idx = 0; node_idx < nodes_.size(); node_idx++)
             {
                 Node& node = nodes_[node_idx];
@@ -231,7 +286,7 @@ namespace Boolean
         {
             std::stack<ConnectionIndex> edge_stack;
             std::vector<Component*> components;
-            const int con_sz = connections_.size();
+            const int con_sz = static_cast<int>(connections_.size());
             int component_index = -1;
             for (int i = 0; i < con_sz; i++)
             {
@@ -263,7 +318,7 @@ namespace Boolean
 
                     Loop cur_loop;
                     cur_loop.nested = false;
-                    int loop_index = cur_component->size();
+                    int loop_index = static_cast<int>(cur_component->size());
                     while (1)
                     {
                         Direction sub_dir = D_SEQ;
@@ -297,12 +352,12 @@ namespace Boolean
                         {
                             cur_con.loop_index_right = loop_index;
                         }
-                           
+
                         // end loop
                         if (cur_node_idx == headnode) break;
 
                         // update
-                        cur_con_idx = findnext(cur_node_idx, cur_con_idx);
+                        cur_con_idx = findnext(nodes_[cur_node_idx], cur_con_idx);
                         cur_node_idx = (sub_dir == D_SEQ) ? cur_con.ends[1] : cur_con.ends[0];
                     }
                     cur_component->push_back(std::move(cur_loop));
@@ -319,20 +374,6 @@ namespace Boolean
 
             return true;
         }
-
-        class ResolveObj :
-            public IResolveLineIntersection<
-            PlanePoint, cyPointT,
-            VertexIndex, VertexIndex
-            >
-        {
-        public:
-            void resolve(Oriented_side side[4], const XPlane& a, const XPlane&b,
-                const PlanePoint& a0, const cyPointT& a1,
-                const VertexIndex& b0, const VertexIndex& b1);
-
-            VertexSIndex insct_node_id;
-        };
 
         void TessGraph::nestedResolveAndExtractFaces(std::vector<Component*>& components) const
         {
@@ -422,18 +463,18 @@ namespace Boolean
                     const Connection& test_con = connections_[i];
                     if (test_con.component_index != cur_component_idx) continue;
 
-                    FacePBI* pbi_itr = reinterpret_cast<FacePBI*>(connections_[i].pbi);
+                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(connections_[i].pbi);
 
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
                         chosen_vertex.ppoint(), anchor_vertex.point(),
-                        pbi_itr->ends[0], pbi_itr->ends[1],
+                        xvertex(pbi_itr->ends[0]), xvertex(pbi_itr->ends[1]),
                         &resolve_obj
                     );
 
                     if (insct_res == Intersect)
                     {
-                        if (resolve_obj.insct_node_id < 0) // pbi insct
+                        if (!resolve_obj.is_vertex_intersection()) // pbi insct
                         {
                             XPlane test_plane = pbi_itr->vertPlane;
                             split_line.make_positive(test_plane);
@@ -447,13 +488,13 @@ namespace Boolean
                         }
                         else // vertex insct
                         {
-                            MyVertex& test_point = xvertex(nodes_[resolve_obj.insct_node_id].vertex_id);
+                            MyVertex& test_point = xvertex(nodes_[resolve_obj.get_intersect_node_id()].vertex_id);
                             XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.ppoint());
                             if (split_line.linear_order_unsafe(
                                 insct_pair.first.plane, test_plane) > 0)
                             {
                                 insct_pair.first.is_con_type = false;
-                                insct_pair.first.node_idx = resolve_obj.insct_node_id;
+                                insct_pair.first.node_idx = resolve_obj.get_intersect_node_id();
                                 insct_pair.first.plane = test_plane;
                             }
                         }
@@ -471,17 +512,17 @@ namespace Boolean
                     const Connection& test_con = connections_[i];
                     if (rel_table.is_inner_or_sibling(test_con.component_index, i)) continue;
 
-                    FacePBI* pbi_itr = reinterpret_cast<FacePBI*>(connections_[i].pbi);
+                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(connections_[i].pbi);
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
                         chosen_vertex.ppoint(), anchor_vertex.point(),
-                        pbi_itr->ends[0], pbi_itr->ends[1],
+                        xvertex(pbi_itr->ends[0]), xvertex(pbi_itr->ends[1]),
                         &resolve_obj
                     );
 
                     if (insct_res == Intersect)
                     {
-                        if (resolve_obj.insct_node_id < 0) // pbi insct
+                        if (!resolve_obj.get_intersect_node_id()) // pbi insct
                         {
                             XPlane test_plane = pbi_itr->vertPlane;
                             split_line.make_positive(test_plane);
@@ -498,7 +539,7 @@ namespace Boolean
                         }
                         else // vertex insct
                         {
-                            MyVertex& test_point = xvertex(nodes_[resolve_obj.insct_node_id].vertex_id);
+                            MyVertex& test_point = xvertex(nodes_[resolve_obj.get_intersect_node_id()].vertex_id);
                             XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.ppoint());
                             if (split_line.linear_order_unsafe(
                                 insct_pair.first.plane, test_plane) > 0 &&
@@ -507,7 +548,7 @@ namespace Boolean
                                 )
                             {
                                 insct_pair.second.is_con_type = false;
-                                insct_pair.second.node_idx = resolve_obj.insct_node_id;
+                                insct_pair.second.node_idx = resolve_obj.get_intersect_node_id();
                                 insct_pair.second.plane = test_plane;
                             }
                         }
@@ -555,7 +596,7 @@ namespace Boolean
         void TessGraph::extract_face(const Loop& loop) const
         {
             // add subpolygon
-            const int degree = loop.cloop.size();
+            const int degree = static_cast<int>(loop.cloop.size());
             SubPolygon *spoly = new SubPolygon(triangle_->meshId(), degree);
 
             std::vector<VertexIndex> vertices(degree);
@@ -568,7 +609,7 @@ namespace Boolean
             // add neighborInfo
             for (int i = 0; i < degree; i++)
             {
-                PBIRep* pbi = connections_[loop.cloop[i]].pbi;
+                PbiRep* pbi = connections_[loop.cloop[i]].pbi;
                 if (pbi && !pbi->neighbor.empty())
                 {
                     auto &nSourse = pbi->neighbor;
@@ -600,7 +641,7 @@ namespace Boolean
             }
         }
 
-        void TessGraph::addConnection(std::map<VertexIndex, NodeIndex>& dict, VertexIndex a, VertexIndex b, PBIRep * pbi, Direction dir, XPlane prep)
+        void TessGraph::addConnection(std::map<VertexIndex, NodeIndex>& dict, VertexIndex a, VertexIndex b, PbiRep * pbi, Direction dir, XPlane prep)
         {
             auto findres0 = dict.find(a);
             auto findres1 = dict.find(b);
@@ -614,86 +655,45 @@ namespace Boolean
             connections_.push_back(std::move(con));
             assert(checkPlaneOrientation(con, triangle_->supportingPlane()));
 
-            ConnectionIndex con_idx = connections_.size() - 1;
+            ConnectionIndex con_idx = static_cast<int>(connections_.size() - 1);
             nodes_[con.ends[0]].connections.push_back(con_idx);
             nodes_[con.ends[1]].connections.push_back(con_idx);
         }
 
-        //bool TessGraph::SortObject::operator()(EdgeIndex i, EdgeIndex j)
-        //{
-        //    if (i == j) return false;
 
-        //    auto &ei = pTG->m_edges[i];
-        //    auto &ej = pTG->m_edges[j];
+        TessGraph::ConnectionIndex TessGraph::findnext(const Node& node, ConnectionIndex cur) const
+        {
+            for (int i = 0; i < node.connections.size(); i++)
+            {
+                if (node.connections[i] == cur)
+                    return node.connections[i + 1];
+            }
+            return -1;
+        }
 
-        //    auto sp = pTG->mp_tri->supportingPlane();
-        //    XPlane ep[2] = { ei.prep, ej.prep };
+        bool TessGraph::checkPlaneOrientation(const Connection& con, const XPlane& sp) const
+        {
+            PlaneLine line(sp, con.prep);
 
-        //    if (ei.startVertex() != node)
-        //        ep[0].inverse();
+            if (linear_order(line,
+                xvertex(get_vertex_idx(con.ends[0])),
+                xvertex(get_vertex_idx(con.ends[1]))
+            ) > 0)
+                return true;
 
-        //    if (ej.startVertex() != node)
-        //        ep[1].inverse();
-
-        //    Real res = sign(sp, ep[0], ep[1]);
-        //    //assert(res != Real(0));
-        //    return res < Real(0);
-        //}
-
-    //    TessGraph::ConnectionIndex TessGraph::Node::findnext(ConnectionIndex now) const
-    //    {
-    //        for (int i = 0; i < connections.size(); i++)
-    //        {
-    //            if (connections[i] == now)
-    //                return connections[i + 1];
-    //        }
-    //        return INVALID_UINT32;
-    //    }
-    //    bool TessGraph::Connection::checkPlaneOrientation(const Triangle *pTri)
-    //    {
-    //        PlaneLine line(pTri->supportingPlane(), prep);
-    //        if (linear_order(line, xvertex(v[0]->first),
-    //            xvertex(v[1]->first)) > 0)
-    //            return true;
-
-    //        return false;
-    //    }
-
-    //    struct FacePBITessData
-    //    {
-    //        decltype(FaceInsctData::inscts)::mapped_type::iterator ptr;
-    //        decltype(FaceInsctData::inscts)::mapped_type* pContainer = nullptr;
-
-    //        std::vector<PlaneVertex> points;
-    //    };
-    //}
-
+            return false;
+        }
+    }
 
     void tessellation(std::vector<RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles)
     {
-        auto pMem = GlobalData::getObject();
-        auto& inscts = insct_triangles;
-        for (Triangle* pTri : inscts)
+        for (Triangle* triangle : insct_triangles)
         {
-            assert(pTri->add_as_insct_triangle);
-            if (pTri->inscts)
-                pTri->inscts->refine((void*)pTri);
+            triangle->refine();
 
-            for (int i = 0; i < 3; i++)
-            {
-                EdgeAuxiliaryStructure data = { pTri->edge(i).ends[0] , pTri->edge(i).ends[1] };
-                if (pTri->edge(i).faceOrientation(pTri) > 0)
-                    data.line = PlaneLine(pTri->supportingPlane(), pTri->boundingPlane(i).opposite());
-                else
-                    data.line = PlaneLine(pTri->supportingPlane(), pTri->boundingPlane(i));
-
-                if (pTri->edge(i).inscts)
-                    pTri->edge(i).inscts->refine((void*)&data);
-            }
-
-            TessGraph tg(pTri);
+            TessGraph tg(triangle);
             if (tg.tessellate())
-                pTri->invalidate();
+                triangle->invalidate();
         }
     }
 }

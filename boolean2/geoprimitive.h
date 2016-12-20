@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <list>
+
+#include <macros.h>
 
 #include "csgdefs.h"
 #include "preps.h"
@@ -20,29 +21,38 @@ namespace Boolean
 
     class MyVertex
     {
+        friend class GlobalData;
     public:
-        //bool findEdge(uint32_t other, uint32_t* result = nullptr) const;
-        //Oriented_side orientation(const XPlane& p) const;
 
         bool isPlaneRep() const { return rep_ < 0; }
         bool isValid() const { return rep_ != 0; }
 
         bool isCoincident(const PlanePoint& p) const;
         bool isCoincident(const cyPointT& p) const;
-        const std::list<EdgeIndex> edges() const { return edges_; }
+
+        bool findEdge(EdgeIndex other, EdgeIndex* result = nullptr) const;
+        Oriented_side orientation(const XPlane& plane) const;
+
+        const std::vector<EdgeIndex> edges() const { return edges_; }
 
         const PlanePoint& ppoint() const;
         const cyPointT& point() const;
 
     private:
         // only for global object usage
-        void setAsPRep(int i) { rep_ = -(i + 1); }
-        void setAsVRep(int i) { rep_ = (i + 1); }
+        void setAsPRep(int i);
+        void setAsVRep(int i);
+
         VertexIndex absId() const { assert(rep_);  return std::abs(rep_) - 1; }
 
         // + is v-base, - is p-base
-        int rep_ = 0; 
-        std::list<EdgeIndex> edges_;
+        int rep_ = 0;
+        union
+        {
+            ExternPtr const PlanePoint* ppoint_;
+            ExternPtr const cyPointT* point_;
+        };
+        std::vector<EdgeIndex> edges_;
     };
 
     struct EdgeFaceHandle
@@ -54,7 +64,6 @@ namespace Boolean
     class MyEdge
     {
     public:
-
         class ConstFaceIterator
         {
         public:
@@ -76,7 +85,7 @@ namespace Boolean
         private:
             const MyEdge& m_edge;
             int stage; // > 2, then eItr
-            std::list<EdgeFaceHandle>::const_iterator eItr;
+            std::vector<EdgeFaceHandle>::const_iterator eItr;
         };
 
         class FaceIterator
@@ -100,7 +109,7 @@ namespace Boolean
         private:
             MyEdge& m_edge;
             int stage; // > 2, then eItr
-            std::list<EdgeFaceHandle>::iterator eItr;
+            std::vector<EdgeFaceHandle>::iterator eItr;
         };
 
     public:
@@ -109,6 +118,7 @@ namespace Boolean
         EdgeInsctData* inscts = nullptr;
         bool noOverlapNeighbor = false;
 
+    public:
         MyEdge(VertexIndex a, VertexIndex b) : ends{ a, b } {}
         ~MyEdge();
         void addAjacentFace(VertexIndex s, VertexIndex e, IPolygon* fPtr);
@@ -120,6 +130,6 @@ namespace Boolean
 
     private:
         EdgeFaceHandle fhs[2];
-        std::list<EdgeFaceHandle> extrafhs;
+        std::vector<EdgeFaceHandle> extrafhs;
     };
 }

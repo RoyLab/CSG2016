@@ -4,11 +4,11 @@
 
 namespace Boolean
 {
-    bool MyVertex::findEdge(uint32_t other, uint32_t * result) const
+    bool MyVertex::findEdge(VertexIndex other, EdgeIndex * result) const
     {
-        for (auto& item : edges)
+        for (EdgeIndex item : edges_)
         {
-            auto &e = xedge(item);
+            MyEdge &e = xedge(item);
             if (e.ends[0] == other || e.ends[1] == other)
             {
                 if (result)
@@ -21,44 +21,62 @@ namespace Boolean
 
     Oriented_side MyVertex::orientation(const XPlane & p) const
     {
-        if (rep > 0)
+        if (isPlaneRep())
         {
-            return p.orientation(xpoint(rep - 1));
+            return p.orientation(point());
         }
         else
         {
-            return p.orientation(xppoint((-rep) - 1));
+            return p.orientation(ppoint());
         }
     }
 
     bool MyVertex::isCoincident(const PlanePoint & p) const
     {
         if (isPlaneRep())
-            return xcppoint(absId()) == p;
+            return ppoint().value_equals(p);
         else
-            return p == xcpoint(absId());
+            return p.value_equals(point());
     }
 
     const PlanePoint & MyVertex::ppoint() const
     {
+#ifdef XR_DEBUG
         if (!isValid() || !isPlaneRep())
             throw std::exception();
-
-        return xppoint(absId());
+#endif
+        //return xppoint(absId());
+        return *ppoint_;
     }
 
     const cyPointT & MyVertex::point() const
     {
+#ifdef XR_DEBUG
         if (!isValid() || isPlaneRep())
             throw std::exception();
-
-        return xpoint(absId());
+#endif
+        //return xpoint(absId());
+        return *point_;
     }
+
+    void MyVertex::setAsPRep(int i)
+    {
+        rep_ = -(i + 1);
+        ppoint_ = &xcppoint(i);
+    }
+
+    void MyVertex::setAsVRep(int i)
+    {
+        rep_ = (i + 1);
+        point_ = &xcpoint(i);
+    }
+
+    ////////////////////////////////////////////////////////////////
 
     MyEdge::~MyEdge()
     {
-        //SAFE_DELETE(inscts);
-        //SAFE_DELETE(neighbor);
+        SAFE_DELETE(inscts);
+        SAFE_DELETE(neighbor);
     }
 
     void MyEdge::addAjacentFace(VertexIndex s, VertexIndex e, IPolygon * fPtr)
@@ -77,8 +95,7 @@ namespace Boolean
             }
         }
 
-        //assert(0);
-        extrafhs.push_back(FH{ ori, fPtr });
+        extrafhs.push_back(EdgeFaceHandle{ ori, fPtr });
     }
 
     int MyEdge::faceOrientation(const IPolygon * ptr) const

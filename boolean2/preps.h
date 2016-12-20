@@ -2,6 +2,7 @@
 #ifdef PREP_DEBUG_INFO
 #include <CGAL/intersection_3.h>
 #endif
+#include <macros.h>
 #include "global.h"
 
 namespace Boolean
@@ -82,7 +83,7 @@ namespace Boolean
 		int id_; // id = (realId+1) * sign
 
 #ifdef PREP_DEBUG_INFO
-        const Real* data_;
+        ExternPtr const Real* data_;
 #endif
 	};
 
@@ -169,8 +170,8 @@ namespace Boolean
 	public:
         XPlane& plane(int i) { return m_planes[i]; }
         const XPlane& plane(int i) const { return m_planes[i]; }
-        bool operator==(const PlanePoint& p) const;
-        bool operator==(const cyPointT& p) const;
+        bool value_equals(const PlanePoint& p) const;
+        bool value_equals(const cyPointT& p) const;
 
         cyPointT toVertexBased() const 
         { 

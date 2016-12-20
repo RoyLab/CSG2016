@@ -345,7 +345,7 @@ namespace Boolean
         return true;
     }
 
-    bool PlanePoint::operator==(const PlanePoint &p) const
+    bool PlanePoint::value_equals(const PlanePoint &p) const
     {
         //return m_pos == p.m_pos;
         return plane(0).orientation(p) == ON_ORIENTED_BOUNDARY
@@ -353,7 +353,7 @@ namespace Boolean
             && plane(2).orientation(p) == ON_ORIENTED_BOUNDARY;
     }
 
-    bool PlanePoint::operator==(const cyPointT & p) const
+    bool PlanePoint::value_equals(const cyPointT & p) const
     {
         return plane(0).orientation(p) == ON_ORIENTED_BOUNDARY
             && plane(1).orientation(p) == ON_ORIENTED_BOUNDARY

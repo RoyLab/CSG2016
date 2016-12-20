@@ -25,11 +25,11 @@ namespace Boolean
 	class GlobalData;
 
     struct NeighborInfo;
-    struct FacePBI;
-    struct PBIRep;
-    typedef PBIRep EdgePBI;
+    struct FacePbi;
+    struct PbiRep;
+    typedef PbiRep EdgePbi;
 
-    template <class PBI> class InsctData;
+    template <class Pbi> class InsctData;
     template <class Mesh> class CSGTree;
 
     class EdgeInsctData;

@@ -270,6 +270,24 @@ namespace Boolean
         }
     }
 
+    void Triangle::refine()
+    {
+        assert(add_as_insct_triangle);
+
+        if (inscts)
+        {
+            inscts->refine(this);
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (edge(i).inscts)
+            {
+                edge(i).inscts->refine(this, i);
+            }
+        }
+    }
+
     void SubPolygon::getVertices(std::vector<VertexIndex>& output) const
     {
         assert(output.empty());

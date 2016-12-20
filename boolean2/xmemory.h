@@ -22,9 +22,9 @@ namespace Boolean
     {
     public:
         std::deque<XPlaneBase>      planebases;
-        std::vector<PlanePoint>	    ppoints;
 
-        std::vector<cyPointT>	    points;
+        std::deque<PlanePoint>	    ppoints; // iterator must be always valid
+        std::deque<cyPointT>	    points; // iterator must be always valid
 
         std::vector<MyEdge>         edges;
         std::vector<MyVertex>       vertices;
@@ -60,11 +60,11 @@ namespace Boolean
 
     inline const cyPointT& xcpoint(uint32_t id) { return GlobalData::getObject()->points[id]; }
     inline cyPointT& xpoint(uint32_t id) { return GlobalData::getObject()->points[id]; }
-    inline std::vector<cyPointT>& xpoints() { return GlobalData::getObject()->points; }
+    inline std::deque<cyPointT>& xpoints() { return GlobalData::getObject()->points; }
 
     inline const PlanePoint& xcppoint(uint32_t id) { return GlobalData::getObject()->ppoints[id]; }
     inline PlanePoint& xppoint(uint32_t id) { return GlobalData::getObject()->ppoints[id]; }
-    inline std::vector<PlanePoint>& xppoints() { return GlobalData::getObject()->ppoints; }
+    inline std::deque<PlanePoint>& xppoints() { return GlobalData::getObject()->ppoints; }
 
     inline const XPlaneBase& xcplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }
     inline XPlaneBase& xplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }

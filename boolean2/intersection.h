@@ -1,10 +1,9 @@
 #pragma once
 #include <vector>
-#include <list>
-#include "global.h"
+
 #include "preps.h"
-#include "Octree.h"
 #include "xmemory.h"
+#include "hybrid_geometry.h"
 
 namespace Boolean
 {
@@ -21,37 +20,47 @@ namespace Boolean
 		};
 	};
 
-    struct PBIRep
+    struct PbiRep
     {
-		XPlane pends[2];
 		uint32_t ends[2];
-
 		std::vector<NeighborInfo> neighbor;
 
         virtual int is_derived_cls() const { return false; }
-		virtual ~PBIRep() {}
+		virtual ~PbiRep() {}
     };
 
-	typedef PBIRep EdgePBI;
+	typedef PbiRep EdgePbi;
 
-	struct FacePBI: public PBIRep
+	struct FacePbi: public PbiRep
 	{
         int is_derived_cls() const { return true; }
         XPlane vertPlane;
-	};
+        XPlane pends[2];
+    };
 
     class EdgeInsctData
     {
     public:
-        typedef std::list<EdgePBI> PBIList;
-        typedef std::map<uint32_t, PBIList> PBILists;
-		typedef std::vector<VertexIndex> VertexList;
+        typedef std::vector<EdgePbi> PbiList;
+        typedef std::map<MeshIndex, PbiList> PbiLists;
 
-		void refine(void* pData);
+        struct Vertex
+        {
+            VertexIndex vertex_idx;
+            XPlane      plane_rep;
+        };
+		typedef std::vector<Vertex> VertexList;
+
+		void refine(Triangle* triangle, int which_edge);
         bool isRefined() const { return bRefined; }
-        uint32_t* point(const PlanePoint&);
+        VertexIndex* point(const PlanePoint&, const XPlane& plane);
 
 	public:
+        EdgeInsctData(const XPlane& sp, const XPlane& bp)
+        {
+            line = PlaneLine(sp, bp);
+            line.inverse();
+        }
         class PbiPairIterator
         {
         public:
@@ -60,11 +69,11 @@ namespace Boolean
             operator bool() const;
 
         private:
-            PBILists::iterator outer_end_, inner_end_;
-            PBILists::iterator outer_cur_, inner_cur_;
+            PbiLists::iterator outer_end_, inner_end_;
+            PbiLists::iterator outer_cur_, inner_cur_;
 
-            PBIList::iterator outer_pbi_end_, inner_pbi_end_;
-            PBIList::iterator outer_pbi_cur_, inner_pbi_cur_;
+            PbiList::iterator outer_pbi_end_, inner_pbi_end_;
+            PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
         };
 
         class PbiIterator
@@ -72,16 +81,16 @@ namespace Boolean
         public:
             PbiIterator(EdgeInsctData* target);
             void operator++();
-            EdgePBI* operator->() const;
-            EdgePBI* pointer() const;
+            EdgePbi* operator->() const;
+            EdgePbi* pointer() const;
             operator bool() const;
 
         private:
-            PBILists::iterator end_;
-            PBILists::iterator cur_;
+            PbiLists::iterator end_;
+            PbiLists::iterator cur_;
 
-            PBIList::iterator pbi_end_;
-            PBIList::iterator pbi_cur_;
+            PbiList::iterator pbi_end_;
+            PbiList::iterator pbi_cur_;
         };
 
         PbiPairIterator pbi_pair_begin()
@@ -94,9 +103,9 @@ namespace Boolean
             return PbiIterator(this);
         }
 
-
-        PBILists	inscts;
+        PbiLists	inscts;
 		VertexList  points;
+        PlaneLine   line;
 
     protected:
         bool		bRefined = false;
@@ -107,13 +116,13 @@ namespace Boolean
     public:
         // eId: -1 means tess intersection, -2 means from by propagate at that stage
         struct Vertex { VertexIndex vId; EdgeSIndex eId; };
-        typedef std::list<FacePBI> PBIList;
-        typedef std::map<uint32_t, PBIList> PBILists;
+        typedef std::vector<FacePbi> PbiList;
+        typedef std::map<MeshIndex, PbiList> PbiLists;
         typedef std::vector<Vertex> VertexList;
 
-        void refine(void* pData);
+        void refine(Triangle*);
         bool isRefined() const { return bRefined; }
-        uint32_t* point(const PlanePoint&, EdgeSIndex eIdx);
+        VertexIndex* point(const PlanePoint&, EdgeSIndex eIdx);
 
     public:
         class PbiPairIterator
@@ -124,11 +133,11 @@ namespace Boolean
             operator bool() const;
 
         private:
-            PBILists::iterator outer_end_, inner_end_;
-            PBILists::iterator outer_cur_, inner_cur_;
+            PbiLists::iterator outer_end_, inner_end_;
+            PbiLists::iterator outer_cur_, inner_cur_;
 
-            PBIList::iterator outer_pbi_end_, inner_pbi_end_;
-            PBIList::iterator outer_pbi_cur_, inner_pbi_cur_;
+            PbiList::iterator outer_pbi_end_, inner_pbi_end_;
+            PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
         };
 
         class PbiIterator
@@ -136,16 +145,16 @@ namespace Boolean
         public:
             PbiIterator(FaceInsctData* target);
             void operator++();
-            FacePBI* operator->() const;
-            EdgePBI* pointer() const;
+            FacePbi* operator->() const;
+            FacePbi* pointer() const;
             operator bool() const;
 
         private:
-            PBILists::iterator end_;
-            PBILists::iterator cur_;
+            PbiLists::iterator end_;
+            PbiLists::iterator cur_;
 
-            PBIList::iterator pbi_end_;
-            PBIList::iterator pbi_cur_;
+            PbiList::iterator pbi_end_;
+            PbiList::iterator pbi_cur_;
         };
 
         PbiPairIterator pbi_pair_begin()
@@ -158,11 +167,12 @@ namespace Boolean
             return PbiIterator(this);
         }
 
-        PBILists    inscts;
+        PbiLists    inscts;
         VertexList  points;
 
     protected:
-        void resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices = nullptr);
+        void removeOverlapPbi();
+        void resolveIntersection(Triangle*);
         bool		bRefined = false;
     };
 }

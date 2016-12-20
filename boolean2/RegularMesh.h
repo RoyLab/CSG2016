@@ -1,5 +1,4 @@
 #pragma once
-#include <list>
 #include <macros.h>
 
 #include "global.h"
@@ -69,6 +68,7 @@ namespace Boolean
 		// manipulate
 		void calcSupportingPlane();
 		void calcBoundingPlane();
+        void refine();
 
         // state
         bool isValid() const { return bIsValid; }

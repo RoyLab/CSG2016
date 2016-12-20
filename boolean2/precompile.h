@@ -46,5 +46,4 @@
 
 #include "global.h"
 #include "csgdefs.h"
-#include "xgeometry.h"
 #include "CGALext.h"
