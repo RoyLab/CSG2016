@@ -236,7 +236,7 @@ namespace Boolean
     {
         if (!sPlane.is_valid())
         {
-            sPlane = XPlane(XPlaneBase(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2])));
+            sPlane.construct_from_three_vertices(xcpoint(vIds[0]), xcpoint(vIds[1]), xcpoint(vIds[2]));
             assert(sPlane.has_on(xcpoint(vIds[0])));
             assert(sPlane.has_on(xcpoint(vIds[1])));
             assert(sPlane.has_on(xcpoint(vIds[2])));
@@ -257,9 +257,9 @@ namespace Boolean
             cyPointT& q = xpoint(vIds[1]);
             cyPointT& r = xpoint(vIds[2]);
 
-            bPlanes[0].setBase(XPlaneBase(q, normal, r - q, 0));
-            bPlanes[1].setBase(XPlaneBase(r, normal, p - r, 0));
-            bPlanes[2].setBase(XPlaneBase(p, normal, q - p, 0));
+            bPlanes[0].construct_from_one_vertex_two_edges(q, normal, r - q);
+            bPlanes[1].construct_from_one_vertex_two_edges(r, normal, p - r);
+            bPlanes[2].construct_from_one_vertex_two_edges(p, normal, q - p);
 
             assert(bPlanes[0].orientation(p) == ON_POSITIVE_SIDE);
             assert(bPlanes[0].orientation(q) == ON_ORIENTED_BOUNDARY);

@@ -430,11 +430,11 @@ namespace Boolean
                 VertexIndex chosen_vertex_idx = nodes_[chosen_node_idx].vertex_id;
                 MyVertex& chosen_vertex = xvertex(chosen_vertex_idx);
 
-                XPlane split_plane(
-                    XPlaneBase(anchor_vertex.point(),
-                        xvertex(chosen_edge.ends[0]).point(),
-                        xvertex(chosen_edge.ends[1]).point()
-                    )
+                XPlane split_plane;
+                split_plane.construct_from_three_vertices(
+                    anchor_vertex.point(),
+                    xvertex(chosen_edge.ends[0]).point(),
+                    xvertex(chosen_edge.ends[1]).point()
                 );
 
                 // reverse split_plane if necessary

@@ -81,7 +81,7 @@ namespace Boolean
 
         bool operator() (const Item& i, const Item& j) const
         {
-            Real res = sign(supporting_plane_, i.prep, j.prep);
+            Real res = orientation(supporting_plane_, i.prep, j.prep);
             assert(res != Real(0));
             return res < Real(0);
         }

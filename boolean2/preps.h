@@ -7,83 +7,85 @@
 
 namespace Boolean
 {
-	class XPlaneBase
-	{
-	public:
-        XPlaneBase() {}
-        XPlaneBase(const PlaneLine& l, const cyPointT& p); // give a p-rep normal and a point, construct a approx plane on p
-        XPlaneBase(const cyPointT& p, const cyPointT& q, const cyPointT& r);
-        XPlaneBase(const cyPointT& p, const cyPointT& e0, const cyPointT& e1, int);
+    class XPlaneBase
+    {
+        friend class XPlane;
+    public:
+        XPlaneBase(Real x, Real y, Real z, Real w) :
+            data_{ x,y,z,w } {}
 
-        Oriented_side orientation(const cyPointT&) const;
-        bool coplanar(const XPlaneBase&) const;
-
-		const Real& a() const { return data_[0]; }
-		const Real& b() const { return data_[1]; }
-		const Real& c() const { return data_[2]; }
-		const Real& d() const { return data_[3]; }
-
+        const Real& a() const { return data_[0]; }
+        const Real& b() const { return data_[1]; }
+        const Real& c() const { return data_[2]; }
+        const Real& d() const { return data_[3]; }
         const Real* data() const { return data_; }
-        Real* data() { return data_; }
+        const Real& operator[](int i) const { return data_[i]; }
+        const Real& at(int i) const { return data_[i]; }
 
-	protected:
-		Real data_[4];
-	};
+    private:
+        Real& operator[](int i) { return data_[i]; }
+        Real& at(int i) { return data_[i]; }
+
+        Real data_[4];
+    };
 
 	class XPlane
 	{
 	public:
-		XPlane() : id_(0) {
+		XPlane() : id_(0)
 #ifdef PREP_DEBUG_INFO
-            data_ = nullptr;
+            ,debug_data_(nullptr)
 #endif
-        }
+        {}
 
-        XPlane(const XPlaneBase& base) { setBase(base); }
-        void setBase(const XPlaneBase& base);
-        void set_positive_from_id(int i) { assert(i >= 0); id_ = i + 1; }
-        const Real* data() const { return base().data(); }
-        const XPlaneBase& base() const;
+        //XPlane(const XPlaneBase& base) { setBase(base); }
 
-		void inverse() { id_ = -id_; }
-		XPlane opposite() const { return XPlane(-id_); }
-        Real signd() const { return is_inverse() ? -1.0 : 1.0; }
-        const Real* normal() const { return data(); }
-        uint32_t absid() const { return is_valid() ? std::abs(id_) - 1 : INVALID_UINT32; }
+        void construct_from_three_vertices(const cyPointT& p, const cyPointT& q, const cyPointT& r);
+        void construct_from_one_vertex_two_edges(const cyPointT& p, const cyPointT& q, const cyPointT& r);
+        void construct_coicident_plane(const PlaneLine & l, const cyPointT & p);
 
-		bool is_valid() const { return id_ != 0; }
+        // state
+        bool is_valid() const { return id_ != 0; }
         bool is_inverse() const { return id_ < 0; }
+
+        // access
+        const XPlaneBase& get_base() const;
+        const Real* get_data() const { return get_base().data(); }
+        const Real* normal() const { return get_data(); }
+        uint32_t absid() const { return is_valid() ? std::abs(id_) - 1 : INVALID_UINT32; }
+        Real signd() const { return is_inverse() ? -1.0 : 1.0; }
+
+        //void set_positive_from_id(int i) { assert(i >= 0); id_ = i + 1; }
+
+        // manipulate
+		void inverse() { id_ = -id_; }
+        XPlane opposite() const { XPlane res; res.id_ = -id_; return res; }
 
 		// predicates
 		Oriented_side orientation(const PlanePoint&) const;
         Oriented_side orientation(const cyPointT&) const;
-
+        bool normal_equals(const XPlane& p) const;
         bool has_on(const cyPointT& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
         bool has_on(const PlanePoint& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
         bool id_equals(const XPlane& p) const { return std::abs(id_) == std::abs(p.id_); }
 
-        bool coplanar(const XPlane& p) const { return base().coplanar(p.base()); }
-
-#ifdef PREP_DEBUG_INFO
-        void debug() { data_ = data(); }
-#endif
-
     protected:
-        XPlane(int i) : id_(i) {
-#ifdef PREP_DEBUG_INFO
-            debug();
-#endif  
-        }
-        XPlane(int i, bool inv) : id_(inv?i:-i) {
-#ifdef PREP_DEBUG_INFO
-            debug();
-#endif
-        }
+//        XPlane(int i) : id_(i) {
+//#ifdef PREP_DEBUG_INFO
+//            debug();
+//#endif  
+//        }
+//        XPlane(int i, bool inv) : id_(inv?i:-i) {
+//#ifdef PREP_DEBUG_INFO
+//            debug();
+//#endif
+        //}
+        XPlaneBase* register_base();
 
 		int id_; // id = (realId+1) * sign
 
 #ifdef PREP_DEBUG_INFO
-        ExternPtr const Real* data_;
+        ExternPtr const Real* debug_data_;
 #endif
 	};
 
@@ -95,7 +97,7 @@ namespace Boolean
 		PlaneLine(const XPlane& a, const XPlane& b) :
 			planes_{ a, b } {
 #ifdef PREP_DEBUG_INFO
-            vec3_mul_cross(normal, a.data(), b.data());
+            vec3_mul_cross(normal, a.get_data(), b.get_data());
             vec3_norm(normal, normal);
 #endif
         }
@@ -118,9 +120,6 @@ namespace Boolean
         int linear_order_unsafe(const XPlane& a, const PlanePoint& b) const;
         int linear_order_unsafe(const PlanePoint& a, const XPlane& b) const;
 
-        int linear_order_unsafe(const PlanePoint& a, const cyPointT& b) const;
-        int linear_order_unsafe(const cyPointT& a, const PlanePoint& b) const;
-
         int linear_order_unsafe(const XPlane& a, const cyPointT& b) const;
         int linear_order_unsafe(const cyPointT& a, const XPlane& b) const;
 
@@ -130,6 +129,14 @@ namespace Boolean
         XPlane pick_positive_vertical_plane(const PlanePoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
         void inverse();
         cyPointT approxNormal() const;
+        const XPlane& plane(int i) const { return planes_[i]; }
+
+        template <class Point>
+        bool has_on(const Point& p) const
+        {
+            return planes_[0].has_on(p) && 
+                planes_[1].has_on(p); 
+        }
 
 #ifdef PREP_DEBUG_INFO
     protected:
@@ -145,9 +152,9 @@ namespace Boolean
     {
         typedef CGAL::Plane_3<K> CGALPLane;
         typedef CGAL::Point_3<K> point;
-        CGALPLane p[3] = { { a.data()[0], a.data()[1], a.data()[2], a.data()[3] },
-        { b.data()[0], b.data()[1], b.data()[2], b.data()[3] },
-        { c.data()[0], c.data()[1], c.data()[2], c.data()[3] } };
+        CGALPLane p[3] = { { a.get_data()[0], a.get_data()[1], a.get_data()[2], a.get_data()[3] },
+        { b.get_data()[0], b.get_data()[1], b.get_data()[2], b.get_data()[3] },
+        { c.get_data()[0], c.get_data()[1], c.get_data()[2], c.get_data()[3] } };
         auto result = CGAL::intersection(p[0], p[1], p[2]);
         const point* res = boost::get<point>(&*result);
         return *res;
@@ -158,7 +165,7 @@ namespace Boolean
 	{
     public:
         PlanePoint(const XPlane& a, const XPlane& b, const XPlane& c) :
-            m_planes{ a, b, c } {
+            planes_{ a, b, c } {
             //m_pos = convertToPoint<Depeck>(a, b, c);
 #ifdef PREP_DEBUG_INFO
             auto res = convertToPoint<Depick>(a, b, c);
@@ -168,14 +175,14 @@ namespace Boolean
 #endif
         }
 	public:
-        XPlane& plane(int i) { return m_planes[i]; }
-        const XPlane& plane(int i) const { return m_planes[i]; }
+        XPlane& plane(int i) { return planes_[i]; }
+        const XPlane& plane(int i) const { return planes_[i]; }
         bool value_equals(const PlanePoint& p) const;
         bool value_equals(const cyPointT& p) const;
 
         cyPointT toVertexBased() const 
         { 
-            auto tmp = convertToPoint<Depick>(m_planes[0], m_planes[1], m_planes[2]);
+            auto tmp = convertToPoint<Depick>(planes_[0], planes_[1], planes_[2]);
             return cyPointT(tmp.x(), tmp.y(), tmp.z());
         }
 
@@ -186,8 +193,9 @@ namespace Boolean
 
 	protected:
         //CGAL::Point_3<Depeck> m_pos;
-		XPlane m_planes[3];
+		XPlane planes_[3];
 	};
 
-    Real sign(const XPlane& p, const XPlane& q, const XPlane& input);
+    Real orientation(const XPlane& p, const XPlane& q, const XPlane& input);
+    Real orientation(const XPlane & p, const XPlane & q, const XPlane & r, const XPlane & s);
 }

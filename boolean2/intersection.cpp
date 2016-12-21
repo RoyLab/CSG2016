@@ -496,7 +496,7 @@ namespace Boolean
 				{
 					FacePbi fpbi;
 					fpbi.vertPlane = t[i2]->supportingPlane();
-                    if (sign(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
+                    if (orientation(t[i]->supportingPlane(), fpbi.vertPlane, insctRes.A) < 0)
                     {
                         fpbi.pends[0] = insctRes.B.opposite();
                         fpbi.pends[1] = insctRes.A.opposite();
@@ -513,8 +513,8 @@ namespace Boolean
 
 					fpbi.neighbor.push_back(ninfo);
 
-                    assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
-                    assert(sign(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
+                    assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
+                    assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
                     assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linear_order(fpbi.pends[0], fpbi.pends[1]) > 0);
                     assert(linear_order(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
 

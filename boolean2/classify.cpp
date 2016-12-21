@@ -83,7 +83,7 @@ namespace Boolean
                     pTri->calcSupportingPlane();
                 }
                 
-                if (!basePlane.coplanar(fItr.face()->supportingPlane()))
+                if (!basePlane.normal_equals(fItr.face()->supportingPlane()))
                 {
                     seed.edgeId = edgeId;
                     flag = true;
@@ -121,8 +121,8 @@ namespace Boolean
             return REL_INSIDE;
         else
         {
-            const Real* dataA = testPlane.data();
-            const Real* dataB = refPlane.data();
+            const Real* dataA = testPlane.get_data();
+            const Real* dataB = refPlane.get_data();
 
             if (dataA[0] * dataB[0] > 0 || dataA[1] * dataB[1] > 0
                 || dataA[2] * dataB[2] > 0)

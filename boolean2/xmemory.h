@@ -55,23 +55,28 @@ namespace Boolean
     /// gramma sugar
     inline const MyEdge& xcedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
     inline MyEdge& xedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
-    inline std::vector<MyEdge>& xedges() { return GlobalData::getObject()->edges; }
+    //inline std::vector<MyEdge>& xedges() { return GlobalData::getObject()->edges; }
+    EdgeIndex assign_new_edge(MyEdge** p_edge);
 
     inline const MyVertex& xcvertex(VertexIndex id) { return GlobalData::getObject()->vertices[id]; }
     inline MyVertex& xvertex(VertexIndex id) { return GlobalData::getObject()->vertices[id]; }
-    inline std::vector<MyVertex>& xvertices() { return GlobalData::getObject()->vertices; }
+    //inline std::vector<MyVertex>& xvertices() { return GlobalData::getObject()->vertices; }
+    //inline VertexIndex assign_new_edge(MyVertex** p_edge);
 
     inline const cyPointT& xcpoint(Index id) { return GlobalData::getObject()->points[id]; }
     inline cyPointT& xpoint(Index id) { return GlobalData::getObject()->points[id]; }
-    inline std::deque<cyPointT>& xpoints() { return GlobalData::getObject()->points; }
+    //inline std::deque<cyPointT>& xpoints() { return GlobalData::getObject()->points; }
+    //inline EdgeIndex assign_new_edge(MyEdge** p_edge);
 
     inline const PlanePoint& xcppoint(Index id) { return GlobalData::getObject()->ppoints[id]; }
     inline PlanePoint& xppoint(Index id) { return GlobalData::getObject()->ppoints[id]; }
-    inline std::deque<PlanePoint>& xppoints() { return GlobalData::getObject()->ppoints; }
+    //inline std::deque<PlanePoint>& xppoints() { return GlobalData::getObject()->ppoints; }
+    //inline EdgeIndex assign_new_edge(MyEdge** p_edge);
 
     inline const XPlaneBase& xcplane(Index id) { return GlobalData::getObject()->planebases[id]; }
     inline XPlaneBase& xplane(Index id) { return GlobalData::getObject()->planebases[id]; }
-    inline std::deque<XPlaneBase>& xplanes() { return GlobalData::getObject()->planebases; }
+    //inline std::deque<XPlaneBase>& xplanes() { return GlobalData::getObject()->planebases; }
+    Index assign_new_plane(XPlaneBase** p_edge);
 
     inline const std::vector<RegularMesh*>& xcmeshlist() { return GlobalData::getObject()->meshes; }
     inline std::vector<RegularMesh*>& xmeshlist() { return GlobalData::getObject()->meshes; }
