@@ -10,7 +10,6 @@ namespace Boolean
         if (a.isPlaneRep()) type += 1;
         if (b.isPlaneRep()) type += 2;
 
-        Oriented_side side;
         switch (type)
         {
         case 0:

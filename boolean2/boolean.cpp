@@ -50,7 +50,7 @@ namespace Boolean
         {
             MyVertex& vRef = xvertex(seed[i]);
             basePoint[0] = vRef.point();
-            auto eItr = vRef.edges.begin();
+            auto eItr = vRef.edges().begin();
 
             VertexIndex base[2];
             MyEdge& edge = xedge(*eItr++);
@@ -74,11 +74,11 @@ namespace Boolean
 
             assert(!xvertex(base[0]).isPlaneRep());
             assert(!xvertex(base[1]).isPlaneRep());
-            assert(eItr != vRef.edges.end());
+            assert(eItr != vRef.edges().end());
 
             XPlaneBase pbase(basePoint[0], basePoint[1], xvertex(base[1]).point());
             bool got = false;
-            while (eItr != vRef.edges.end())
+            while (eItr != vRef.edges().end())
             {
                 MyEdge& edge = xedge(*eItr++);
                 VertexIndex theother =

@@ -1,6 +1,8 @@
 #include "precompile.h"
 #include "geoprimitive.h"
+
 #include "xmemory.h"
+#include "intersection.h"
 
 namespace Boolean
 {
@@ -95,7 +97,7 @@ namespace Boolean
             }
         }
 
-        extrafhs.push_back(EdgeFaceHandle{ ori, fPtr });
+        extrafhs.emplace_back(EdgeFaceHandle{ ori, fPtr });
     }
 
     int MyEdge::faceOrientation(const IPolygon * ptr) const
@@ -154,5 +156,73 @@ namespace Boolean
         }
     }
 
+    MyEdge::ConstFaceIterator & MyEdge::ConstFaceIterator::operator++()
+    {
+        if (stage == -1) throw std::exception();
 
+        if (stage < 2)
+        {
+            ++stage;
+            if (stage == 2)
+            {
+                if (m_edge.extrafhs.empty())
+                {
+                    stage = -1;
+                    return *this;
+                }
+                else eItr = m_edge.extrafhs.begin();
+            }
+        }
+        else
+        {
+            ++eItr;
+            if (eItr == m_edge.extrafhs.end())
+                stage = -1;
+        }
+        return *this;
+    }
+
+    MyEdge::FaceIterator::FaceIterator(MyEdge & edge, bool triangle) :
+        m_edge(edge), stage(0)
+    {
+        if (triangle)
+        {
+            if (face()->getType() != IPolygon::TRIANGLE)
+                incrementToTriangle();
+        }
+    }
+
+    MyEdge::FaceIterator & MyEdge::FaceIterator::operator++()
+    {
+        if (stage == -1) throw std::exception();
+
+        if (stage < 2)
+        {
+            ++stage;
+            if (stage == 2)
+            {
+                if (m_edge.extrafhs.empty())
+                {
+                    stage = -1;
+                    return *this;
+                }
+                else eItr = m_edge.extrafhs.begin();
+            }
+        }
+        else
+        {
+            ++eItr;
+            if (eItr == m_edge.extrafhs.end())
+                stage = -1;
+        }
+        return *this;
+    }
+
+    MyEdge::FaceIterator & MyEdge::FaceIterator::incrementToTriangle()
+    {
+        do {
+            ++*this;
+        } while (*this && face()->getType() != IPolygon::TRIANGLE);
+        return *this;
+    }
 }

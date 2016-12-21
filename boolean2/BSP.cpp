@@ -1,4 +1,6 @@
 #include "precompile.h"
+#include "hybrid_geometry.h"
+
 #include "RegularMesh.h"
 #include "BSP.h"
 

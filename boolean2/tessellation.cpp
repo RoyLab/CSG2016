@@ -37,6 +37,7 @@ namespace Boolean
     {
         class TessGraph
         {
+            friend class ResolveObj;
         public:
             TessGraph(const Triangle*);
             bool tessellate();
@@ -156,6 +157,8 @@ namespace Boolean
             >
         {
         public:
+            ResolveObj() : node_ids_{ -1,-1 } {}
+
             void resolve(Oriented_side side[4], const XPlane& a, const XPlane&b,
                 const PlanePoint& a0, const cyPointT& a1,
                 const MyVertex& b0, const MyVertex& b1);
@@ -172,8 +175,15 @@ namespace Boolean
                 return static_cast<VertexIndex>(insct_node_id);
             }
 
+            void set_node_id(TessGraph::NodeIndex a, TessGraph::NodeIndex b)
+            {
+                node_ids_[0] = a;
+                node_ids_[1] = b;
+            }
+
         private:
             VertexSIndex insct_node_id;
+            TessGraph::NodeIndex node_ids_[2];
         };
 
         // impl start
@@ -436,7 +446,6 @@ namespace Boolean
                 }
 
                 // intersection test init
-                ResolveObj resolve_obj;
                 std::pair<IntersectionResult, IntersectionResult> insct_pair;
 
                 insct_pair.first.plane = split_line.
@@ -463,8 +472,10 @@ namespace Boolean
                     const Connection& test_con = connections_[i];
                     if (test_con.component_index != cur_component_idx) continue;
 
-                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(connections_[i].pbi);
+                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(test_con.pbi);
 
+                    ResolveObj resolve_obj;
+                    resolve_obj.set_node_id(test_con.ends[0], test_con.ends[1]);
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
                         chosen_vertex.ppoint(), anchor_vertex.point(),
@@ -512,7 +523,11 @@ namespace Boolean
                     const Connection& test_con = connections_[i];
                     if (rel_table.is_inner_or_sibling(test_con.component_index, i)) continue;
 
-                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(connections_[i].pbi);
+                    FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(test_con.pbi);
+
+                    ResolveObj resolve_obj;
+                    resolve_obj.set_node_id(test_con.ends[0], test_con.ends[1]);
+
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
                         chosen_vertex.ppoint(), anchor_vertex.point(),
@@ -683,7 +698,38 @@ namespace Boolean
 
             return false;
         }
-    }
+
+        void ResolveObj::resolve(Oriented_side side[4],
+            const XPlane & plane_a, const XPlane & plane_b,
+            const PlanePoint & a0, const cyPointT & a1,
+            const MyVertex & b0, const MyVertex & b1)
+        {
+            if (node_ids_[0] == -1)
+            {
+                throw 1;
+            }
+
+            if (side[2] * side[3] == 0)
+            {
+                if (side[2] == ON_ORIENTED_BOUNDARY)
+                {
+                    // intersect on chosen vertex
+                    insct_node_id = node_ids_[0];
+                }
+                else
+                {
+                    assert(side[1] == ON_ORIENTED_BOUNDARY);
+                    // intersect on anchor vertex
+                    insct_node_id = node_ids_[1];
+                }
+                return;
+            }
+
+            insct_node_id = -1;
+            return;
+        }
+
+    }// namespace anonymous
 
     void tessellation(std::vector<RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles)
     {

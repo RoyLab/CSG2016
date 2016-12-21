@@ -62,8 +62,8 @@ namespace Boolean
         VertexIndex getTheOtherVertex(EdgeIndex eId) const;
 
 		// search
-        uint32_t findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, uint32_t*&);
-        uint32_t findNonFaceVertex(const PlanePoint& pt, PosTag tag, uint32_t*&);
+        VertexIndex findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*&);
+        VertexIndex findNonFaceVertex(const PlanePoint& pt, PosTag tag, VertexIndex*&);
 
 		// manipulate
 		void calcSupportingPlane();

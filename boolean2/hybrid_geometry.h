@@ -134,8 +134,8 @@ namespace Boolean
     )
     {
         Oriented_side side[4];
-        side[0] = orientation(a, b0);
-        side[1] = orientation(a, b1);
+        side[0] = orientation(b, a0);
+        side[1] = orientation(b, a1);
         if (side[0] == side[1])
         {
             if (side[0] == ON_ORIENTED_BOUNDARY)
@@ -149,8 +149,8 @@ namespace Boolean
             }
         }
 
-        side[2] = orientation(b, a0);
-        side[3] = orientation(b, a1);
+        side[2] = orientation(a, b0);
+        side[3] = orientation(a, b1);
         if (side[2] == side[3])
         {
             assert(side[2] != ON_ORIENTED_BOUNDARY);

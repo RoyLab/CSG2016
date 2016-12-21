@@ -34,6 +34,7 @@ namespace Boolean
         Oriented_side orientation(const XPlane& plane) const;
 
         const std::vector<EdgeIndex> edges() const { return edges_; }
+        void add_edge(EdgeIndex edge_idx);
 
         const PlanePoint& ppoint() const;
         const cyPointT& point() const;
@@ -58,7 +59,7 @@ namespace Boolean
     struct EdgeFaceHandle
     {
         int orientation; // +1 same, -1 oppo
-        IPolygon* ptr = nullptr;
+        IPolygon* ptr;
     };
 
     class MyEdge

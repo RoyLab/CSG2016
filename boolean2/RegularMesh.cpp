@@ -2,6 +2,8 @@
 #include <CGAL/Point_3.h>
 #include <cstring>
 
+#include <xgeometry.h>
+
 #include "adaptive.h"
 #include "RegularMesh.h"
 #include "xmemory.h"
@@ -175,48 +177,59 @@ namespace Boolean
         }
         throw std::exception("cannot find edge");
     }
-    uint32_t Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, uint32_t*& slot)
+
+    VertexIndex Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*& slot)
     {
         assert(tag == INNER);
         if (!inscts) inscts = new FaceInsctData;
-        slot = inscts->point(pt, eIdx);
+        slot = &inscts->point(pt, eIdx)->vId;
         return *slot;
     }
 
 
-    uint32_t Triangle::findNonFaceVertex(const PlanePoint & pt, PosTag tag, uint32_t *&slot)
+    VertexIndex Triangle::findNonFaceVertex(const PlanePoint & pt, PosTag tag, VertexIndex *&slot)
     {
-        EdgeInsctData **is;
+        EdgeInsctData **pp_insct_data;
         switch (tag)
         {
         case EDGE_0:
-            is = &xedge(eIds[0]).inscts;
-            if (!*is) *is = new EdgeInsctData;
-            slot = (*is)->point(pt);
-            return *slot;
+            pp_insct_data = &xedge(eIds[0]).inscts;
+            if (!*pp_insct_data)
+            {
+                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(0));
+            }
+            slot = (*pp_insct_data)->point(pt);
+            break;
         case EDGE_1:
-            is = &xedge(eIds[1]).inscts;
-            if (!*is) *is = new EdgeInsctData;
-            slot = (*is)->point(pt);
-            return *slot;
+            pp_insct_data = &xedge(eIds[1]).inscts;
+            if (!*pp_insct_data)
+            {
+                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(1));
+            }
+            slot = (*pp_insct_data)->point(pt);
+            break;
         case EDGE_2:
-            is = &xedge(eIds[2]).inscts;
-            if (!*is) *is = new EdgeInsctData;
-            slot = (*is)->point(pt);
-            return *slot;
+            pp_insct_data = &xedge(eIds[2]).inscts;
+            if (!*pp_insct_data) 
+            {
+                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(2));
+            }
+            slot = (*pp_insct_data)->point(pt);
+            break;
         case VER_0:
             slot = &vIds[0];
-            return *slot;
+            break;
         case VER_1:
             slot = &vIds[1];
-            return *slot;
+            break;
         case VER_2:
             slot = &vIds[2];
-            return *slot;
+            break;
         default:
-            assert(0);
-            return -1;
+            throw 1;
         }
+        return *slot;
+
     }
 
     void Triangle::calcSupportingPlane()

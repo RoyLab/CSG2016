@@ -2,6 +2,8 @@
 #include <vector>
 #include <macros.h>
 #include <deque>
+#include <set>
+
 #include "preps.h"
 #include "global.h"
 #include "RegularMesh.h"
@@ -32,9 +34,9 @@ namespace Boolean
 
         static GlobalData* getObject();
 
-        uint32_t insertVertices(cyPointT* begin, cyPointT* end);
-        uint32_t insertVertex(PlanePoint& pt);
-        uint32_t getEdgeId(uint32_t a, uint32_t b, IPolygon* facePtr);
+        int insertVertices(cyPointT* begin, cyPointT* end);
+        VertexIndex insertVertex(PlanePoint& pt);
+        EdgeIndex getEdgeId(VertexIndex a, VertexIndex b, IPolygon* facePtr);
 
         void clear();
 
@@ -47,27 +49,28 @@ namespace Boolean
     };
 
     /// useful functions
-    void mergeBrepVertices(VertexIndex a, VertexIndex b);
+    void mergeVertices(VertexIndex a, VertexIndex b);
+    void mergeVertices(std::set<VertexIndex>& indices);
 
     /// gramma sugar
-    inline const MyEdge& xcedge(uint32_t id) { return GlobalData::getObject()->edges[id]; }
-    inline MyEdge& xedge(uint32_t id) { return GlobalData::getObject()->edges[id]; }
+    inline const MyEdge& xcedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
+    inline MyEdge& xedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
     inline std::vector<MyEdge>& xedges() { return GlobalData::getObject()->edges; }
 
-    inline const MyVertex& xcvertex(uint32_t id) { return GlobalData::getObject()->vertices[id]; }
-    inline MyVertex& xvertex(uint32_t id) { return GlobalData::getObject()->vertices[id]; }
+    inline const MyVertex& xcvertex(VertexIndex id) { return GlobalData::getObject()->vertices[id]; }
+    inline MyVertex& xvertex(VertexIndex id) { return GlobalData::getObject()->vertices[id]; }
     inline std::vector<MyVertex>& xvertices() { return GlobalData::getObject()->vertices; }
 
-    inline const cyPointT& xcpoint(uint32_t id) { return GlobalData::getObject()->points[id]; }
-    inline cyPointT& xpoint(uint32_t id) { return GlobalData::getObject()->points[id]; }
+    inline const cyPointT& xcpoint(Index id) { return GlobalData::getObject()->points[id]; }
+    inline cyPointT& xpoint(Index id) { return GlobalData::getObject()->points[id]; }
     inline std::deque<cyPointT>& xpoints() { return GlobalData::getObject()->points; }
 
-    inline const PlanePoint& xcppoint(uint32_t id) { return GlobalData::getObject()->ppoints[id]; }
-    inline PlanePoint& xppoint(uint32_t id) { return GlobalData::getObject()->ppoints[id]; }
+    inline const PlanePoint& xcppoint(Index id) { return GlobalData::getObject()->ppoints[id]; }
+    inline PlanePoint& xppoint(Index id) { return GlobalData::getObject()->ppoints[id]; }
     inline std::deque<PlanePoint>& xppoints() { return GlobalData::getObject()->ppoints; }
 
-    inline const XPlaneBase& xcplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }
-    inline XPlaneBase& xplane(uint32_t id) { return GlobalData::getObject()->planebases[id]; }
+    inline const XPlaneBase& xcplane(Index id) { return GlobalData::getObject()->planebases[id]; }
+    inline XPlaneBase& xplane(Index id) { return GlobalData::getObject()->planebases[id]; }
     inline std::deque<XPlaneBase>& xplanes() { return GlobalData::getObject()->planebases; }
 
     inline const std::vector<RegularMesh*>& xcmeshlist() { return GlobalData::getObject()->meshes; }

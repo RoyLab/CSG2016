@@ -4,6 +4,7 @@
 #include <set>
 
 #include <xstruct.hpp>
+#include <xlogger.h>
 
 #include "intersection.h"
 #include "hybrid_geometry.h"
@@ -295,12 +296,26 @@ namespace Boolean
 
     namespace
     {
-
         struct ResolveAuxInfo
         {
-            XPlane        splane, plane_a0, plane_a1, plane_b0, plane_b1;
+            XPlane        plane_a0, plane_a1, plane_b0, plane_b1;
             VertexIndex   a0, a1, b0, b1;
         };
+
+        void fillAuxInfo(ResolveAuxInfo& info, FacePbi* pbi_a, FacePbi* pbi_b)
+        {
+            info.a0 = pbi_a->ends[0];
+            info.a1 = pbi_a->ends[1];
+
+            info.b0 = pbi_b->ends[0];
+            info.b1 = pbi_b->ends[1];
+
+            info.plane_a0 = pbi_a->pends[0];
+            info.plane_a1 = pbi_a->pends[1];
+
+            info.plane_b0 = pbi_b->pends[0];
+            info.plane_b1 = pbi_b->pends[1];
+        }
 
         class InsctResolveObj :
             public IResolveLineIntersection<
@@ -308,8 +323,10 @@ namespace Boolean
                 MyVertex, MyVertex>
         {
         public:
-            InsctResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts) :
-                item_(&item), counts_(&counts) {}
+            InsctResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts,
+                const XPlane& splane, FaceInsctData* insct, FacePbi* pbi_a, FacePbi* pbi_b) :
+                item_(&item), counts_(&counts), splane_(splane), 
+                insct_(insct), pbis_{ pbi_a, pbi_b } {}
 
             void resolve(
                 Oriented_side side[4],
@@ -317,7 +334,9 @@ namespace Boolean
                 const MyVertex& a0, const MyVertex& a1,
                 const MyVertex& b0, const MyVertex& b1)
             {
-                LinOrderItem* item = nullptr;
+                ResolveAuxInfo aux;
+                fillAuxInfo(aux, pbis_[0], pbis_[1]);
+
                 if (side[0] * side[1] == 0)
                 {
                     if (side[2] * side[3] == 0)
@@ -329,10 +348,10 @@ namespace Boolean
 
                     /// put point of a into b
                     LinOrderItem& item = item_->at(2 + counts_->at(1)++);
-                    item.vertex_idx = (side[0] == ON_ORIENTED_BOUNDARY ? aux_->a0 : aux_->a1);
+                    item.vertex_idx = (side[0] == ON_ORIENTED_BOUNDARY ? aux.a0 : aux.a1);
                     item.plane = plane_a;
 
-                    PlaneLine line(aux_->splane, plane_b);
+                    PlaneLine line(splane_, plane_b);
                     make_good(line, xvertex(item.vertex_idx), &item);
                 }
                 else
@@ -341,10 +360,10 @@ namespace Boolean
                     if (side[2] * side[3] == 0)
                     {
                         LinOrderItem& item = item_->at(counts_->at(0)++);
-                        item.vertex_idx = (side[2] == ON_ORIENTED_BOUNDARY ? aux_->b0 : aux_->b1);
+                        item.vertex_idx = (side[2] == ON_ORIENTED_BOUNDARY ? aux.b0 : aux.b1);
                         item.plane = plane_b;
 
-                        PlaneLine line(aux_->splane, plane_a);
+                        PlaneLine line(splane_, plane_a);
                         make_good(line, xvertex(item.vertex_idx), &item);
                     }
                     else
@@ -352,63 +371,103 @@ namespace Boolean
                         assert(side[2] * side[3] == -1);
                         // new vertex
                         XPlane thirdPlane = plane_b;
-                        PlaneLine(aux_->splane, plane_a).make_positive(thirdPlane); // 似乎不需要，可以尝试注释这一句
-                        PlanePoint newPoint(aux_->splane, plane_a, thirdPlane);
+                        PlaneLine(splane_, plane_a).make_positive(thirdPlane); // 似乎不需要，可以尝试注释这一句
+                        PlanePoint newPoint(splane_, plane_a, thirdPlane);
 
-                        VertexIndex* newPos;
-                        newPos = insct_->point(newPoint, -1);
                         std::vector<VertexIndex*> vecs;
-                        vecs.push_back(newPos);
-
-                        VertexIndex minVal = *newPos;
+                        FaceInsctData::Vertex* face_new_pos = insct_->point(newPoint, TRIPLE_CROSS_0);
+                        vecs.push_back(&face_new_pos->vId);
 
                         // 去所有的邻居看一看
+                        VertexIndex minVal = face_new_pos->vId,
+                            *cur_vertex_id = nullptr;
 
-                        // yesterday
                         for (int i = 0; i < 2; i++)
                         {
                             int i2 = (i + 1) % 2;
-                            for (NeighborInfo& neiInfo : twoPbiPtr[i]->neighbor)
+                            assert(pbis_[i]->neighbor.size());
+                            for (NeighborInfo& neiInfo : pbis_[i]->neighbor)
                             {
                                 if (neiInfo.type == NeighborInfo::Edge)
                                 {
                                     MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
                                     assert(cur_con.inscts);
-                                    newPos = cur_con.inscts->point(newPoint, twoPbiPtr[i2]->vertPlane);
+                                    cur_vertex_id = cur_con.inscts->find_point(
+                                        newPoint);
+                                    
+                                    // because it is edge-face intersection, 
+                                    // it should have been detected in previous test
+                                    if (!cur_vertex_id)
+                                    {
+                                        XLOG_ERROR << "There should have a intersection.";
+                                        throw 1;
+                                    }
                                 }
                                 else
                                 {
                                     assert(neiInfo.type == NeighborInfo::Face);
                                     assert(neiInfo.pTrangle->inscts);
-                                    int eId = -1;
-                                    if (twoPbiPtr[i2]->neighbor.empty())
-                                        eId = -2;
 
-                                    newPos = neiInfo.pTrangle->inscts->point(newPoint, eId);
+                                    face_new_pos = neiInfo.pTrangle->inscts->point(newPoint, TRIPLE_CROSS_0);
+                                    cur_vertex_id = &face_new_pos->vId;
                                 }
-                                if (*newPos < minVal)
-                                    minVal = *newPos;
-                                vecs.push_back(newPos);
+
+                                if (*cur_vertex_id < minVal)
+                                {
+                                    minVal = *cur_vertex_id;
+                                }
+                                vecs.push_back(cur_vertex_id);
                             }
                         }
 
-                        // 所有的邻居都没有，那就真没有了
+                        VertexIndex this_vertex_idx = INVALID_UINT32;
                         if (minVal == INVALID_UINT32)
                         {
-                            minVal = GlobalData::getObject()->insertVertex(newPoint);
+                            // 所有的邻居都没有，那就真没有了
+                            this_vertex_idx = GlobalData::getObject()->insertVertex(newPoint);
+                            for (VertexIndex *int_value : vecs)
+                            {
+                                *int_value = this_vertex_idx;
+                            }
                         }
-                        for (uint32_t *pInt : vecs)
-                            *pInt = minVal;
+                        else
+                        {
+                            this_vertex_idx = minVal;
+                            std::set<VertexIndex> coincident_vertex_ids;
+                            for (VertexIndex *int_value : vecs)
+                            {
+                                if (*int_value == INVALID_UINT32)
+                                {
+                                    *int_value = minVal;
+                                }
+                                else
+                                {
+                                    coincident_vertex_ids.insert(*int_value);
+                                }
+                            }
+                            mergeVertices(coincident_vertex_ids);
+                            this_vertex_idx = *vecs[0];
+                        }
+
+                        PlaneLine line;
 
                         LinOrderItem& item = item_->at(counts_->at(0)++);
-                        slots[0][0].id = minVal;
-                        slots[0][0].plane = pbiItr2->vertPlane;
-                        PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(slots[0][0].plane);
+                        item.vertex_idx = this_vertex_idx;
+                        item.plane = plane_b;
+                        line = PlaneLine(splane_, plane_a);
+                        make_good(line, xvertex(item.vertex_idx), &item);
+                        //slots[0][0].id = minVal;
+                        //slots[0][0].plane = pbiItr2->vertPlane;
+                        //PlaneLine(triangle->supportingPlane(), pbiItr->vertPlane).make_positive(slots[0][0].plane);
 
-                        LinOrderItem& item = item_->at(counts_->at(1)++);
-                        slots[1][0].id = minVal;
-                        slots[1][0].plane = pbiItr->vertPlane;
-                        PlaneLine(triangle->supportingPlane(), pbiItr2->vertPlane).make_positive(slots[1][0].plane);
+                        LinOrderItem& item1 = item_->at(counts_->at(1)++);
+                        item1.vertex_idx = this_vertex_idx;
+                        item1.plane = plane_a;
+                        line = PlaneLine(splane_, plane_b);
+                        make_good(line, xvertex(item1.vertex_idx), &item1);
+                        //slots[1][0].id = minVal;
+                        //slots[1][0].plane = pbiItr->vertPlane;
+                        //PlaneLine(triangle->supportingPlane(), pbiItr2->vertPlane).make_positive(slots[1][0].plane);
                     }
                 }
             }
@@ -507,50 +566,55 @@ namespace Boolean
                 //    }
 
             }
+
         private:
-            std::array<LinOrderItem, 4>* item_;
-            std::array<int, 2>* counts_;
-            ResolveAuxInfo*      aux_;
-            FaceInsctData*        insct_;
-            FacePbi* twoPbiPtr[2];
+            std::array<LinOrderItem, 4>*    item_;
+            std::array<int, 2>*             counts_;
+            XPlane                          splane_;
+            FaceInsctData*                  insct_;
+            FacePbi*                        pbis_[2];
         };
 
         class CoplanarResolveObj : public IResolveLineIntersection<
             MyVertex, MyVertex, MyVertex, MyVertex>
         {
         public:
-            CoplanarResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts) :
-                item_(&item), counts_(&counts) {}
+            CoplanarResolveObj(std::array<LinOrderItem, 4>& item, std::array<int, 2>& counts,
+                const XPlane& splane, FacePbi* pbi_a, FacePbi* pbi_b) :
+                item_(&item), counts_(&counts), splane_(splane), pbis_{pbi_a, pbi_b} {}
 
             void resolve(Oriented_side side[4],
                 const XPlane& plane_a, const XPlane& plane_b,
                 const MyVertex& a0, const MyVertex& a1,
                 const MyVertex& b0, const MyVertex& b1)
             {
-                PlaneLine line(aux_->splane, plane_a);
-                Real dotRes = line.dot(aux_->plane_b0);
+                ResolveAuxInfo aux;
+                fillAuxInfo(aux, pbis_[0], pbis_[1]);
+
+                PlaneLine line(splane_, plane_a);
+                Real dotRes = line.dot(aux.plane_b0);
                 assert(dotRes != 0);
                 bool inverseLine = dotRes > 0 ? false : true;
 
                 if (inverseLine)
                 {
-                    aux_->plane_b0.inverse();
-                    aux_->plane_b1.inverse();
-                    std::swap(aux_->plane_b0, aux_->plane_b1);
+                    aux.plane_b0.inverse();
+                    aux.plane_b1.inverse();
+                    std::swap(aux.plane_b0, aux.plane_b1);
                 }
 
-                assert(check_orientation(line));
+                assert(check_orientation(line, aux));
 
                 // linear order 计算overlap
-                if (line.linear_order_unsafe(aux_->plane_b0, aux_->plane_a1) <= 0 ||
-                    line.linear_order_unsafe(aux_->plane_a0, aux_->plane_b1) <= 0)
+                if (line.linear_order_unsafe(aux.plane_b0, aux.plane_a1) <= 0 ||
+                    line.linear_order_unsafe(aux.plane_a0, aux.plane_b1) <= 0)
                 {
                     return;
                 }
 
                 int compRes[2] = {
-                    line.linear_order_unsafe(aux_->plane_a0, aux_->plane_b0),
-                    line.linear_order_unsafe(aux_->plane_a1, aux_->plane_b1),
+                    line.linear_order_unsafe(aux.plane_a0, aux.plane_b0),
+                    line.linear_order_unsafe(aux.plane_a1, aux.plane_b1),
                 };
 
                 // must not be coincident
@@ -561,10 +625,10 @@ namespace Boolean
                 if (compRes[0] > 0)
                 {
                     LinOrderItem& item = item_->at(counts_->at(0)++);
-                    item.vertex_idx = aux_->b0;
+                    item.vertex_idx = aux.b0;
                     if (b0.isPlaneRep())
                     {
-                        item.plane = aux_->plane_b0;
+                        item.plane = aux.plane_b0;
                     }
                     else
                     {
@@ -575,10 +639,10 @@ namespace Boolean
                 else if (compRes[0] < 0)
                 {
                     LinOrderItem& item = item_->at(2+counts_->at(1)++);
-                    item.vertex_idx = aux_->a0;
+                    item.vertex_idx = aux.a0;
                     if (a0.isPlaneRep())
                     {
-                        item.plane = aux_->plane_a0;
+                        item.plane = aux.plane_a0;
                         item.plane.inverse();
                     }
                     else
@@ -593,10 +657,10 @@ namespace Boolean
                 if (compRes[1] > 0)
                 {
                     LinOrderItem& item = item_->at(2+counts_->at(1)++);
-                    item.vertex_idx = aux_->a1;
+                    item.vertex_idx = aux.a1;
                     if (a1.isPlaneRep())
                     {
-                        item.plane = aux_->plane_a1;
+                        item.plane = aux.plane_a1;
                         item.plane.inverse();
                     }
                     else
@@ -608,10 +672,10 @@ namespace Boolean
                 else if (compRes[1] < 0)
                 {
                     LinOrderItem& item = item_->at(counts_->at(0)++);
-                    item.vertex_idx = aux_->b1;
+                    item.vertex_idx = aux.b1;
                     if (b1.isPlaneRep())
                     {
-                        item.plane = aux_->plane_b1;
+                        item.plane = aux.plane_b1;
                     }
                     else
                     {
@@ -668,21 +732,22 @@ namespace Boolean
             }
 
         private:
-            bool check_orientation(const PlaneLine& line) const
+            bool check_orientation(const PlaneLine& line, ResolveAuxInfo& aux) const
             {
-                if ((line.dot(aux_->plane_a0) > 0) &&
-                    (line.dot(aux_->plane_a1) > 0) &&
-                    (line.dot(aux_->plane_b0) > 0) &&
-                    (line.dot(aux_->plane_b1) > 0) &&
-                    (line.linear_order_unsafe(aux_->plane_a0, aux_->plane_a1) > 0) &&
-                    (line.linear_order_unsafe(aux_->plane_b0, aux_->plane_b1) > 0))
+                if ((line.dot(aux.plane_a0) > 0) &&
+                    (line.dot(aux.plane_a1) > 0) &&
+                    (line.dot(aux.plane_b0) > 0) &&
+                    (line.dot(aux.plane_b1) > 0) &&
+                    (line.linear_order_unsafe(aux.plane_a0, aux.plane_a1) > 0) &&
+                    (line.linear_order_unsafe(aux.plane_b0, aux.plane_b1) > 0))
                     return true;
                 return false;
             }
 
             std::array<LinOrderItem, 4>*    item_;
             std::array<int, 2>*             counts_;
-            ResolveAuxInfo*                  aux_;
+            XPlane                          splane_;
+            FacePbi*                        pbis_[2];
         };
     }
 
@@ -714,8 +779,12 @@ namespace Boolean
 
                         std::array<LinOrderItem, 4> insct_item_slots;
                         std::array<int,2> insct_count{ 0, 0 };
-                        InsctResolveObj insct_obj(insct_item_slots, insct_count);
-                        CoplanarResolveObj coplanar_obj(insct_item_slots, insct_count);
+
+                        InsctResolveObj insct_obj(insct_item_slots, insct_count, 
+                            triangle->supportingPlane(), this, &*pbiItr, &*pbiItr2);
+
+                        CoplanarResolveObj coplanar_obj(insct_item_slots, insct_count,
+                            triangle->supportingPlane(), &*pbiItr, &*pbiItr2);
 
                         LineInsctResultType insct_res = plane_based_line_intersection(
                             pbiItr->vertPlane, pbiItr2->vertPlane,

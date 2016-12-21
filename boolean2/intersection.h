@@ -53,7 +53,8 @@ namespace Boolean
 
 		void refine(Triangle* triangle, int which_edge);
         bool isRefined() const { return bRefined; }
-        VertexIndex* point(const PlanePoint&, const XPlane& plane);
+        VertexIndex* point(const PlanePoint&, const XPlane* plane = nullptr);
+        VertexIndex* find_point(const PlanePoint & p);
 
 	public:
         EdgeInsctData(const XPlane& sp, const XPlane& bp)
@@ -122,7 +123,7 @@ namespace Boolean
 
         void refine(Triangle*);
         bool isRefined() const { return bRefined; }
-        VertexIndex* point(const PlanePoint&, EdgeSIndex eIdx);
+        Vertex* point(const PlanePoint&, EdgeSIndex eIdx);
 
     public:
         class PbiPairIterator
