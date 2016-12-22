@@ -65,9 +65,6 @@
     <ClInclude Include="geoprimitive.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="interfaces.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="hybrid_geometry.h">
       <Filter>Source Files</Filter>
     </ClInclude>

@@ -154,7 +154,7 @@ namespace Boolean
                 if (!pTable)
                     pTable = new TriList;
 
-				assert(fPtr->degree() == 3);
+				assert(fPtr->getType() == IPolygon::TRIANGLE);
                 pTable->push_back(reinterpret_cast<Triangle*>(fPtr));
             }
         }

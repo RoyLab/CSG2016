@@ -6,7 +6,7 @@
 
 namespace Boolean
 {
-    bool MyVertex::findEdge(VertexIndex other, EdgeIndex * result) const
+    bool MyVertex::findEdge(EdgeIndex other, EdgeIndex * result) const
     {
         for (EdgeIndex item : edges_)
         {
@@ -36,9 +36,17 @@ namespace Boolean
     bool MyVertex::isCoincident(const PlanePoint & p) const
     {
         if (isPlaneRep())
-            return ppoint().value_equals(p);
+            return p.value_equals(ppoint());
         else
             return p.value_equals(point());
+    }
+
+    bool MyVertex::isCoincident(const cyPointT & p) const
+    {
+        if (isPlaneRep())
+            return ppoint().value_equals(p);
+        else
+            return (p == point()) == 0 ? false: true;
     }
 
     const PlanePoint & MyVertex::ppoint() const
@@ -224,5 +232,11 @@ namespace Boolean
             ++*this;
         } while (*this && face()->getType() != IPolygon::TRIANGLE);
         return *this;
+    }
+
+    Triangle * MyEdge::FaceIterator::as_triangle() const
+    {
+        assert(faceHandle().ptr->getType() == IPolygon::TRIANGLE);
+        return reinterpret_cast<Triangle*>(faceHandle().ptr);
     }
 }

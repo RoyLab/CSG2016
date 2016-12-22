@@ -76,7 +76,8 @@ namespace Boolean
             assert(!xvertex(base[1]).isPlaneRep());
             assert(eItr != vRef.edges().end());
 
-            XPlaneBase pbase(basePoint[0], basePoint[1], xvertex(base[1]).point());
+            XPlane pbase;
+            pbase.construct_from_three_vertices(basePoint[0], basePoint[1], xvertex(base[1]).point());
             bool got = false;
             while (eItr != vRef.edges().end())
             {

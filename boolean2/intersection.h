@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 
+#include <xstruct.hpp>
+
 #include "preps.h"
 #include "xmemory.h"
 #include "hybrid_geometry.h"
@@ -12,10 +14,9 @@ namespace Boolean
 		enum Type {Vertex, Edge, Face};
 
 		Type type;
-		uint32_t neighborMeshId;
 		union
 		{
-			int neighborEdgeId; // >0 is fid, < 0 is eid,  0 is invalid
+			int neighborEdgeId;
 			Triangle* pTrangle;
 		};
 	};
@@ -23,7 +24,7 @@ namespace Boolean
     struct PbiRep
     {
 		uint32_t ends[2];
-		std::vector<NeighborInfo> neighbor;
+		std::map<MeshIndex, NeighborInfo> neighbor;
 
         virtual int is_derived_cls() const { return false; }
 		virtual ~PbiRep() {}
@@ -62,46 +63,61 @@ namespace Boolean
             line = PlaneLine(sp, bp);
             line.inverse();
         }
-        class PbiPairIterator
+        //class PbiPairIterator
+        //{
+        //public:
+        //    PbiPairIterator(EdgeInsctData* target);
+        //    void operator++();
+        //    operator bool() const;
+
+        //private:
+        //    PbiLists::iterator outer_end_, inner_end_;
+        //    PbiLists::iterator outer_cur_, inner_cur_;
+
+        //    PbiList::iterator outer_pbi_end_, inner_pbi_end_;
+        //    PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
+        //};
+
+        //class PbiIterator
+        //{
+        //public:
+        //    PbiIterator(EdgeInsctData* target);
+        //    void operator++();
+        //    EdgePbi* operator->() const;
+        //    EdgePbi* pointer() const;
+        //    operator bool() const;
+
+        //private:
+        //    void assignInnerPtr();
+
+        //    PbiLists::iterator end_;
+        //    PbiLists::iterator cur_;
+
+        //    PbiList::iterator pbi_end_;
+        //    PbiList::iterator pbi_cur_;
+        //};
+
+        //PbiPairIterator pbi_pair_begin()
+        //{
+        //    return PbiPairIterator(this);
+        //}
+
+        static void assignInnerPtr(PbiLists::iterator o, 
+            PbiList::iterator& begin, PbiList::iterator& end)
         {
-        public:
-            PbiPairIterator(EdgeInsctData* target);
-            void operator++();
-            operator bool() const;
-
-        private:
-            PbiLists::iterator outer_end_, inner_end_;
-            PbiLists::iterator outer_cur_, inner_cur_;
-
-            PbiList::iterator outer_pbi_end_, inner_pbi_end_;
-            PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
-        };
-
-        class PbiIterator
-        {
-        public:
-            PbiIterator(EdgeInsctData* target);
-            void operator++();
-            EdgePbi* operator->() const;
-            EdgePbi* pointer() const;
-            operator bool() const;
-
-        private:
-            PbiLists::iterator end_;
-            PbiLists::iterator cur_;
-
-            PbiList::iterator pbi_end_;
-            PbiList::iterator pbi_cur_;
-        };
-
-        PbiPairIterator pbi_pair_begin()
-        {
-            return PbiPairIterator(this);
+            begin = o->second.begin();
+            end = o->second.end();
         }
+
+        typedef XR::DoubleIterator<
+            PbiLists::iterator, 
+            PbiList::iterator,
+            assignInnerPtr>
+            PbiIterator;
 
         PbiIterator pbi_begin()
         {
-            return PbiIterator(this);
+            return PbiIterator(inscts.begin(), inscts.end());
         }
 
         PbiLists	inscts;
@@ -126,46 +142,60 @@ namespace Boolean
         Vertex* point(const PlanePoint&, EdgeSIndex eIdx);
 
     public:
-        class PbiPairIterator
+        //class PbiPairIterator
+        //{
+        //public:
+        //    PbiPairIterator(FaceInsctData* target);
+        //    void operator++();
+        //    operator bool() const;
+
+        //private:
+        //    PbiLists::iterator outer_end_, inner_end_;
+        //    PbiLists::iterator outer_cur_, inner_cur_;
+
+        //    PbiList::iterator outer_pbi_end_, inner_pbi_end_;
+        //    PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
+        //};
+
+        //class PbiIterator
+        //{
+        //public:
+        //    PbiIterator(FaceInsctData* target);
+        //    void operator++();
+        //    FacePbi* operator->() const;
+        //    FacePbi* pointer() const;
+        //    operator bool() const;
+
+        //private:
+        //    PbiLists::iterator end_;
+        //    PbiLists::iterator cur_;
+
+        //    PbiList::iterator pbi_end_;
+        //    PbiList::iterator pbi_cur_;
+        //};
+
+        //PbiPairIterator pbi_pair_begin()
+        //{
+        //    return PbiPairIterator(this);
+        //}
+
+
+        static void assignInnerPtr(PbiLists::iterator o,
+            PbiList::iterator& begin, PbiList::iterator& end)
         {
-        public:
-            PbiPairIterator(FaceInsctData* target);
-            void operator++();
-            operator bool() const;
-
-        private:
-            PbiLists::iterator outer_end_, inner_end_;
-            PbiLists::iterator outer_cur_, inner_cur_;
-
-            PbiList::iterator outer_pbi_end_, inner_pbi_end_;
-            PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
-        };
-
-        class PbiIterator
-        {
-        public:
-            PbiIterator(FaceInsctData* target);
-            void operator++();
-            FacePbi* operator->() const;
-            FacePbi* pointer() const;
-            operator bool() const;
-
-        private:
-            PbiLists::iterator end_;
-            PbiLists::iterator cur_;
-
-            PbiList::iterator pbi_end_;
-            PbiList::iterator pbi_cur_;
-        };
-
-        PbiPairIterator pbi_pair_begin()
-        {
-            return PbiPairIterator(this);
+            begin = o->second.begin();
+            end = o->second.end();
         }
+
+        typedef XR::DoubleIterator<
+            PbiLists::iterator,
+            PbiList::iterator,
+            assignInnerPtr>
+            PbiIterator;
 
         PbiIterator pbi_begin()
         {
-            return PbiIterator(this);
+            return PbiIterator(inscts.begin(), inscts.end());
         }
 
         PbiLists    inscts;

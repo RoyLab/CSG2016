@@ -37,7 +37,6 @@
     <ClInclude Include="geoprimitive.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="hybrid_geometry.h" />
-    <ClInclude Include="interfaces.h" />
     <ClInclude Include="intersection.h" />
     <ClInclude Include="triboxtest.hpp" />
     <ClInclude Include="UndirectedGraph.hpp" />

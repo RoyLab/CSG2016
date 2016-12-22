@@ -442,7 +442,7 @@ namespace Boolean
 			for (int i = 0; i < 2; i++)
 			{
 				int i2 = (i + 1) % 2;
-				ninfo.neighborMeshId = meshId[i2];
+				//ninfo.neighborMeshId = meshId[i2];
 				if (eId[i2] > -1)
 				{
 					ninfo.type = NeighborInfo::Edge;
@@ -479,7 +479,8 @@ namespace Boolean
                         epbi.ends[0] = v[i][0];
                         epbi.ends[1] = v[i][1];
                     }
-                    epbi.neighbor.push_back(ninfo);
+                    //epbi.neighbor.push_back(ninfo);
+                    epbi.neighbor[meshId[i2]] = ninfo;
 
                     //assert(edgeLine.dot(epbi.pends[0]) > 0);
                     //assert(edgeLine.dot(epbi.pends[1]) > 0);
@@ -511,7 +512,8 @@ namespace Boolean
                         fpbi.ends[1] = v[i][1];
                     }
 
-					fpbi.neighbor.push_back(ninfo);
+                    //fpbi.neighbor.push_back(ninfo);
+                    fpbi.neighbor[meshId[i2]] = ninfo;
 
                     assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
                     assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
@@ -651,4 +653,5 @@ namespace Boolean
         points.push_back(v);
         return &points.back();
     }
+
 }

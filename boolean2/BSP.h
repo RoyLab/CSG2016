@@ -23,15 +23,16 @@ namespace Boolean
         BSPTree() {}
         ~BSPTree() { reset(); }
 
-        void buildNoCross(std::vector<IPolygon*>& faces);
-        void build(std::vector<IPolygon*>& faces);
+        void buildNoCross(std::vector<Triangle*>& faces);
+        //void build(std::vector<IPolygon*>& faces);
         void reset();
         Oriented_side classify(const MyVertex& v, XPlane* bspPlane = 0) const;
 
     private:
-        Node* buildRecursion(std::vector<IPolygon*>& faces);
+        Node* buildRecursion(std::vector<Triangle*>& faces);
 
         Node *mp_root = nullptr;
 
     };
+
 }

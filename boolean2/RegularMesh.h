@@ -11,32 +11,30 @@ namespace Boolean
     class IPolygon
     {
     public:
-        enum TYPE {TRIANGLE, SUBPOLYGON, SUBPOLYGON_WITH_HOLE};
+        enum TYPE {TRIANGLE, SUBPOLYGON, SUBPOLYGON_WITH_HOLES};
         int mark = UNVISITED;
 
     public:
-		IPolygon(uint32_t d, uint32_t i, uint32_t meshId):
-			m_degree(d), m_id(i), m_meshId(meshId) {}
+		IPolygon(uint32_t i, uint32_t meshId):
+			m_id(i), m_meshId(meshId) {}
 		virtual ~IPolygon() {}
 
-		uint32_t degree() const { return m_degree; }
 		uint32_t id() const { return m_id; }
         uint32_t meshId() const { return m_meshId; }
 
-        virtual void getVertices(std::vector<VertexIndex>&) const = 0;
-        virtual void getEdges(std::vector<EdgeIndex>&) const;
+        virtual void get_vertices_for_dumping(std::vector<VertexIndex>&) const = 0;
+        virtual void getAllEdges(std::vector<EdgeIndex>&) const = 0;
         virtual TYPE getType() const = 0;
 
-        virtual MyEdge& edge(int i) const;
-        virtual uint32_t edgeId(int i) const = 0;
-        virtual MyVertex& vertex(int i)const;
-        virtual uint32_t vertexId(int i)const = 0;
+        //virtual MyEdge& edge(int i) const;
+        //virtual uint32_t edgeId(int i) const = 0;
+        //virtual MyVertex& vertex(int i)const;
+        //virtual uint32_t vertexId(int i)const = 0;
         virtual bool isValid() const = 0;
 
         XPlane supportingPlane() const { assert(sPlane.is_valid()); return sPlane; }
         XPlane sPlane;
     protected:
-        const uint32_t m_degree;
         const uint32_t m_id;
         const uint32_t m_meshId;
     };
@@ -48,16 +46,22 @@ namespace Boolean
 		FaceInsctData* inscts = nullptr;
         bool add_as_insct_triangle = false;
 
-		Triangle(uint32_t meshId, uint32_t i): IPolygon(3, i, meshId) {}
+		Triangle(uint32_t meshId, uint32_t i): IPolygon(i, meshId) {}
         ~Triangle();
 
 		// access
 		//const CGALTriangle& triangle() const { return cgalTri; }
 		XPlane boundingPlane(int i) const { return bPlanes[i]; }
         cyPointT& point(int i) const;
+        uint32_t degree() const { return 3; }
+
+        MyEdge& edge(int i) const;
+        MyVertex& vertex(int i)const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
-        void getVertices(std::vector<VertexIndex>&) const;
+
+        void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
+        void getAllEdges(std::vector<EdgeIndex>& output) const;
         bool coherentEdge(int whichEdge) const; // 等价于MyEdge的faceOrientation
         VertexIndex getTheOtherVertex(EdgeIndex eId) const;
 
@@ -94,24 +98,54 @@ namespace Boolean
 
     CGALTriangle convertToCGALTriangle(const Triangle*);
 
+
+    // 0---------------1
+    //       edge 0
     class SubPolygon : public IPolygon
     {
     public:
         SubPolygon(uint32_t meshId, uint32_t d, uint32_t i = uint32_t(-1)):
-            IPolygon(d, i, meshId),  eIds(d), vIds(d) {}
+            IPolygon(i, meshId),  eIds(d), vIds(d), m_degree(d) {}
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
-        void getVertices(std::vector<VertexIndex>&) const;
+        void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
+        void getAllEdges(std::vector<EdgeIndex>& output) const;
         TYPE getType() const { return SUBPOLYGON; }
         bool isValid() const { return true; }
 
+        MyEdge& edge(int i) const;
+        MyVertex& vertex(int i)const;
         uint32_t edgeId(int i) const { return eIds[i]; }
         uint32_t vertexId(int i) const { return vIds[i]; }
+        uint32_t degree() const { return m_degree; }
 
     protected:
         std::vector<EdgeIndex> eIds;
         std::vector<VertexIndex> vIds;
+
+        const uint32_t m_degree;
+    };
+
+    class SubPolygonWithHoles : public IPolygon
+    {
+    public:
+        SubPolygonWithHoles(std::vector<std::vector<VertexIndex>>& loops);
+        ~SubPolygonWithHoles();
+        void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
+        void getAllEdges(std::vector<EdgeIndex>& output) const;
+
+        TYPE getType() const { return SUBPOLYGON_WITH_HOLES; }
+        bool isValid() const { return true; }
+
+        MyEdge& edge(int i, int j) const;
+        MyVertex& vertex(int i, int j)const;
+        uint32_t edgeId(int i, int j) const { return eIds[i][j]; }
+        uint32_t vertexId(int i, int j) const { return vIds[i][j]; }
+
+    protected:
+        std::vector<std::vector<EdgeIndex>> eIds;
+        std::vector<std::vector<VertexIndex>> vIds;
     };
 
 	class RegularMesh

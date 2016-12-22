@@ -27,7 +27,7 @@ namespace Boolean
 
     void RegularMesh::writeFile(RegularMesh & mesh, const char *fileName)
     {
-        size_t nVertices = xvertices().size();
+        size_t nVertices = GlobalData::getObject()->vertices.size();
         std::vector<int> idmap(nVertices, -1);
         uint32_t vCount = 0, fCount = 0;
         std::vector<Real> vSlot;
@@ -55,8 +55,8 @@ namespace Boolean
             IPolygon* face = mesh.faces()[i];
             if (!face->isValid()) continue;
 
-            face->getVertices(tmp);
-            iSlot.push_back(face->degree());
+            face->get_vertices_for_dumping(tmp);
+            iSlot.push_back(tmp.size());
             for (auto idx : tmp)
             {
                 uint32_t cId = idmap[idx];
@@ -152,7 +152,7 @@ namespace Boolean
         return xpoint(vIds[i]);
     }
 
-    void Triangle::getVertices(std::vector<VertexIndex>& output) const
+    void Triangle::get_vertices_for_dumping(std::vector<VertexIndex>& output) const
     {
         assert(output.empty());
         output.resize(3);
@@ -283,6 +283,14 @@ namespace Boolean
         }
     }
 
+    void Triangle::getAllEdges(std::vector<EdgeIndex>& output) const
+    {
+        assert(output.empty());
+        output.resize(degree());
+        for (size_t i = 0; i < degree(); i++)
+            output[i] = edgeId(i);
+    }
+
     void Triangle::refine()
     {
         assert(add_as_insct_triangle);
@@ -301,7 +309,7 @@ namespace Boolean
         }
     }
 
-    void SubPolygon::getVertices(std::vector<VertexIndex>& output) const
+    void SubPolygon::get_vertices_for_dumping(std::vector<VertexIndex>& output) const
     {
         assert(output.empty());
         output.resize(degree());
@@ -309,7 +317,7 @@ namespace Boolean
             output[i] = vIds[i];
     }
 
-    void IPolygon::getEdges(std::vector<EdgeIndex>& output) const
+    void SubPolygon::getAllEdges(std::vector<EdgeIndex>& output) const
     {
         assert(output.empty());
         output.resize(degree());
@@ -317,12 +325,22 @@ namespace Boolean
             output[i] = edgeId(i);
     }
 
-    MyEdge & IPolygon::edge(int i) const
+    MyEdge & SubPolygon::edge(int i) const
     {
         return xedge(edgeId(i));
     }
 
-    MyVertex& IPolygon::vertex(int i) const
+    MyVertex& SubPolygon::vertex(int i) const
+    {
+        return xvertex(vertexId(i));
+    }
+
+    MyEdge & Triangle::edge(int i) const
+    {
+        return xedge(edgeId(i));
+    }
+
+    MyVertex& Triangle::vertex(int i) const
     {
         return xvertex(vertexId(i));
     }
@@ -331,6 +349,14 @@ namespace Boolean
     {
         return CGALTriangle(convertToCGALPoint<CGALPoint>(pTri->point(0)),
             convertToCGALPoint<CGALPoint>(pTri->point(1)), convertToCGALPoint<CGALPoint>(pTri->point(2)));
+    }
+    MyEdge & SubPolygonWithHoles::edge(int i, int j) const
+    {
+        return xedge(edgeId(i, j));
+    }
+    MyVertex & SubPolygonWithHoles::vertex(int i, int j) const
+    {
+        return xvertex(vertexId(i, j));
     }
 }
 

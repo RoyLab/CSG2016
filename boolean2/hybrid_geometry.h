@@ -15,7 +15,7 @@ namespace Boolean
     XPlane pick_positive_vertical_plane(const PlaneLine&, const MyVertex&);
 
 
-    Oriented_side orientation(const XPlane& p, const MyVertex& v)
+    inline Oriented_side orientation(const XPlane& p, const MyVertex& v)
     {
         return v.orientation(p);
     }
@@ -25,7 +25,7 @@ namespace Boolean
         return p.orientation(v);
     }
 
-    Oriented_side orientation(const XPlane& p, const PlanePoint& v)
+    inline Oriented_side orientation(const XPlane& p, const PlanePoint& v)
     {
         return p.orientation(v);
     }

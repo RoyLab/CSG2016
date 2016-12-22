@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <map>
 
 #include <macros.h>
 
@@ -34,7 +35,10 @@ namespace Boolean
         Oriented_side orientation(const XPlane& plane) const;
 
         const std::vector<EdgeIndex> edges() const { return edges_; }
-        void add_edge(EdgeIndex edge_idx);
+        void add_edge(EdgeIndex edge_idx)
+        {
+            edges_.push_back(edge_idx);
+        }
 
         const PlanePoint& ppoint() const;
         const cyPointT& point() const;
@@ -105,6 +109,7 @@ namespace Boolean
                 else return *eItr;
             }
             IPolygon* face() const { return faceHandle().ptr; }
+            Triangle* as_triangle() const;
             int orientation() const { return faceHandle().orientation; }
 
         private:
@@ -115,9 +120,9 @@ namespace Boolean
 
     public:
         VertexIndex ends[2];
-        std::vector<NeighborInfo>* neighbor = nullptr;
+        std::map<MeshIndex, NeighborInfo>* neighbor = nullptr;
         EdgeInsctData* inscts = nullptr;
-        bool noOverlapNeighbor = false;
+        //bool noOverlapNeighbor = false;
 
     public:
         MyEdge(VertexIndex a, VertexIndex b) : ends{ a, b } {}

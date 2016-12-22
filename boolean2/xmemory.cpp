@@ -40,7 +40,7 @@ namespace Boolean
 
     EdgeIndex GlobalData::getEdgeId(VertexIndex a, VertexIndex b, IPolygon * facePtr)
     {
-        assert(a < xvertices().size());
+        assert(a < vertices.size());
         MyVertex& one = xvertex(a);
 
         EdgeIndex target;

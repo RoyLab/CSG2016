@@ -16,7 +16,6 @@ namespace Boolean
     class MyVertex;
     class MyEdge;
 
-
 	class IPolygon;
 	class Triangle;
     class SubPolygon;

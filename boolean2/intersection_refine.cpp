@@ -137,7 +137,8 @@ namespace Boolean
             for (int i = start; i < last; i++)
             {
                 assert(pbi_itr->neighbor.size() == 1);
-                new_pbis[i].neighbor.push_back(*pbi_itr->neighbor.begin());
+                //new_pbis[i].neighbor.push_back(*pbi_itr->neighbor.begin());
+                new_pbis[i].neighbor.insert(*pbi_itr->neighbor.begin());
             }
         }
 
@@ -386,11 +387,11 @@ namespace Boolean
                         {
                             int i2 = (i + 1) % 2;
                             assert(pbis_[i]->neighbor.size());
-                            for (NeighborInfo& neiInfo : pbis_[i]->neighbor)
+                            for (auto& neiInfo : pbis_[i]->neighbor)
                             {
-                                if (neiInfo.type == NeighborInfo::Edge)
+                                if (neiInfo.second.type == NeighborInfo::Edge)
                                 {
-                                    MyEdge& cur_con = xedge(neiInfo.neighborEdgeId);
+                                    MyEdge& cur_con = xedge(neiInfo.first);
                                     assert(cur_con.inscts);
                                     cur_vertex_id = cur_con.inscts->find_point(
                                         newPoint);
@@ -405,10 +406,10 @@ namespace Boolean
                                 }
                                 else
                                 {
-                                    assert(neiInfo.type == NeighborInfo::Face);
-                                    assert(neiInfo.pTrangle->inscts);
+                                    assert(neiInfo.second.type == NeighborInfo::Face);
+                                    assert(neiInfo.second.pTrangle->inscts);
 
-                                    face_new_pos = neiInfo.pTrangle->inscts->point(newPoint, TRIPLE_CROSS_0);
+                                    face_new_pos = neiInfo.second.pTrangle->inscts->point(newPoint, TRIPLE_CROSS_0);
                                     cur_vertex_id = &face_new_pos->vId;
                                 }
 
@@ -977,12 +978,12 @@ namespace Boolean
                     if (alreadyHere->ends[0] == pbi_itr->ends[1] ||
                         alreadyHere->ends[1] == pbi_itr->ends[1]) // if has
                     {
-                        for (NeighborInfo& nInfo : pbi_itr->neighbor)
+                        for (auto& nInfo : pbi_itr->neighbor)
                         {
                             bool unique = true; // search if the neighInfo is already there, == std::find
-                            for (NeighborInfo& nInfo2 : alreadyHere->neighbor)
+                            for (auto& nInfo2 : alreadyHere->neighbor)
                             {
-                                if (nInfo.neighborMeshId == nInfo.neighborMeshId)
+                                if (nInfo.first == nInfo.first)
                                 {
                                     unique = false;
                                     break;
@@ -991,7 +992,8 @@ namespace Boolean
 
                             if (unique)
                             {
-                                alreadyHere->neighbor.push_back(nInfo);
+                                //alreadyHere->neighbor.push_back(nInfo);
+                                alreadyHere->neighbor.insert(nInfo);
                             }
                         }
                         found = true;

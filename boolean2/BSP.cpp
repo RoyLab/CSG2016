@@ -6,7 +6,7 @@
 
 namespace Boolean
 {
-    void BSPTree::buildNoCross(std::vector<IPolygon*>& faces)
+    void BSPTree::buildNoCross(std::vector<Triangle*>& faces)
     {
         mp_root = buildRecursion(faces);
     }
@@ -40,13 +40,13 @@ namespace Boolean
         return curNode->relation;
     }
 
-    BSPTree::Node * BSPTree::buildRecursion(std::vector<IPolygon*>& faces)
+    BSPTree::Node * BSPTree::buildRecursion(std::vector<Triangle*>& faces)
     {
         Node* pNode = new Node;
         pNode->sp = faces[0]->supportingPlane();
 
-        std::vector<IPolygon*> fronts;
-        std::vector<IPolygon*> backs;
+        std::vector<Triangle*> fronts;
+        std::vector<Triangle*> backs;
 
         size_t i, j; Oriented_side side;
         for (i = 0; i < faces.size(); i++)

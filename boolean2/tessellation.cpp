@@ -79,6 +79,9 @@ namespace Boolean
                     ConnectionIndex con_idx;
                     NodeIndex node_idx;
                 };
+
+                /** used for compare, aux data, should have 
+                coherent orientation with splitting plane*/
                 XPlane plane;
             };
 
@@ -87,6 +90,7 @@ namespace Boolean
 
             struct Loop
             {
+                // *------>*  the related node of connection is on the right;
                 ConnectionLoop cloop;
                 NodeLoop nloop;
                 bool nested;
@@ -128,8 +132,16 @@ namespace Boolean
             void extract_face(const Loop& loop) const;
             void extract_complex_face(const std::vector<Loop*>&) const;
             void resolveIsolatedVertices() const;
-            NodeIndex get_vertex_node_id(int i) const { return i; }
-            int get_loop_from_cross_point(const IntersectionResult&, LoopLocation& loop_loc, bool inverse = false) const;
+            NodeIndex get_node_id_of_vertex(int i) const { return i; }
+
+            template <class Point>
+            bool is_inside_angle(const Node& node, int i, int j, const Point& p) const;
+            
+            // get the loop index between i-th connection and i+1-th conection
+            int get_loop_idx(const Node& node, int i) const;
+
+            void get_loop_from_cross_point(const PlanePoint& chosen_ponit, const cyPointT& anchor_point, 
+                const IntersectionResult&, LoopLocation& loop_loc, bool near_anchor = false) const;
 
             Loop& get_loop(std::vector<Component*>& comp, LoopLocation& loc) const
             {
@@ -458,7 +470,7 @@ namespace Boolean
                     pick_positive_vertical_plane(anchor_vertex.point());
 
                 insct_pair.second.is_con_type = false;
-                insct_pair.second.node_idx = get_vertex_node_id(0);
+                insct_pair.second.node_idx = get_node_id_of_vertex(0);
 
                 int cur_component_idx = nodes_[chosen_node_idx].component_index;
 
@@ -573,8 +585,8 @@ namespace Boolean
 
                 // we have get the connection pair, retreive the related loop
                 std::pair<LoopLocation, LoopLocation> loop_loc_pair;
-                get_loop_from_cross_point(insct_pair.first, loop_loc_pair.first);
-                get_loop_from_cross_point(insct_pair.second, loop_loc_pair.second, true);
+                get_loop_from_cross_point(chosen_vertex.ppoint(), anchor_vertex.point(), insct_pair.first, loop_loc_pair.first);
+                get_loop_from_cross_point(chosen_vertex.ppoint(), anchor_vertex.point(), insct_pair.second, loop_loc_pair.second, true);
 
                 rel_table.set_sibling_or_outer(loop_loc_pair.second, loop_loc_pair.first);
 
@@ -628,10 +640,53 @@ namespace Boolean
                 if (pbi && !pbi->neighbor.empty())
                 {
                     auto &nSourse = pbi->neighbor;
-                    auto &nTarget = spoly->edge(i).neighbor;
+                    auto &nTarget = spoly->edge((i+1)%degree).neighbor;
                     if (!nTarget)
-                        nTarget = new std::vector<NeighborInfo>;
-                    nTarget->insert(nTarget->end(), nSourse.begin(), nSourse.end());
+                    {
+                        nTarget = new std::map<MeshIndex, NeighborInfo>;
+                    }
+                    nTarget->insert(nSourse.begin(), nSourse.end());
+                }
+            }
+
+            spoly->sPlane = triangle_->supportingPlane();
+            xmeshlist()[triangle_->meshId()]->faces().push_back(spoly);
+        }
+
+        void TessGraph::extract_complex_face(const std::vector<Loop*>& loops) const
+        {
+            // add subpolygon
+            std::vector<std::vector<VertexIndex>> vertices(loops.size());
+            for (int i = 0; i < loops.size(); ++i)
+            {
+                Loop* loop = loops[i];
+                const int degree = loop->nloop.size();
+                vertices[i].resize(degree);
+                for (int j = 0; j < degree; ++j)
+                {
+                    vertices[i][j] = nodes_[loop->nloop[i]].vertex_id;
+                }
+            }
+            SubPolygonWithHoles *spoly = new SubPolygonWithHoles(vertices);
+
+            // add neighborInfo
+            for (int i = 0; i < loops.size(); ++i)
+            {
+                Loop* loop = loops[i];
+                const int degree = loop->nloop.size();
+                for (int j = 0; j < degree; j++)
+                {
+                    PbiRep* pbi = connections_[loop->cloop[j]].pbi;
+                    if (pbi && !pbi->neighbor.empty())
+                    {
+                        auto &nSourse = pbi->neighbor;
+                        auto &nTarget = spoly->edge(i, (j+1)%degree).neighbor;
+                        if (!nTarget)
+                        {
+                            nTarget = new std::map<MeshIndex, NeighborInfo>;
+                        }
+                        nTarget->insert(nSourse.begin(), nSourse.end());
+                    }
                 }
             }
 
@@ -655,8 +710,76 @@ namespace Boolean
                 }
             }
         }
+        
 
-        void TessGraph::addConnection(std::map<VertexIndex, NodeIndex>& dict, VertexIndex a, VertexIndex b, PbiRep * pbi, Direction dir, XPlane prep)
+        void TessGraph::get_loop_from_cross_point(
+            const PlanePoint& chosen_point, const cyPointT& anchor_point,
+            const IntersectionResult &insct_res, 
+            LoopLocation & loop_loc, bool near_anchor) const
+        {
+            if (insct_res.is_con_type)
+            {
+                const Connection& con = connections_[insct_res.con_idx];
+                loop_loc.component_idx = con.component_index;
+
+                Oriented_side side = OS_WRONG;
+                if (near_anchor)
+                {
+                    side = con.prep.orientation(anchor_point);
+                }
+                else
+                {
+                    side = con.prep.orientation(chosen_point);
+                }
+
+                assert(side != ON_ORIENTED_BOUNDARY);
+                if (side == ON_POSITIVE_SIDE)
+                {
+                    //<-----¡ý, right
+                    //¡ü----->, right
+                    loop_loc.loop_idx = con.loop_index_right;
+                }
+                else
+                {
+                    //<-----¡ü, left
+                    //¡ý----->, left
+                    loop_loc.loop_idx = con.loop_index_left;
+                }
+                return;
+            }
+            else
+            {
+                const Node& node = nodes_[insct_res.node_idx];
+                loop_loc.component_idx = node.component_index;
+
+                Oriented_side side = OS_WRONG;
+                if (near_anchor)
+                {
+                    for (int i = 0; i < node.connections.size(); ++i)
+                    {
+                        if (is_inside_angle(node, i, i + 1, anchor_point))
+                        {
+                            loop_loc.loop_idx = get_loop_idx(node, i);
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < node.connections.size(); ++i)
+                    {
+                        if (is_inside_angle(node, i, i + 1, anchor_point))
+                        {
+                            loop_loc.loop_idx = get_loop_idx(node, i);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        void TessGraph::addConnection(std::map<VertexIndex, NodeIndex>& dict, VertexIndex a, 
+            VertexIndex b, PbiRep * pbi, Direction dir, XPlane prep)
         {
             auto findres0 = dict.find(a);
             auto findres1 = dict.find(b);

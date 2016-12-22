@@ -162,9 +162,9 @@ namespace Boolean
             bool flag = false;
             for (auto &neigh : *edge.neighbor)
             {
-                if (neigh.type == NeighborInfo::Edge)
+                if (neigh.second.type == NeighborInfo::Edge)
                 {
-                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId), true);
+                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
                         fItr; fItr.incrementToTriangle())
                     {
                         assert(fItr.face()->getType() == IPolygon::TRIANGLE);
@@ -179,8 +179,8 @@ namespace Boolean
                 }
                 else
                 {
-                    assert(neigh.type == NeighborInfo::Face);
-                    XPlane tmpPlane = neigh.pTrangle->supportingPlane();
+                    assert(neigh.second.type == NeighborInfo::Face);
+                    XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
                     if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
                     {
                         boundPlane = tmpPlane;
@@ -251,7 +251,7 @@ namespace Boolean
                 flag = false;
                 for (auto& neigh : *edge.neighbor)
                 {
-                    if (neigh.neighborMeshId == i)
+                    if (neigh.first == i)
                     {
                         flag = true;
                         break;
@@ -269,21 +269,21 @@ namespace Boolean
 
         // remove repetitive neighborInfo, must before <find repVertex>
         // because subpolygon use neighborInfo to find a splitPlane
-        if (!edge.noOverlapNeighbor)
-        {
-            edge.noOverlapNeighbor = true;
-            std::set<MeshId> meshSets;
-            std::vector<NeighborInfo> newNeighbor;
-            for (auto &neigh : *edge.neighbor)
-            {
-                if (meshSets.find(neigh.neighborMeshId) == meshSets.end())
-                {
-                    newNeighbor.push_back(neigh);
-                    meshSets.insert(neigh.neighborMeshId);
-                }
-            }
-            edge.neighbor->swap(newNeighbor);
-        }
+        //if (!edge.noOverlapNeighbor)
+        //{
+        //    edge.noOverlapNeighbor = true;
+        //    std::set<MeshId> meshSets;
+        //    std::vector<NeighborInfo> newNeighbor;
+        //    for (auto &neigh : *edge.neighbor)
+        //    {
+        //        if (meshSets.find(neigh.first) == meshSets.end())
+        //        {
+        //            newNeighbor.push_back(neigh);
+        //            meshSets.insert(neigh.first);
+        //        }
+        //    }
+        //    edge.neighbor->swap(newNeighbor);
+        //}
 
         // find the represented vertex
         VertexIndex repVertexId;
@@ -298,33 +298,32 @@ namespace Boolean
         {
             Oriented_side side;
 
-            if (neigh.neighborMeshId == polygon->meshId())
+            if (neigh.first == polygon->meshId())
                 continue;
 
-            if (neigh.type == NeighborInfo::Edge)
+            if (neigh.second.type == NeighborInfo::Edge)
             {
-                std::vector<IPolygon*> faces;
-                auto fItr = MyEdge::FaceIterator(xedge(neigh.neighborEdgeId), true);
+                std::vector<Triangle*> faces;
+                auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
                 for (; fItr; fItr.incrementToTriangle())
                 {
-                    assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                    faces.push_back(fItr.face());
+                    faces.push_back(fItr.as_triangle());
                 }
 
                 BSPTree bsp; XPlane bspPlane;
                 bsp.buildNoCross(faces);
                 side = bsp.classify(repVertex, &bspPlane);
 
-                relTab[neigh.neighborMeshId] = vRelation2fRelation(side,
+                relTab[neigh.first] = vRelation2fRelation(side,
                     bspPlane, polygon->supportingPlane());
             }
             else
             {
-                assert(neigh.type == NeighborInfo::Face);
-                Oriented_side side = orientation(neigh.pTrangle->supportingPlane(), repVertex);
+                assert(neigh.second.type == NeighborInfo::Face);
+                Oriented_side side = orientation(neigh.second.pTrangle->supportingPlane(), repVertex);
 
-                relTab[neigh.neighborMeshId] = vRelation2fRelation(side,
-                    neigh.pTrangle->supportingPlane(), polygon->supportingPlane());
+                relTab[neigh.first] = vRelation2fRelation(side,
+                    neigh.second.pTrangle->supportingPlane(), polygon->supportingPlane());
             }
         }
     }
@@ -408,11 +407,11 @@ namespace Boolean
                         result->faces().push_back(curFace);
 
                     edges.clear();
-                    curFace->getEdges(edges);
-                    assert(edges.size() == curFace->degree());
+                    curFace->getAllEdges(edges);
+                    //assert(edges.size() == curFace->degree());
 
                     // flood filling, bfs
-                    for (int i = 0; i < curFace->degree(); i++)
+                    for (int i = 0; i < edges.size(); i++)
                     {
                         MyEdge& curEdge = xedge(edges[i]);
                         MyEdge::FaceIterator fItr(curEdge);
@@ -449,8 +448,8 @@ namespace Boolean
                                     tmpSeed.eIndicators->at(i) = tmpInd;
                                 }
 
-                                for (NeighborInfo& nInfo : *curEdge.neighbor)
-                                    tmpSeed.eIndicators->at(nInfo.neighborMeshId) = REL_ON_BOUNDARY;
+                                for (auto& nInfo : *curEdge.neighbor)
+                                    tmpSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
 
                                 if (fItr.face()->meshId() == curMeshId)
                                 {
