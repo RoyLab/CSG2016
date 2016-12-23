@@ -83,7 +83,7 @@ namespace Boolean
                     pTri->calcSupportingPlane();
                 }
                 
-                if (!basePlane.normal_equals(fItr.face()->supportingPlane()))
+                if (!basePlane.parallel(fItr.face()->supportingPlane()))
                 {
                     seed.edgeId = edgeId;
                     flag = true;

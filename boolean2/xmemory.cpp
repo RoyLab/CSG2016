@@ -61,6 +61,16 @@ namespace Boolean
         return target;
     }
 
+    const std::vector<EdgeIndex>& GlobalData::get_merged_edges(VertexIndex id) const
+    {
+        return mergedvertices_[id].edges;
+    }
+
+    void GlobalData::add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid)
+    {
+        mergedvertices_[mergeid].edges.push_back(edgeid);
+    }
+
     void GlobalData::dumpIntersectionToXyzFile(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
     {
         std::ofstream file(fileName);
@@ -84,8 +94,8 @@ namespace Boolean
         ppoints.clear();
     }
 
-    void mergeVertices(VertexIndex to, VertexIndex from)
-    {
+    //void mergeVertices(VertexIndex to, VertexIndex from)
+    //{
         //MyEdge& edge1 = fh[to]->edge((from + 1) % 3);
         //MyEdge& edge2 = fh[to]->edge((from + 2) % 3);
 
@@ -95,7 +105,7 @@ namespace Boolean
         //}
         //else
         //{
-        //    if (edge1.ends[1] == *slots[to])
+        //    if (edge1.ends[1]   == *slots[to])
         //        edge1.ends[1] = vid;
         //}
 
@@ -112,10 +122,39 @@ namespace Boolean
         //MyVertex& vRef = xvertex(*slots[(to + 1) % 2]),
         //    &vMerge = xvertex(*slots[to]);
 
-        //if (!vMerge.edges().empty())
+    void mergeVertices(VertexIndex a, VertexIndex b)
+    {
+
+    }
+
+    void mergeVertices(std::set<VertexIndex>& indices)
+    {
+        VertexIndex v0 = INVALID_UINT32;
+        for (VertexIndex v: indices)
+        {
+            if (v0 = INVALID_UINT32)
+            {
+                v0 = v;
+            }
+            else
+            {
+                mergeVertices(v0, v);
+            }
+        }
+    }
+
+    Index assign_new_plane(XPlaneBase ** p_edge)
+    {
+        auto &container = GlobalData::getObject()->planebases;
+        container.emplace_back();
+        *p_edge = &container.back();
+        return container.size() - 1;
+    }
+
+    //if (!vMerge.edges().empty())
         //{
         //    vRef.edges().insert(vRef.edges().end(), vMerge.edges().begin(), vMerge.edges().end());
         //    vMerge.edges().clear();
         //}
-    }
+    //}
 }

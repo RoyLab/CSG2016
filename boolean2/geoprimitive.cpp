@@ -8,7 +8,16 @@ namespace Boolean
 {
     bool MyVertex::findEdge(EdgeIndex other, EdgeIndex * result) const
     {
-        for (EdgeIndex item : edges_)
+        const std::vector<EdgeIndex>* edges = nullptr;
+        if (merge_ < 0)
+        {
+            edges = &edges_;
+        }
+        else {
+            edges = &GlobalData::getObject()->get_merged_edges(merge_);
+        }
+
+        for (EdgeIndex item : *edges)
         {
             MyEdge &e = xedge(item);
             if (e.ends[0] == other || e.ends[1] == other)
@@ -19,37 +28,62 @@ namespace Boolean
             }
         }
         return false;
+
+    }
+
+    const std::vector<EdgeIndex> MyVertex::edges() const
+    {
+        if (merge_ < 0)
+        {
+            return edges_;
+        }
+        else
+        {
+            return GlobalData::getObject()->get_merged_edges(merge_);
+        }
+    }
+
+    void MyVertex::add_edge(EdgeIndex edge_idx)
+    {
+        if (merge_ < 0)
+        {
+            edges_.push_back(edge_idx);
+        }
+        else
+        {
+            GlobalData::getObject()->add_merged_edges(merge_, edge_idx);
+        }
     }
 
     Oriented_side MyVertex::orientation(const XPlane & p) const
     {
         if (isPlaneRep())
         {
-            return p.orientation(point());
+            return p.orientation(vertex_rep());
         }
         else
         {
-            return p.orientation(ppoint());
+            return p.orientation(plane_rep());
         }
     }
 
     bool MyVertex::isCoincident(const PlanePoint & p) const
     {
         if (isPlaneRep())
-            return p.value_equals(ppoint());
+            return p.value_equals(plane_rep());
         else
-            return p.value_equals(point());
+            return p.value_equals(vertex_rep());
     }
 
     bool MyVertex::isCoincident(const cyPointT & p) const
     {
         if (isPlaneRep())
-            return ppoint().value_equals(p);
+            return plane_rep().value_equals(p);
         else
-            return (p == point()) == 0 ? false: true;
+            return (p == vertex_rep()) == 0 ? false: true;
     }
 
-    const PlanePoint & MyVertex::ppoint() const
+    const PlanePoint & MyVertex::plane_rep() const
     {
 #ifdef XR_DEBUG
         if (!isValid() || !isPlaneRep())
@@ -59,7 +93,7 @@ namespace Boolean
         return *ppoint_;
     }
 
-    const cyPointT & MyVertex::point() const
+    const cyPointT & MyVertex::vertex_rep() const
     {
 #ifdef XR_DEBUG
         if (!isValid() || isPlaneRep())

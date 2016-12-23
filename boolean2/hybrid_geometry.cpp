@@ -13,13 +13,13 @@ namespace Boolean
         switch (type)
         {
         case 0:
-            return l.linear_order(a.point(), b.point());
+            return l.linear_order(a.vertex_rep(), b.vertex_rep());
         case 1:
-            return l.linear_order(a.ppoint(), b.point());
+            return l.linear_order(a.plane_rep(), b.vertex_rep());
         case 2:
-            return l.linear_order(a.point(), b.ppoint());
+            return l.linear_order(a.vertex_rep(), b.plane_rep());
         case 3:
-            return l.linear_order(a.ppoint(), b.ppoint());
+            return l.linear_order(a.plane_rep(), b.plane_rep());
         default:
             throw std::exception();
         }
@@ -29,9 +29,9 @@ namespace Boolean
     XPlane pick_positive_vertical_plane(const PlaneLine &l, const MyVertex & v)
     {
         if (v.isPlaneRep())
-            return l.pick_positive_vertical_plane(v.ppoint());
+            return l.pick_positive_vertical_plane(v.plane_rep());
         else
-            return l.pick_positive_vertical_plane(v.point());
+            return l.pick_positive_vertical_plane(v.vertex_rep());
     }
 
 }

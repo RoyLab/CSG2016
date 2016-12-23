@@ -65,9 +65,9 @@ namespace Boolean
                     cId = idmap[idx] = vCount++;
                     MyVertex& v = xvertex(idx);
                     if (v.isPlaneRep())
-                        tmpVec = v.ppoint().toVertexBased();
+                        tmpVec = v.plane_rep().toVertexBased();
                     else
-                        tmpVec = v.point();
+                        tmpVec = v.vertex_rep();
 
                     XR::invCoords(mesh.m_center, mesh.m_scale, tmpVec);
                     vSlot.insert(vSlot.end(), (Real*)&tmpVec, (Real*)&tmpVec + 3);
@@ -350,10 +350,57 @@ namespace Boolean
         return CGALTriangle(convertToCGALPoint<CGALPoint>(pTri->point(0)),
             convertToCGALPoint<CGALPoint>(pTri->point(1)), convertToCGALPoint<CGALPoint>(pTri->point(2)));
     }
+
+    SubPolygonWithHoles::SubPolygonWithHoles(uint32_t meshId, std::vector<std::vector<VertexIndex>>& loops, uint32_t i):
+        IPolygon(i, meshId)
+    {
+        loops_.resize(loops.size());
+        int count = 0;
+        for (auto& loop : loops)
+        {
+            auto itr = loop.begin();
+            VertexIndex v0, v1;
+            auto pMem = GlobalData::getObject();
+
+            for (int i = 0; i < loop.size(); i++)
+            {
+                v0 = *itr; ++itr;
+                if (itr != loop.end())
+                {
+                    v1 = *itr;
+                }
+                else
+                {
+                    v1 = loop.front();
+                }
+
+                loops_[count].vIds[i] = v0;
+                loops_[count].eIds[i] = pMem->getEdgeId(v0, v1, this);
+            }
+            ++count;
+        }
+    }
+
+    void SubPolygonWithHoles::get_vertices_for_dumping(std::vector<VertexIndex>& output) const
+    {
+        assert(output.empty());
+        output = loops_[0].vIds;
+    }
+
+    void SubPolygonWithHoles::getAllEdges(std::vector<EdgeIndex>& output) const
+    {
+        assert(output.empty());
+        for (const Loop& loop: loops_)
+        { 
+            output.insert(output.end(), loop.eIds.begin(), loop.eIds.end());
+        }
+    }
+
     MyEdge & SubPolygonWithHoles::edge(int i, int j) const
     {
         return xedge(edgeId(i, j));
     }
+
     MyVertex & SubPolygonWithHoles::vertex(int i, int j) const
     {
         return xvertex(vertexId(i, j));

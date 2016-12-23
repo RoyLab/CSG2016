@@ -20,6 +20,12 @@ namespace Boolean
         bool triangulation = false;
     };
 
+    struct MergedVertex
+    {
+        std::set<VertexIndex> refs;
+        std::vector<EdgeIndex> edges;
+    };
+
     class GlobalData
     {
     public:
@@ -28,8 +34,8 @@ namespace Boolean
         std::deque<PlanePoint>	    ppoints; // iterator must be always valid
         std::deque<cyPointT>	    points; // iterator must be always valid
 
-        std::vector<MyEdge>         edges;
-        std::vector<MyVertex>       vertices;
+        std::deque<MyEdge>         edges;
+        std::deque<MyVertex>       vertices;
         std::vector<RegularMesh*>   meshes;
 
         static GlobalData* getObject();
@@ -37,6 +43,8 @@ namespace Boolean
         int insertVertices(cyPointT* begin, cyPointT* end);
         VertexIndex insertVertex(PlanePoint& pt);
         EdgeIndex getEdgeId(VertexIndex a, VertexIndex b, IPolygon* facePtr);
+        const std::vector<EdgeIndex>& get_merged_edges(VertexIndex id) const;
+        void add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid);
 
         void clear();
 
@@ -44,6 +52,8 @@ namespace Boolean
         void dumpIntersectionToXyzFile(const std::string& filename, const cyPointT& center, const cyPointT& scale);
 
     private:
+        std::deque<MergedVertex> mergedvertices_;
+
         GlobalData() {}
         static GlobalData mgr;
     };

@@ -92,7 +92,7 @@ namespace Boolean
 
         XPlaneBase *base = register_base();
 
-        cyPointT* thiz = reinterpret_cast<cyPointT*>(base);
+        cyPointT* thiz = reinterpret_cast<cyPointT*>(base->data_);
         *thiz = (e0).Cross(e1);
         base->data_[3] = -thiz->Dot(p);
 
@@ -125,7 +125,7 @@ namespace Boolean
         assert(has_on(p));
     }
 
-    bool XPlane::normal_equals(const XPlane & p) const
+    bool XPlane::parallel(const XPlane & p) const
     {
         const Real* data[2] = { get_data(), p.get_data() };
         //const Real* mat[2] = { data_, p.data_ };
@@ -135,6 +135,17 @@ namespace Boolean
         if (mat2x2det(mat2) != 0) return false;
 
         return true;
+    }
+
+    bool XPlane::normal_equals(const XPlane & p) const
+    {
+        const Real* data[2] = { get_data(), p.get_data() };
+        if (data[0][0] * data[1][0] < 0 ||
+            data[0][1] * data[1][1] < 0 ||
+            data[0][2] * data[1][2] < 0)
+            return false;
+
+        return parallel(p);
     }
 
     const XPlaneBase & XPlane::get_base() const
@@ -148,7 +159,7 @@ namespace Boolean
         XPlaneBase *plane_base;
         id_ = assign_new_plane(&plane_base)+1;
 #ifdef PREP_DEBUG_INFO
-        debug_data_ = plane_base->data();
+        debug_data_ = reinterpret_cast<decltype(debug_data_)>(plane_base->data());
 #endif
         return plane_base;
     }
@@ -179,7 +190,7 @@ namespace Boolean
         {
             side = ON_POSITIVE_SIDE;
         }
-        if (res < -data[3])
+        else if (res < -data[3])
         {
             side = ON_NEGATIVE_SIDE;
         }

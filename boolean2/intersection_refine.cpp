@@ -51,7 +51,7 @@ namespace Boolean
             }
             else
             {
-                seqs[i].point = vertex.point();
+                seqs[i].point = vertex.vertex_rep();
                 seqs[i].plane = XPlane();
             }
 
@@ -478,7 +478,7 @@ namespace Boolean
                 if (!vertex.isPlaneRep())
                 {
                     item->plane = XPlane();
-                    item->point = vertex.point();
+                    item->point = vertex.vertex_rep();
                 }
                 else
                 {
@@ -634,7 +634,7 @@ namespace Boolean
                     else
                     {
                         item.plane = XPlane();
-                        item.point = b0.point();
+                        item.point = b0.vertex_rep();
                     }
                 }
                 else if (compRes[0] < 0)
@@ -649,7 +649,7 @@ namespace Boolean
                     else
                     {
                         item.plane = XPlane();
-                        item.point = a0.point();
+                        item.point = a0.vertex_rep();
                     }
                 }
 
@@ -667,7 +667,7 @@ namespace Boolean
                     else
                     {
                         item.plane = XPlane();
-                        item.point = a1.point();
+                        item.point = a1.vertex_rep();
                     }
                 }
                 else if (compRes[1] < 0)
@@ -681,7 +681,7 @@ namespace Boolean
                     else
                     {
                         item.plane = XPlane();
-                        item.point = b1.point();
+                        item.point = b1.vertex_rep();
                     }
                 }
 

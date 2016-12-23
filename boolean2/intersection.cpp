@@ -235,7 +235,7 @@ namespace Boolean
 		// 规定cross(n0, n1)为正方向
 		sign = compute_intervals_isectline(db, *t[1], tagA[1], tagB[1], posA[1], posB[1]);
 
-        line.linear_order_unsafe(posA[1], posB[1]);
+        //line.linear_order_unsafe(posA[1], posB[1]);
 
         posB[0].inverse();
         posB[1].inverse();

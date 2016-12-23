@@ -49,7 +49,7 @@ namespace Boolean
         for (uint32_t i = 0; i < seed.size(); i++)
         {
             MyVertex& vRef = xvertex(seed[i]);
-            basePoint[0] = vRef.point();
+            basePoint[0] = vRef.vertex_rep();
             auto eItr = vRef.edges().begin();
 
             VertexIndex base[2];
@@ -57,7 +57,7 @@ namespace Boolean
             VertexIndex theother =
                 edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
             base[0] = theother;
-            basePoint[1] = xvertex(base[0]).point();
+            basePoint[1] = xvertex(base[0]).vertex_rep();
 
             while (1)
             {
@@ -65,7 +65,7 @@ namespace Boolean
                 VertexIndex theother =
                     edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
 
-                if (theother != base[0] && !collinear(basePoint[0], basePoint[1], xvertex(theother).point()))
+                if (theother != base[0] && !collinear(basePoint[0], basePoint[1], xvertex(theother).vertex_rep()))
                 {
                     base[1] = theother;
                     break;
@@ -77,7 +77,7 @@ namespace Boolean
             assert(eItr != vRef.edges().end());
 
             XPlane pbase;
-            pbase.construct_from_three_vertices(basePoint[0], basePoint[1], xvertex(base[1]).point());
+            pbase.construct_from_three_vertices(basePoint[0], basePoint[1], xvertex(base[1]).vertex_rep());
             bool got = false;
             while (eItr != vRef.edges().end())
             {
@@ -85,7 +85,7 @@ namespace Boolean
                 VertexIndex theother =
                     edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
                 MyVertex& vRef2 = xvertex(theother);
-                if (!vRef2.isPlaneRep() && pbase.orientation(vRef2.point()) != ON_ORIENTED_BOUNDARY)
+                if (!vRef2.isPlaneRep() && pbase.orientation(vRef2.vertex_rep()) != ON_ORIENTED_BOUNDARY)
                 {
                     got = true;
                     break;

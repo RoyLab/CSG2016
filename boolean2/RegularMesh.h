@@ -104,7 +104,7 @@ namespace Boolean
     class SubPolygon : public IPolygon
     {
     public:
-        SubPolygon(uint32_t meshId, uint32_t d, uint32_t i = uint32_t(-1)):
+        SubPolygon(MeshIndex meshId, uint32_t d, uint32_t i = INVALID_UINT32):
             IPolygon(i, meshId),  eIds(d), vIds(d), m_degree(d) {}
 
         template <class ForwardIterator>
@@ -130,8 +130,8 @@ namespace Boolean
     class SubPolygonWithHoles : public IPolygon
     {
     public:
-        SubPolygonWithHoles(std::vector<std::vector<VertexIndex>>& loops);
-        ~SubPolygonWithHoles();
+        SubPolygonWithHoles(uint32_t meshId, std::vector<std::vector<VertexIndex>>& loops, uint32_t i = INVALID_UINT32 );
+        ~SubPolygonWithHoles() {}
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
 
@@ -140,12 +140,19 @@ namespace Boolean
 
         MyEdge& edge(int i, int j) const;
         MyVertex& vertex(int i, int j)const;
-        uint32_t edgeId(int i, int j) const { return eIds[i][j]; }
-        uint32_t vertexId(int i, int j) const { return vIds[i][j]; }
+        uint32_t edgeId(int i, int j) const { return loops_[i].eIds[j]; }
+        uint32_t vertexId(int i, int j) const { return loops_[i].vIds[j]; }
 
     protected:
-        std::vector<std::vector<EdgeIndex>> eIds;
-        std::vector<std::vector<VertexIndex>> vIds;
+        // 0---------------1
+        //       edge 0
+        struct Loop
+        {
+            std::vector<EdgeIndex> eIds;
+            std::vector<VertexIndex> vIds;
+        };
+        std::vector<Loop> loops_;
+
     };
 
 	class RegularMesh

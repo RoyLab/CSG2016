@@ -24,24 +24,20 @@ namespace Boolean
     {
         friend class GlobalData;
     public:
-
         bool isPlaneRep() const { return rep_ < 0; }
         bool isValid() const { return rep_ != 0; }
 
         bool isCoincident(const PlanePoint& p) const;
         bool isCoincident(const cyPointT& p) const;
 
-        bool findEdge(EdgeIndex other, EdgeIndex* result = nullptr) const;
         Oriented_side orientation(const XPlane& plane) const;
 
-        const std::vector<EdgeIndex> edges() const { return edges_; }
-        void add_edge(EdgeIndex edge_idx)
-        {
-            edges_.push_back(edge_idx);
-        }
+        bool findEdge(EdgeIndex other, EdgeIndex* result = nullptr) const;
+        const std::vector<EdgeIndex> edges() const;
+        void add_edge(EdgeIndex edge_idx);
 
-        const PlanePoint& ppoint() const;
-        const cyPointT& point() const;
+        const PlanePoint& plane_rep() const;
+        const cyPointT& vertex_rep() const;
 
     private:
         // only for global object usage
@@ -52,6 +48,7 @@ namespace Boolean
 
         // + is v-base, - is p-base
         int rep_ = 0;
+        int merge_ = -1;
         union
         {
             ExternPtr const PlanePoint* ppoint_;

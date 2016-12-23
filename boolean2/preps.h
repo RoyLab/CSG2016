@@ -7,12 +7,16 @@
 
 namespace Boolean
 {
+    typedef Real Real4[4];
+
     class XPlaneBase
     {
         friend class XPlane;
     public:
+        XPlaneBase() {}
         XPlaneBase(Real x, Real y, Real z, Real w) :
             data_{ x,y,z,w } {}
+        //virtual ~XPlaneBase() {}
 
         const Real& a() const { return data_[0]; }
         const Real& b() const { return data_[1]; }
@@ -64,6 +68,7 @@ namespace Boolean
 		// predicates
 		Oriented_side orientation(const PlanePoint&) const;
         Oriented_side orientation(const cyPointT&) const;
+        bool parallel(const XPlane& p) const;
         bool normal_equals(const XPlane& p) const;
         bool has_on(const cyPointT& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
         bool has_on(const PlanePoint& p) const { return orientation(p) == ON_ORIENTED_BOUNDARY; }
@@ -85,7 +90,7 @@ namespace Boolean
 		int id_; // id = (realId+1) * sign
 
 #ifdef PREP_DEBUG_INFO
-        ExternPtr const Real* debug_data_;
+        ExternPtr const Real (*debug_data_)[4];
 #endif
 	};
 

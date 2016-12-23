@@ -100,27 +100,34 @@ namespace Boolean
             struct LoopLocation
             {
                 int component_idx;
-                int loop_idx;
+                int loop_index;
             };
 
             class OuterInnerTable
             {
             public:
+                struct LoopComplex
+                {
+                    LoopLocation root;
+                    std::vector<LoopLocation> children;
+                };
+
                 OuterInnerTable(size_t n);
                 void set_sibling_or_outer(LoopLocation outer, LoopLocation inner);
                 bool is_inner_or_sibling(int inner, int outer) const;
-                int get_outer() const;
-
-                class FaceIterator
+                void generate(std::vector<LoopComplex>& result);
+                
+            private:
+                struct Node
                 {
-                public:
-                    FaceIterator(OuterInnerTable*);
-                    void operator++();
-                    operator bool() const;
-                    void retrieve(std::vector<Loop*>&);
+                    IndexPair ancestor_code = std::numeric_limits<IndexPair>::max();
+                    int father_comp = -1, father_loop = -1;
                 };
 
-                FaceIterator face_begin() { return FaceIterator(this); }
+                bool get_ancestor(int node_comp, int node_loop, IndexPair& result);
+                std::vector<std::map<int, Node>> table_;
+                std::vector<int> comp_relation_;
+                int num_loop_ = 0;
             };
 
         private:
@@ -135,17 +142,15 @@ namespace Boolean
             NodeIndex get_node_id_of_vertex(int i) const { return i; }
 
             template <class Point>
-            bool is_inside_angle(const Node& node, int i, int j, const Point& p) const;
-            
-            // get the loop index between i-th connection and i+1-th conection
-            int get_loop_idx(const Node& node, int i) const;
+            int get_loop_id(const NodeIndex node_idx, int i, const Point& p) const;
+
 
             void get_loop_from_cross_point(const PlanePoint& chosen_ponit, const cyPointT& anchor_point, 
                 const IntersectionResult&, LoopLocation& loop_loc, bool near_anchor = false) const;
 
             Loop& get_loop(std::vector<Component*>& comp, LoopLocation& loc) const
             {
-                return comp[loc.component_idx]->at(loc.loop_idx);
+                return comp[loc.component_idx]->at(loc.loop_index);
             }
 
             VertexIndex get_vertex_idx(NodeIndex node_idx) const
@@ -444,14 +449,14 @@ namespace Boolean
 
                 XPlane split_plane;
                 split_plane.construct_from_three_vertices(
-                    anchor_vertex.point(),
-                    xvertex(chosen_edge.ends[0]).point(),
-                    xvertex(chosen_edge.ends[1]).point()
+                    anchor_vertex.vertex_rep(),
+                    xvertex(chosen_edge.ends[0]).vertex_rep(),
+                    xvertex(chosen_edge.ends[1]).vertex_rep()
                 );
 
                 // reverse split_plane if necessary
                 PlaneLine split_line(triangle_->supportingPlane(), split_plane);
-                if (split_line.linear_order(chosen_vertex.ppoint(), anchor_vertex.point()) < 0)
+                if (split_line.linear_order(chosen_vertex.plane_rep(), anchor_vertex.vertex_rep()) < 0)
                 {
                     split_plane.inverse();
                     split_line.inverse();
@@ -461,13 +466,13 @@ namespace Boolean
                 std::pair<IntersectionResult, IntersectionResult> insct_pair;
 
                 insct_pair.first.plane = split_line.
-                    pick_positive_vertical_plane(chosen_vertex.ppoint());
+                    pick_positive_vertical_plane(chosen_vertex.plane_rep());
 
                 insct_pair.first.is_con_type = false;
                 insct_pair.first.node_idx = chosen_node_idx;
 
                 insct_pair.second.plane = split_line.
-                    pick_positive_vertical_plane(anchor_vertex.point());
+                    pick_positive_vertical_plane(anchor_vertex.vertex_rep());
 
                 insct_pair.second.is_con_type = false;
                 insct_pair.second.node_idx = get_node_id_of_vertex(0);
@@ -490,7 +495,7 @@ namespace Boolean
                     resolve_obj.set_node_id(test_con.ends[0], test_con.ends[1]);
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
-                        chosen_vertex.ppoint(), anchor_vertex.point(),
+                        chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(),
                         xvertex(pbi_itr->ends[0]), xvertex(pbi_itr->ends[1]),
                         &resolve_obj
                     );
@@ -512,7 +517,7 @@ namespace Boolean
                         else // vertex insct
                         {
                             MyVertex& test_point = xvertex(nodes_[resolve_obj.get_intersect_node_id()].vertex_id);
-                            XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.ppoint());
+                            XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.plane_rep());
                             if (split_line.linear_order_unsafe(
                                 insct_pair.first.plane, test_plane) > 0)
                             {
@@ -542,7 +547,7 @@ namespace Boolean
 
                     LineInsctResultType insct_res = plane_based_line_intersection(
                         split_plane, pbi_itr->vertPlane,
-                        chosen_vertex.ppoint(), anchor_vertex.point(),
+                        chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(),
                         xvertex(pbi_itr->ends[0]), xvertex(pbi_itr->ends[1]),
                         &resolve_obj
                     );
@@ -567,7 +572,7 @@ namespace Boolean
                         else // vertex insct
                         {
                             MyVertex& test_point = xvertex(nodes_[resolve_obj.get_intersect_node_id()].vertex_id);
-                            XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.ppoint());
+                            XPlane test_plane = split_line.pick_positive_vertical_plane(test_point.plane_rep());
                             if (split_line.linear_order_unsafe(
                                 insct_pair.first.plane, test_plane) > 0 &&
                                 split_line.linear_order_unsafe(
@@ -585,8 +590,8 @@ namespace Boolean
 
                 // we have get the connection pair, retreive the related loop
                 std::pair<LoopLocation, LoopLocation> loop_loc_pair;
-                get_loop_from_cross_point(chosen_vertex.ppoint(), anchor_vertex.point(), insct_pair.first, loop_loc_pair.first);
-                get_loop_from_cross_point(chosen_vertex.ppoint(), anchor_vertex.point(), insct_pair.second, loop_loc_pair.second, true);
+                get_loop_from_cross_point(chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(), insct_pair.first, loop_loc_pair.first);
+                get_loop_from_cross_point(chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(), insct_pair.second, loop_loc_pair.second, false);
 
                 rel_table.set_sibling_or_outer(loop_loc_pair.second, loop_loc_pair.first);
 
@@ -610,13 +615,17 @@ namespace Boolean
                 }
             }
 
-            std::vector<Loop*> complex_faces;
-            auto face_itr = rel_table.face_begin();
-            while (face_itr)
+            std::vector<OuterInnerTable::LoopComplex> complex_faces;
+            rel_table.generate(complex_faces);
+            for (auto& loop_complex : complex_faces)
             {
-                face_itr.retrieve(complex_faces);
-                extract_complex_face(complex_faces);
-                complex_faces.clear();
+                std::vector<Loop*> loops;
+                loops.push_back(&get_loop(components, loop_complex.root));
+                for (LoopLocation& loop_loc : loop_complex.children)
+                {
+                    loops.push_back(&get_loop(components, loop_loc));
+                }
+                extract_complex_face(loops);
             }
         }
 
@@ -667,7 +676,8 @@ namespace Boolean
                     vertices[i][j] = nodes_[loop->nloop[i]].vertex_id;
                 }
             }
-            SubPolygonWithHoles *spoly = new SubPolygonWithHoles(vertices);
+            SubPolygonWithHoles *spoly = new 
+                SubPolygonWithHoles(triangle_->meshId(), vertices);
 
             // add neighborInfo
             for (int i = 0; i < loops.size(); ++i)
@@ -715,7 +725,7 @@ namespace Boolean
         void TessGraph::get_loop_from_cross_point(
             const PlanePoint& chosen_point, const cyPointT& anchor_point,
             const IntersectionResult &insct_res, 
-            LoopLocation & loop_loc, bool near_anchor) const
+            LoopLocation & loop_loc, bool near_chosen) const
         {
             if (insct_res.is_con_type)
             {
@@ -723,7 +733,7 @@ namespace Boolean
                 loop_loc.component_idx = con.component_index;
 
                 Oriented_side side = OS_WRONG;
-                if (near_anchor)
+                if (near_chosen)
                 {
                     side = con.prep.orientation(anchor_point);
                 }
@@ -737,13 +747,13 @@ namespace Boolean
                 {
                     //<-----¡ý, right
                     //¡ü----->, right
-                    loop_loc.loop_idx = con.loop_index_right;
+                    loop_loc.loop_index = con.loop_index_right;
                 }
                 else
                 {
                     //<-----¡ü, left
                     //¡ý----->, left
-                    loop_loc.loop_idx = con.loop_index_left;
+                    loop_loc.loop_index = con.loop_index_left;
                 }
                 return;
             }
@@ -753,13 +763,14 @@ namespace Boolean
                 loop_loc.component_idx = node.component_index;
 
                 Oriented_side side = OS_WRONG;
-                if (near_anchor)
+                if (near_chosen)
                 {
                     for (int i = 0; i < node.connections.size(); ++i)
                     {
-                        if (is_inside_angle(node, i, i + 1, anchor_point))
+                        int loop_idx = get_loop_id(insct_res.node_idx, i, chosen_point);
+                        if (loop_idx >= 0)
                         {
-                            loop_loc.loop_idx = get_loop_idx(node, i);
+                            loop_loc.loop_index = loop_idx;
                             return;
                         }
                     }
@@ -768,9 +779,10 @@ namespace Boolean
                 {
                     for (int i = 0; i < node.connections.size(); ++i)
                     {
-                        if (is_inside_angle(node, i, i + 1, anchor_point))
+                        int loop_idx = get_loop_id(insct_res.node_idx, i, anchor_point);
+                        if (loop_idx >= 0)
                         {
-                            loop_loc.loop_idx = get_loop_idx(node, i);
+                            loop_loc.loop_index = loop_idx;
                             return;
                         }
                     }
@@ -850,6 +862,271 @@ namespace Boolean
 
             insct_node_id = -1;
             return;
+        }
+
+        template<class Point>
+        int TessGraph::get_loop_id(const NodeIndex node_idx, int con_order, const Point & p) const
+        {
+            // note the order of connection is clock-wise
+            const Node& center_node = nodes_[node_idx];
+            const Connection* con[2] = { 
+                &connections_[center_node.connections[con_order]],
+                &connections_[center_node.connections[con_order+1]]
+            };
+
+            NodeIndex node[2] = { -1,-1 };
+            XPlane plane[2];
+            int loop_index = -1;
+
+            for (int i = 0; i < 2; ++i)
+            {
+                plane[i] = con[i]->prep;
+                // 0------->1
+                //  n = ¡ý
+                if (con[i]->ends[0] == node_idx)
+                {
+                    if (i == 0)
+                    {
+                        loop_index = con[0]->loop_index_right;
+                    }
+                    else
+                    {
+                        assert(loop_index == con[1]->loop_index_left);
+                    }
+                    node[i] = con[i]->ends[1];
+                }
+                else
+                {
+                    if (i == 0)
+                    {
+                        loop_index = con[0]->loop_index_left;
+                    }
+                    else
+                    {
+                        assert(loop_index == con[1]->loop_index_right);
+                    }
+                    node[i] = con[i]->ends[0];
+                    plane[i].inverse();
+                }
+            }
+            plane[1].inverse();
+
+            Oriented_side side = plane[0].orientation(p);
+            //if (plane[0].normal_equals(plane[1]))
+            //{
+            //    assert(plane[0].dot(plane[1]) > 0); // should not be coicident cases
+            //    if (side == ON_POSITIVE_SIDE)
+            //    {
+            //        return loop_index;
+            //    }
+            //    else
+            //    {
+            //        assert(side != ON_ORIENTED_BOUNDARY);
+            //        return -1;
+            //    }
+            //}
+
+            MyVertex* point[2] = { &xvertex(node[0]), &xvertex(node[1]) };
+            if (side == ON_POSITIVE_SIDE)
+            {
+                Oriented_side side2 = orientation(plane[0], *point[1]);
+                if (side2 == ON_POSITIVE_SIDE)
+                {
+                    Oriented_side side3 = plane[1].orientation(p);
+                    if (side3 == ON_POSITIVE_SIDE)
+                    {
+                        return loop_index;
+                    }
+                    else
+                    {
+                        assert(side3 != ON_ORIENTED_BOUNDARY);
+                        return -1;
+                    }
+                }
+                else if (side2 == ON_NEGATIVE_SIDE)
+                {
+                    return loop_index;
+                }
+                else
+                {
+                    assert(plane[0].normal_equals(plane[1])); // should not be coicident cases
+                    return loop_index;
+                }
+            }
+            else if (side == ON_NEGATIVE_SIDE)
+            {
+                Oriented_side side2 = orientation(plane[0], *point[1]);
+                if (side2 == ON_NEGATIVE_SIDE)
+                {
+                    Oriented_side side3 = plane[1].orientation(p);
+                    if (side3 == ON_POSITIVE_SIDE)
+                    {
+                        return loop_index;
+                    }
+                    else
+                    {
+                        assert(side3 != ON_ORIENTED_BOUNDARY);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            else
+            {
+                Oriented_side side2 = orientation(plane[0], *point[1]);
+                if (side2 == ON_NEGATIVE_SIDE)
+                {
+                    Oriented_side side3 = plane[1].orientation(p);
+                    if (side3 == ON_POSITIVE_SIDE)
+                    {
+                        return loop_index;
+                    }
+                    else
+                    {
+                        assert(side3 != ON_ORIENTED_BOUNDARY);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+        }
+
+        TessGraph::OuterInnerTable::OuterInnerTable(size_t n)
+        {
+            table_.resize(n);
+            comp_relation_.resize(n, -1);
+            num_loop_ = 0;
+        }
+
+        void TessGraph::OuterInnerTable::set_sibling_or_outer(LoopLocation outer, LoopLocation inner)
+        {
+            assert(outer.component_idx != inner.component_idx);
+            // outer might already be there, but inner should be the first time
+            // since every component is tested as inner loop for only one time
+            auto inner_itr = table_[inner.component_idx].find(inner.loop_index);
+            assert(inner_itr == table_[inner.component_idx].end());
+
+            assert(comp_relation_[inner.component_idx] == -1);
+            comp_relation_[inner.component_idx] = outer.component_idx;
+
+            auto outer_itr = table_[outer.component_idx].find(outer.loop_index);
+            if (outer_itr == table_[outer.component_idx].end())
+            {
+                ++num_loop_;
+            }
+            else
+            {
+                table_[outer.component_idx].emplace(outer.loop_index, OuterInnerTable::Node());
+            }
+            ++num_loop_;
+
+            auto inner_node = table_[inner.component_idx][inner.loop_index];
+            inner_node.father_comp = outer.component_idx;
+            inner_node.father_loop = outer.loop_index;
+
+        }
+
+        bool TessGraph::OuterInnerTable::is_inner_or_sibling(int inner, int outer) const
+        {
+            return comp_relation_[inner] == outer;
+        }
+
+        void TessGraph::OuterInnerTable::generate(std::vector<LoopComplex>& result)
+        {
+            std::map<IndexPair, int> dict;
+            LoopComplex* cur_complex = nullptr;
+            for (int i = 0; i < table_.size(); ++i)
+            {
+                auto& nodes = table_[i];
+                for (auto& node : nodes)
+                {
+                    IndexPair ancestor;
+                    bool has_father = get_ancestor(i, node.first, ancestor);
+
+                    if (dict.find(ancestor) == dict.end())
+                    {
+                        dict[ancestor] = result.size();
+                        result.emplace_back();
+                        cur_complex = &result.back();
+
+                        uint32_t id[2];
+                        GetIDFromIndex(id, ancestor);
+                        cur_complex->root.component_idx = id[0];
+                        cur_complex->root.loop_index = id[1];
+                    }
+                    else
+                    {
+                        cur_complex = &result[ancestor];
+                    }
+
+                    if (has_father)
+                    {
+                        cur_complex->children.push_back(LoopLocation{ i, node.first });
+                    }
+                }
+            }
+        }
+
+        bool TessGraph::OuterInnerTable::get_ancestor(int node_comp, int node_loop, IndexPair & result)
+        {
+            std::pair<const int, OuterInnerTable::Node>* curNode =
+                &*table_[node_comp].find(node_loop);
+
+            int cur_comp = node_comp;
+
+            bool has_father = false;
+            if (curNode->second.father_comp >= 0)
+            {
+                has_father = true;
+            }
+
+            std::stack<IndexPair*> history;
+
+            int max_iter = num_loop_;
+            while (1)
+            {
+                if (curNode->second.ancestor_code != std::numeric_limits<IndexPair>::max())
+                {
+                    result = curNode->second.ancestor_code;
+                    break;
+                }
+                else
+                {
+                    history.push(&curNode->second.ancestor_code);
+                }
+
+                if (curNode->second.father_comp < 0)
+                {
+                    uint32_t index_raw[2];
+                    index_raw[0] = node_comp;
+                    index_raw[1] = curNode->first;
+                    MakeIndex(index_raw, result);
+                    break;
+                }
+
+                if (!--max_iter)
+                {
+                    XLOG_ERROR << "Loops in the graph";
+                    throw 1;
+                }
+
+                cur_comp = curNode->second.father_comp;
+                curNode = &*table_[cur_comp].find(curNode->second.father_loop);
+            }
+
+            while (!history.empty())
+            {
+                *history.top() = result;
+                history.pop();
+            }
+
+            return has_father;
         }
 
     }// namespace anonymous
