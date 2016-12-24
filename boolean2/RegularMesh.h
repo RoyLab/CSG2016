@@ -25,6 +25,7 @@ namespace Boolean
         virtual void get_vertices_for_dumping(std::vector<VertexIndex>&) const = 0;
         virtual void getAllEdges(std::vector<EdgeIndex>&) const = 0;
         virtual TYPE getType() const = 0;
+        virtual VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const = 0;
 
         //virtual MyEdge& edge(int i) const;
         //virtual uint32_t edgeId(int i) const = 0;
@@ -64,6 +65,7 @@ namespace Boolean
         void getAllEdges(std::vector<EdgeIndex>& output) const;
         bool coherentEdge(int whichEdge) const; // 等价于MyEdge的faceOrientation
         VertexIndex getTheOtherVertex(EdgeIndex eId) const;
+        VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const;
 
 		// search
         VertexIndex findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*&);
@@ -110,6 +112,7 @@ namespace Boolean
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
+        VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
         TYPE getType() const { return SUBPOLYGON; }
         bool isValid() const { return true; }
@@ -134,6 +137,7 @@ namespace Boolean
         ~SubPolygonWithHoles() {}
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
+        VertexIndex get_rep_vertex(EdgeIndex id) const;
 
         TYPE getType() const { return SUBPOLYGON_WITH_HOLES; }
         bool isValid() const { return true; }

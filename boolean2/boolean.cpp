@@ -27,7 +27,7 @@ namespace Boolean
     extern int xrcount;
     void tessellation(std::vector<Boolean::RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles);
     void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, VertexIndex);
-    void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&, std::vector<Triangle*> insct_triangles);
+    void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&, std::vector<Triangle*>& insct_triangles);
 
     void initContext() {}
     void releaseContext()
@@ -117,21 +117,24 @@ extern "C"
 #endif
         initContext();
 
-		std::vector<RegularMesh*> meshList(names.size());
+        auto& meshlist = GlobalData::getObject()->meshes;
+        meshlist.resize(names.size());
 		for (int i = 0; i < names.size(); i++)
 		{
-			meshList[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
+            meshlist[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
 		}
 
         XTIMER_HELPER(setClock("main"));
-		RegularMesh* result = solveCSG(expr, meshList);
+		RegularMesh* result = solveCSG(expr, meshlist);
         XLOG_INFO << "Overall time: " << XTIMER_HELPER(milliseconds("main")) << " ms";
 
 		RegularMesh::writeFile(*result, output.c_str());
 
 		SAFE_DELETE(result);
-		for (auto mesh : meshList)
+        for (auto mesh : meshlist)
+        {
 			SAFE_DELETE(mesh);
+        }
 
 		releaseContext();
 	}

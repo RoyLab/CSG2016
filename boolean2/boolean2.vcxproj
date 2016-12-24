@@ -34,6 +34,7 @@
     <ClInclude Include="CGALext.h" />
     <ClInclude Include="csg.h" />
     <ClInclude Include="csgdefs.h" />
+    <ClInclude Include="geometry.hpp" />
     <ClInclude Include="geoprimitive.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="hybrid_geometry.h" />

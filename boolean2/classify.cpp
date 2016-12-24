@@ -132,107 +132,15 @@ namespace Boolean
         }
     }
 
-    VertexIndex GetRepVertex_SPOLY(EdgeIndex edgeId, SubPolygon* polygon)
-    {
-        assert(orientation(polygon->supportingPlane(),(polygon->vertex(0))) == ON_ORIENTED_BOUNDARY);
-        assert(orientation(polygon->supportingPlane(),(polygon->vertex(1))) == ON_ORIENTED_BOUNDARY);
-        assert(orientation(polygon->supportingPlane(),(polygon->vertex(2))) == ON_ORIENTED_BOUNDARY);
+    //VertexIndex GetRepVertex_SPOLY(EdgeIndex edgeId, SubPolygon* polygon)
+    //{
 
-        MyEdge& edge = xedge(edgeId);
+    //}
 
-        // find init point
-        int edgeIndexInFace = -1;
-        for (int i = 0; i < polygon->degree(); i++)
-        {
-            if (polygon->edgeId(i) == edgeId)
-            {
-                edgeIndexInFace = i;
-                break;
-            }
-        }
-        assert(edgeIndexInFace != -1);
+    //VertexIndex GetRepVertex_TRI(EdgeIndex edgeId, Triangle* polygon)
+    //{
 
-        VertexIndex vIdInPlane;
-        XPlane boundPlane, tmpPlane;
-        for (int i = 2; i < polygon->degree(); i++)
-        {
-            vIdInPlane = polygon->vertexId((edgeIndexInFace + i) % polygon->degree());
-
-            // find a bounding plane
-            bool flag = false;
-            for (auto &neigh : *edge.neighbor)
-            {
-                if (neigh.second.type == NeighborInfo::Edge)
-                {
-                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
-                        fItr; fItr.incrementToTriangle())
-                    {
-                        assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                        tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
-                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                        {
-                            boundPlane = tmpPlane;
-                            flag = true;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    assert(neigh.second.type == NeighborInfo::Face);
-                    XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
-                    if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                    {
-                        boundPlane = tmpPlane;
-                        break;
-                    }
-                }
-                if (flag) break;
-            }
-            if (boundPlane.is_valid()) break;
-        }
-        assert(boundPlane.is_valid());
-
-        // correct the direction of bounding plane
-        PlaneLine edgeLine(polygon->supportingPlane(), boundPlane);
-        assert(!polygon->supportingPlane().id_equals(boundPlane));
-        int tmpSide = linear_order(edgeLine, xvertex(polygon->vertexId((edgeIndexInFace + 1) % polygon->degree())),
-            xvertex(polygon->vertexId(edgeIndexInFace)));
-
-        assert(tmpSide != 0);
-        if (tmpSide < 0)
-            boundPlane.inverse();
-
-        // pick a correct rep vertex
-        VertexIndex repVertexId = INVALID_UINT32;
-        for (size_t i = 0; i < polygon->degree(); i++)
-        {
-            if (orientation(boundPlane, xvertex(polygon->vertexId(i))) == ON_POSITIVE_SIDE)
-            {
-                repVertexId = polygon->vertexId(i);
-                break;
-            }
-        }
-        XR_assert(repVertexId != INVALID_UINT32);
-        return repVertexId;
-    }
-
-    VertexIndex GetRepVertex_TRI(EdgeIndex edgeId, Triangle* polygon)
-    {
-        MyEdge& edge = xedge(edgeId);
-
-        int edgeIndexInFace = -1;
-        for (size_t i = 0; i < polygon->degree(); i++)
-        {
-            if (polygon->edgeId(i) == edgeId)
-            {
-                edgeIndexInFace = i;
-                break;
-            }
-        }
-        assert(edgeIndexInFace != -1);
-        return polygon->vertexId(edgeIndexInFace);
-    }
+    //}
 
     void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab, bool hasNeighbor)
     {
@@ -286,12 +194,12 @@ namespace Boolean
         //}
 
         // find the represented vertex
-        VertexIndex repVertexId;
-        if (seed.pFace->getType() == IPolygon::TRIANGLE)
-            repVertexId = GetRepVertex_TRI(seed.edgeId, (Triangle*)seed.pFace);
-        else
-            repVertexId = GetRepVertex_SPOLY(seed.edgeId, (SubPolygon*)seed.pFace);
-        MyVertex& repVertex = xvertex(repVertexId);
+        //VertexIndex repVertexId;
+        //if (seed.pFace->getType() == IPolygon::TRIANGLE)
+            //repVertexId = GetRepVertex_TRI(seed.edgeId, (Triangle*)seed.pFace);
+        //else
+            //repVertexId = GetRepVertex_SPOLY(seed.edgeId, (SubPolygon*)seed.pFace);
+        MyVertex& repVertex = xvertex(seed.pFace->get_rep_vertex(seed.edgeId));
 
         // correct the relation
         for (auto &neigh: *edge.neighbor)

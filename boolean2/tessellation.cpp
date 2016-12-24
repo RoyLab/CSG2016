@@ -256,6 +256,7 @@ namespace Boolean
                     {
                         addConnection(vertex_node_dict, pbi_itr->ends[i0],
                             pbi_itr->ends[i1], pbi_itr.pointer(), D_SEQ, prep);
+                        ++pbi_itr;
                     }
                 }
             }
@@ -267,6 +268,7 @@ namespace Boolean
             {
                 addConnection(vertex_node_dict, pbi_itr->ends[0],
                     pbi_itr->ends[1], pbi_itr.pointer(), D_NODIR, pbi_itr->vertPlane);
+                ++pbi_itr;
             }
 
             // sort all node by circular order
@@ -346,22 +348,24 @@ namespace Boolean
                     Loop cur_loop;
                     cur_loop.nested = false;
                     int loop_index = static_cast<int>(cur_component->size());
+                    Connection* cur_con = &connections_[cur_con_idx];
                     while (1)
                     {
                         Direction sub_dir = D_SEQ;
-                        Connection& cur_con = connections_[cur_con_idx];
-                        if (cur_con.ends[0] != cur_node_idx)
+                        if (cur_con->ends[1] != cur_node_idx)
+                        {
                             sub_dir = D_INV;
+                        }
 
-                        if (cur_con.dir < 1 || cur_con.dir & sub_dir)
+                        if (cur_con->dir < 1 || !(cur_con->dir & sub_dir))
                         {
                             XLOG_ERROR << "Tessellation error: " << triangle_->meshId() << "/" << triangle_->id();
                             throw 1;
                         }
-                        cur_con.dir = Direction(cur_con.dir - sub_dir);
+                        cur_con->dir = Direction(cur_con->dir - sub_dir);
 
                         // add to stack
-                        if (cur_con.dir != D_NAN)
+                        if (cur_con->dir != D_NAN)
                             edge_stack.push(cur_con_idx);
 
                         // add to loop
@@ -370,14 +374,14 @@ namespace Boolean
 
                         //colorize
                         nodes_[cur_node_idx].component_index = component_index;
-                        cur_con.component_index = component_index;
+                        cur_con->component_index = component_index;
                         if (sub_dir == D_SEQ)
                         {
-                            cur_con.loop_index_left = loop_index;
+                            cur_con->loop_index_left = loop_index;
                         }
                         else
                         {
-                            cur_con.loop_index_right = loop_index;
+                            cur_con->loop_index_right = loop_index;
                         }
 
                         // end loop
@@ -385,7 +389,8 @@ namespace Boolean
 
                         // update
                         cur_con_idx = findnext(nodes_[cur_node_idx], cur_con_idx);
-                        cur_node_idx = (sub_dir == D_SEQ) ? cur_con.ends[1] : cur_con.ends[0];
+                        cur_con = &connections_[cur_con_idx];
+                        cur_node_idx = (cur_con->ends[0] == cur_node_idx) ? cur_con->ends[1] : cur_con->ends[0];
                     }
                     cur_component->push_back(std::move(cur_loop));
                 }
@@ -645,11 +650,11 @@ namespace Boolean
             // add neighborInfo
             for (int i = 0; i < degree; i++)
             {
-                PbiRep* pbi = connections_[loop.cloop[i]].pbi;
+                PbiRep* pbi = connections_[loop.cloop[(i + 1) % degree]].pbi;
                 if (pbi && !pbi->neighbor.empty())
                 {
                     auto &nSourse = pbi->neighbor;
-                    auto &nTarget = spoly->edge((i+1)%degree).neighbor;
+                    auto &nTarget = spoly->edge(i).neighbor;
                     if (!nTarget)
                     {
                         nTarget = new std::map<MeshIndex, NeighborInfo>;
@@ -686,11 +691,11 @@ namespace Boolean
                 const int degree = loop->nloop.size();
                 for (int j = 0; j < degree; j++)
                 {
-                    PbiRep* pbi = connections_[loop->cloop[j]].pbi;
+                    PbiRep* pbi = connections_[loop->cloop[(j + 1) % degree]].pbi;
                     if (pbi && !pbi->neighbor.empty())
                     {
                         auto &nSourse = pbi->neighbor;
-                        auto &nTarget = spoly->edge(i, (j+1)%degree).neighbor;
+                        auto &nTarget = spoly->edge(i, j).neighbor;
                         if (!nTarget)
                         {
                             nTarget = new std::map<MeshIndex, NeighborInfo>;
@@ -709,7 +714,7 @@ namespace Boolean
             bool first_detect = true;
             for (int i = 0; i < nodes_.size(); i++)
             {
-                if (!(nodes_[i].component_index == -1))
+                if (nodes_[i].component_index == -1)
                 {
                     if (first_detect)
                     {
@@ -802,6 +807,7 @@ namespace Boolean
             con.ends[1] = findres1->second;
             con.pbi = pbi;
             con.prep = prep;
+            con.dir = dir;
             connections_.push_back(std::move(con));
             assert(checkPlaneOrientation(con, triangle_->supportingPlane()));
 

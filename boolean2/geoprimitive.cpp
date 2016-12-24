@@ -31,7 +31,7 @@ namespace Boolean
 
     }
 
-    const std::vector<EdgeIndex> MyVertex::edges() const
+    const std::vector<EdgeIndex>& MyVertex::edges() const
     {
         if (merge_ < 0)
         {
@@ -59,28 +59,36 @@ namespace Boolean
     {
         if (isPlaneRep())
         {
-            return p.orientation(vertex_rep());
+            return p.orientation(plane_rep());
         }
         else
         {
-            return p.orientation(plane_rep());
+            return p.orientation(vertex_rep());
         }
     }
 
     bool MyVertex::isCoincident(const PlanePoint & p) const
     {
         if (isPlaneRep())
+        {
             return p.value_equals(plane_rep());
+        }
         else
+        {
             return p.value_equals(vertex_rep());
+        }
     }
 
     bool MyVertex::isCoincident(const cyPointT & p) const
     {
         if (isPlaneRep())
+        {
             return plane_rep().value_equals(p);
+        }
         else
+        {
             return (p == vertex_rep()) == 0 ? false: true;
+        }
     }
 
     const PlanePoint & MyVertex::plane_rep() const

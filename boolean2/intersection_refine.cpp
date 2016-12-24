@@ -100,7 +100,7 @@ namespace Boolean
         std::sort(seqs.begin(), seqs.end(), orderObj);
 
         // construct new pbis
-        PbiList new_pbis;
+        PbiList new_pbis(seqs.size()+1);
         std::map<VertexIndex, PbiList::size_type> vertex_vecidx_dict;
         const MyEdge& edge = triangle->edge(which_edge);
         vertex_vecidx_dict[edge.ends[0]] = 0;

@@ -102,8 +102,10 @@ namespace Boolean
 		PlaneLine(const XPlane& a, const XPlane& b) :
 			planes_{ a, b } {
 #ifdef PREP_DEBUG_INFO
-            vec3_mul_cross(normal, a.get_data(), b.get_data());
-            vec3_norm(normal, normal);
+            //vec3_mul_cross(normal, a.get_data(), b.get_data());
+            //vec3_norm(normal, normal);
+            cyPointT approx = approxNormal();
+            vec3_copy(normal, reinterpret_cast<Real*>(&approx));
 #endif
         }
 
@@ -130,6 +132,7 @@ namespace Boolean
 
         void make_positive(XPlane& input) const;
         Real dot(const XPlane&) const;
+        Real dot(const Real*) const;
         XPlane pick_positive_vertical_plane(const cyPointT& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
         XPlane pick_positive_vertical_plane(const PlanePoint& p) const; // 从plane triples中找到一个不平行于Line且和Line方向相同的面
         void inverse();

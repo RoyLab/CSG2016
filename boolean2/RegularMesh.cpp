@@ -5,6 +5,7 @@
 #include <xgeometry.h>
 
 #include "adaptive.h"
+#include "geometry.hpp"
 #include "RegularMesh.h"
 #include "xmemory.h"
 #include "offio.h"
@@ -178,10 +179,27 @@ namespace Boolean
         throw std::exception("cannot find edge");
     }
 
+    VertexIndex Triangle::get_rep_vertex(EdgeIndex id) const
+    {
+        MyEdge& edge = xedge(id);
+
+        int edgeIndexInFace = -1;
+        for (size_t i = 0; i < degree(); i++)
+        {
+            if (edgeId(i) == id)
+            {
+                edgeIndexInFace = i;
+                break;
+            }
+        }
+        assert(edgeIndexInFace != -1);
+        return vertexId(edgeIndexInFace);
+    }
+
     VertexIndex Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*& slot)
     {
         assert(tag == INNER);
-        if (!inscts) inscts = new FaceInsctData;
+        if (!inscts) inscts = new FaceInsctData(this);
         slot = &inscts->point(pt, eIdx)->vId;
         return *slot;
     }
@@ -189,30 +207,48 @@ namespace Boolean
 
     VertexIndex Triangle::findNonFaceVertex(const PlanePoint & pt, PosTag tag, VertexIndex *&slot)
     {
-        EdgeInsctData **pp_insct_data;
+        EdgeInsctData **pp_insct_data = nullptr;
+        MyEdge* edge = nullptr;
         switch (tag)
         {
         case EDGE_0:
-            pp_insct_data = &xedge(eIds[0]).inscts;
+            edge = &xedge(eIds[0]);
+            pp_insct_data = &edge->inscts;
             if (!*pp_insct_data)
             {
-                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(0));
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(), 
+                    boundingPlane(0), 
+                    edge->faceOrientation(this)
+                );
             }
             slot = (*pp_insct_data)->point(pt);
             break;
         case EDGE_1:
-            pp_insct_data = &xedge(eIds[1]).inscts;
+            //pp_insct_data = &xedge(eIds[1]).inscts;
+            edge = &xedge(eIds[1]);
+            pp_insct_data = &edge->inscts;
             if (!*pp_insct_data)
             {
-                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(1));
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(),
+                    boundingPlane(1),
+                    edge->faceOrientation(this)
+                );
             }
             slot = (*pp_insct_data)->point(pt);
             break;
         case EDGE_2:
-            pp_insct_data = &xedge(eIds[2]).inscts;
-            if (!*pp_insct_data) 
+            //pp_insct_data = &xedge(eIds[2]).inscts;
+            edge = &xedge(eIds[2]);
+            pp_insct_data = &edge->inscts;
+            if (!*pp_insct_data)
             {
-                *pp_insct_data = new EdgeInsctData(supportingPlane(), boundingPlane(2));
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(),
+                    boundingPlane(2),
+                    edge->faceOrientation(this)
+                );
             }
             slot = (*pp_insct_data)->point(pt);
             break;
@@ -248,10 +284,16 @@ namespace Boolean
         if (!bPlanes[0].is_valid())
         {
             assert(sPlane.is_valid());
-            const cyPointT* tmp = 
-                reinterpret_cast<const cyPointT*>(sPlane.normal());
-            cyPointT normal = *tmp / tmp->Length() * 0.1;
-            fp_filter_edge(reinterpret_cast<Real*>(&normal));
+            //const cyPointT* tmp = 
+            //    reinterpret_cast<const cyPointT*>(sPlane.normal());
+            //cyPointT normal = *tmp / tmp->Length() * 0.1;
+            //fp_filter_edge(reinterpret_cast<Real*>(&normal));
+            cyPointT normal = get_projection_vector_unit(sPlane.normal()) / std::pow(2, 10);
+
+            assert(fp_filter_check(
+                reinterpret_cast<Real*>(&normal), 
+                FP_EDGE_CHECK
+            ));
 
             cyPointT& p = xpoint(vIds[0]);
             cyPointT& q = xpoint(vIds[1]);
@@ -315,6 +357,91 @@ namespace Boolean
         output.resize(degree());
         for (uint32_t i = 0; i < degree(); i++)
             output[i] = vIds[i];
+    }
+
+    VertexIndex SubPolygon::get_rep_vertex(EdgeIndex id) const
+    {
+        assert(orientation(supportingPlane(), (vertex(0))) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(supportingPlane(), (vertex(1))) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(supportingPlane(), (vertex(2))) == ON_ORIENTED_BOUNDARY);
+
+        int edgeIndexInFace = -1;
+        for (int i = 0; i < degree(); i++)
+        {
+            if (edgeId(i) == id)
+            {
+                edgeIndexInFace = i;
+                break;
+            }
+        }
+        assert(edgeIndexInFace != -1);
+
+        VertexIndex vIdInPlane;
+        XPlane boundPlane, tmpPlane;
+        MyEdge& edge = xedge(id);
+
+        // find init point
+        for (int i = 2; i < degree(); i++)
+        {
+            vIdInPlane = vertexId((edgeIndexInFace + i) % degree());
+
+            // find a bounding plane
+            bool flag = false;
+            for (auto &neigh : *edge.neighbor)
+            {
+                if (neigh.second.type == NeighborInfo::Edge)
+                {
+                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
+                        fItr; fItr.incrementToTriangle())
+                    {
+                        assert(fItr.face()->getType() == IPolygon::TRIANGLE);
+                        tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
+                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                        {
+                            boundPlane = tmpPlane;
+                            flag = true;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    assert(neigh.second.type == NeighborInfo::Face);
+                    XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
+                    if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                    {
+                        boundPlane = tmpPlane;
+                        break;
+                    }
+                }
+                if (flag) break;
+            }
+            if (boundPlane.is_valid()) break;
+        }
+        assert(boundPlane.is_valid());
+
+        // correct the direction of bounding plane
+        PlaneLine edgeLine(supportingPlane(), boundPlane);
+        assert(!supportingPlane().id_equals(boundPlane));
+        int tmpSide = linear_order(edgeLine, xvertex(vertexId((edgeIndexInFace + 1) % degree())),
+            xvertex(vertexId(edgeIndexInFace)));
+
+        assert(tmpSide != 0);
+        if (tmpSide < 0)
+            boundPlane.inverse();
+
+        // pick a correct rep vertex
+        VertexIndex repVertexId = INVALID_UINT32;
+        for (size_t i = 0; i < degree(); i++)
+        {
+            if (orientation(boundPlane, xvertex(vertexId(i))) == ON_POSITIVE_SIDE)
+            {
+                repVertexId = vertexId(i);
+                break;
+            }
+        }
+        assert(repVertexId != INVALID_UINT32);
+        return repVertexId;
     }
 
     void SubPolygon::getAllEdges(std::vector<EdgeIndex>& output) const
@@ -394,6 +521,12 @@ namespace Boolean
         { 
             output.insert(output.end(), loop.eIds.begin(), loop.eIds.end());
         }
+    }
+
+    VertexIndex SubPolygonWithHoles::get_rep_vertex(EdgeIndex id) const
+    {
+        assert(0);
+        return VertexIndex();
     }
 
     MyEdge & SubPolygonWithHoles::edge(int i, int j) const

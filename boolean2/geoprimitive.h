@@ -33,7 +33,7 @@ namespace Boolean
         Oriented_side orientation(const XPlane& plane) const;
 
         bool findEdge(EdgeIndex other, EdgeIndex* result = nullptr) const;
-        const std::vector<EdgeIndex> edges() const;
+        const std::vector<EdgeIndex>& edges() const;
         void add_edge(EdgeIndex edge_idx);
 
         const PlanePoint& plane_rep() const;
@@ -122,7 +122,12 @@ namespace Boolean
         //bool noOverlapNeighbor = false;
 
     public:
-        MyEdge(VertexIndex a, VertexIndex b) : ends{ a, b } {}
+        MyEdge(VertexIndex a, VertexIndex b) : ends{ a, b }
+        {
+            fhs[0].ptr = 0;
+            fhs[1].ptr = 0;
+        }
+
         ~MyEdge();
         void addAjacentFace(VertexIndex s, VertexIndex e, IPolygon* fPtr);
         int faceOrientation(const IPolygon*) const;

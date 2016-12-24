@@ -426,6 +426,18 @@ namespace Boolean
         return orientation(planes_[0], planes_[1], input);
     }
 
+    Real PlaneLine::dot(const Real *p) const
+    {
+        const Real* mat[3] = { 
+            planes_[0].get_data(), 
+            planes_[1].get_data(), 
+            p };
+        Real res = mat3x3det(mat);
+
+        res *= planes_[0].signd() * planes_[1].signd();
+        return res;
+    }
+
     XPlane PlaneLine::pick_positive_vertical_plane(const cyPointT & p) const
     {
         XPlane result;
@@ -440,10 +452,19 @@ namespace Boolean
             Real fres = dot(p.plane(j));
             if (fres == Real(0)) continue;
 
+            XPlane result;
             if (fres > 0)
-                return p.plane(j);
+            {
+                result = p.plane(j);
+                assert(dot(result) > 0);
+                return result;
+            }
             else if (fres < 0)
-                return p.plane(j).opposite();
+            {
+                result = p.plane(j).opposite();
+                assert(dot(result) > 0);
+                return result;
+            }
         }
         throw std::exception("cannnot find a proper plane");
     }
@@ -457,6 +478,7 @@ namespace Boolean
     {
         vec3 normal;
         vec3_mul_cross(normal, planes_[0].get_data(), planes_[1].get_data());
+        vec3_scale(normal, normal, (planes_[0].signd() * planes_[1].signd()));
         return cyPointT(normal);
     }
 

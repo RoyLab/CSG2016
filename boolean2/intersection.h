@@ -57,11 +57,21 @@ namespace Boolean
         VertexIndex* point(const PlanePoint&, const XPlane* plane = nullptr);
         VertexIndex* find_point(const PlanePoint & p);
 
+        // debug
+        bool checkOrientation(const EdgePbi* pbi)
+        {
+            return linear_order(line, pbi->ends[0], pbi->ends[1]) > 0;
+        }
+
 	public:
-        EdgeInsctData(const XPlane& sp, const XPlane& bp)
+        EdgeInsctData(const XPlane& sp, const XPlane& bp, int face_ori)
         {
             line = PlaneLine(sp, bp);
-            line.inverse();
+            assert(face_ori != 0);
+            if (face_ori > 0)
+            {
+                line.inverse();
+            }
         }
         //class PbiPairIterator
         //{
@@ -137,9 +147,13 @@ namespace Boolean
         typedef std::map<MeshIndex, PbiList> PbiLists;
         typedef std::vector<Vertex> VertexList;
 
+        FaceInsctData(const Triangle* triangle) : splane_(triangle->supportingPlane()) {}
+
         void refine(Triangle*);
         bool isRefined() const { return bRefined; }
         Vertex* point(const PlanePoint&, EdgeSIndex eIdx);
+
+        bool checkOrientation(const FacePbi* pbi) const;
 
     public:
         //class PbiPairIterator
@@ -205,5 +219,6 @@ namespace Boolean
         void removeOverlapPbi();
         void resolveIntersection(Triangle*);
         bool		bRefined = false;
+        XPlane splane_;
     };
 }

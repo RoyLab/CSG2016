@@ -469,15 +469,15 @@ namespace Boolean
                     {
                         //epbi.pends[0] = insctRes.B.opposite();
                         //epbi.pends[1] = insctRes.A.opposite();
-                        epbi.ends[0] = v[i][1];
-                        epbi.ends[1] = v[i][0];
+                        epbi.ends[0] = v[1][i];
+                        epbi.ends[1] = v[0][i];
                     }
                     else
                     {
                         //epbi.pends[0] = insctRes.A;
                         //epbi.pends[1] = insctRes.B;
-                        epbi.ends[0] = v[i][0];
-                        epbi.ends[1] = v[i][1];
+                        epbi.ends[0] = v[0][i];
+                        epbi.ends[1] = v[1][i];
                     }
                     //epbi.neighbor.push_back(ninfo);
                     epbi.neighbor[meshId[i2]] = ninfo;
@@ -488,9 +488,10 @@ namespace Boolean
 
                     if (!edge->inscts)
                     {
-                        edge->inscts = new EdgeInsctData(t[i]->supportingPlane(), bplane);
+                        edge->inscts = new EdgeInsctData(t[i]->supportingPlane(), bplane, edge->faceOrientation(t[i]));
                     }
 
+                    XR_assert(edge->inscts->checkOrientation(&epbi));
 					edge->inscts->inscts[meshId[i]].push_back(epbi);
 				}
 				else
@@ -501,27 +502,30 @@ namespace Boolean
                     {
                         fpbi.pends[0] = insctRes.B.opposite();
                         fpbi.pends[1] = insctRes.A.opposite();
-                        fpbi.ends[0] = v[i][1];
-                        fpbi.ends[1] = v[i][0];
+                        fpbi.ends[0] = v[1][i];
+                        fpbi.ends[1] = v[0][i];
                     }
                     else
                     {
                         fpbi.pends[0] = insctRes.A;
                         fpbi.pends[1] = insctRes.B;
-                        fpbi.ends[0] = v[i][0];
-                        fpbi.ends[1] = v[i][1];
+                        fpbi.ends[0] = v[0][i];
+                        fpbi.ends[1] = v[1][i];
                     }
 
                     //fpbi.neighbor.push_back(ninfo);
                     fpbi.neighbor[meshId[i2]] = ninfo;
 
-                    assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
-                    assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
-                    assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linear_order(fpbi.pends[0], fpbi.pends[1]) > 0);
-                    assert(linear_order(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
+                    //assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[0]) > 0);
+                    //assert(orientation(t[i]->supportingPlane(), fpbi.vertPlane, fpbi.pends[1]) > 0);
+                    //assert(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane).linear_order(fpbi.pends[0], fpbi.pends[1]) > 0);
+                    //assert(linear_order(PlaneLine(t[i]->supportingPlane(), fpbi.vertPlane), fpbi.ends[0], fpbi.ends[1]) > 0);
 
-					if (!t[i]->inscts)
-						t[i]->inscts = new FaceInsctData;
+                    if (!t[i]->inscts)
+                    {
+                        t[i]->inscts = new FaceInsctData(t[i]);
+                    }
+                    assert(t[i]->inscts->checkOrientation(&fpbi));
 					t[i]->inscts->inscts[meshId[i2]].push_back(fpbi);
 				}
 			}
@@ -540,7 +544,7 @@ namespace Boolean
         return CGAL::do_intersect(tr0, tr1);
     }
 
-	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves, std::vector<Triangle*> insct_triangles)
+	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves, std::vector<Triangle*>& insct_triangles)
 	{
 		AdjacentGraph *adjGraph = nullptr;
 		MeshIdTriIdMap antiOverlapMap;
@@ -653,5 +657,21 @@ namespace Boolean
         points.push_back(v);
         return &points.back();
     }
+
+    bool FaceInsctData::checkOrientation(const FacePbi * pbi) const
+    {
+        PlaneLine line(splane_, pbi->vertPlane);
+        if (linear_order(line, pbi->ends[0], pbi->ends[1]) > 0 &&
+            line.dot(pbi->pends[0]) > 0 &&
+            line.dot(pbi->pends[1]) > 0 &&
+            line.linear_order_unsafe(pbi->pends[0], pbi->pends[1]))
+        {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
 
 }
