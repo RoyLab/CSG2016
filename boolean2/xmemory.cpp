@@ -122,9 +122,64 @@ namespace Boolean
         //MyVertex& vRef = xvertex(*slots[(to + 1) % 2]),
         //    &vMerge = xvertex(*slots[to]);
 
-    void mergeVertices(VertexIndex a, VertexIndex b)
+    void GlobalData::mergeVertices(VertexIndex a, VertexIndex b)
     {
+        MyVertex& va = xvertex(a);
+        MyVertex& vb = xvertex(b);
 
+        if (va.merge_ < 0)
+        {
+            if (vb.merge_ < 0)
+            {
+                va.merge_ = vb.merge_ = mergedvertices_.size();
+
+                mergedvertices_.emplace_back();
+                MergedVertex& last = mergedvertices_.back();
+
+                last.refs.insert(a);
+                last.refs.insert(b);
+
+                last.edges.insert(last.edges.end(), va.edges_.begin(), va.edges_.end());
+                last.edges.insert(last.edges.end(), vb.edges_.begin(), vb.edges_.end());
+            }
+            else
+            {
+                va.merge_ = vb.merge_;
+                MergedVertex& now = mergedvertices_[vb.merge_];
+
+                now.refs.insert(a);
+                now.edges.insert(now.edges.end(), va.edges_.begin(), va.edges_.end());
+            }
+        }
+        else
+        {
+            if (vb.merge_ < 0)
+            {
+                vb.merge_ = va.merge_;
+                MergedVertex& now = mergedvertices_[va.merge_];
+
+                now.refs.insert(b);
+                now.edges.insert(now.edges.end(), vb.edges_.begin(), vb.edges_.end());
+            }
+            else
+            {
+                if (va.merge_ == vb.merge_)
+                {
+                    return;
+                }
+
+                MergedVertex& now = mergedvertices_[va.merge_];
+                MergedVertex& gotovanish = mergedvertices_[vb.merge_];
+
+                now.refs.insert(gotovanish.refs.begin(), gotovanish.refs.end());
+                now.edges.insert(now.edges.end(), gotovanish.edges.begin(), gotovanish.edges.end());
+
+                for (VertexIndex vidx : gotovanish.refs)
+                {
+                    xvertex(vidx).merge_ = va.merge_;
+                }
+            }
+        }
     }
 
     void mergeVertices(std::set<VertexIndex>& indices)
@@ -138,7 +193,7 @@ namespace Boolean
             }
             else
             {
-                mergeVertices(v0, v);
+                GlobalData::getObject()->mergeVertices(v0, v);
             }
         }
     }

@@ -94,6 +94,8 @@ namespace Boolean
 #endif
 	};
 
+    Real orientation(const XPlane& p, const XPlane& q, const XPlane& input);
+    Real orientation(const XPlane & p, const XPlane & q, const XPlane & r, const XPlane & s);
 
 	class PlaneLine
 	{
@@ -101,6 +103,7 @@ namespace Boolean
 		PlaneLine() {}
 		PlaneLine(const XPlane& a, const XPlane& b) :
 			planes_{ a, b } {
+            assert(!a.parallel(b));
 #ifdef PREP_DEBUG_INFO
             //vec3_mul_cross(normal, a.get_data(), b.get_data());
             //vec3_norm(normal, normal);
@@ -172,16 +175,7 @@ namespace Boolean
 	class PlanePoint
 	{
     public:
-        PlanePoint(const XPlane& a, const XPlane& b, const XPlane& c) :
-            planes_{ a, b, c } {
-            //m_pos = convertToPoint<Depeck>(a, b, c);
-#ifdef PREP_DEBUG_INFO
-            auto res = convertToPoint<Depick>(a, b, c);
-            coord[0] = res.x();
-            coord[1] = res.y();
-            coord[2] = res.z();
-#endif
-        }
+        PlanePoint(const XPlane& a, const XPlane& b, const XPlane& c);
 	public:
         XPlane& plane(int i) { return planes_[i]; }
         const XPlane& plane(int i) const { return planes_[i]; }
@@ -203,7 +197,4 @@ namespace Boolean
         //CGAL::Point_3<Depeck> m_pos;
 		XPlane planes_[3];
 	};
-
-    Real orientation(const XPlane& p, const XPlane& q, const XPlane& input);
-    Real orientation(const XPlane & p, const XPlane & q, const XPlane & r, const XPlane & s);
 }

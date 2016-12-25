@@ -219,7 +219,7 @@ namespace Boolean
                 *pp_insct_data = new EdgeInsctData(
                     supportingPlane(), 
                     boundingPlane(0), 
-                    edge->faceOrientation(this)
+                    this, edge
                 );
             }
             slot = (*pp_insct_data)->point(pt);
@@ -233,7 +233,7 @@ namespace Boolean
                 *pp_insct_data = new EdgeInsctData(
                     supportingPlane(),
                     boundingPlane(1),
-                    edge->faceOrientation(this)
+                    this, edge
                 );
             }
             slot = (*pp_insct_data)->point(pt);
@@ -247,7 +247,7 @@ namespace Boolean
                 *pp_insct_data = new EdgeInsctData(
                     supportingPlane(),
                     boundingPlane(2),
-                    edge->faceOrientation(this)
+                    this, edge
                 );
             }
             slot = (*pp_insct_data)->point(pt);

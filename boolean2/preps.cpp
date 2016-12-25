@@ -134,6 +134,13 @@ namespace Boolean
         const Real* mat2[2] = { data[0] + 1, data[1] + 1 };
         if (mat2x2det(mat2) != 0) return false;
 
+        const Real mat3k[2][2] = {
+            { data[0][2], data[0][0] },
+            { data[1][2], data[1][0] }
+        };
+        const Real* mat3[2] = { mat3k[0], mat3k[1] };
+        if (mat2x2det(mat3) != 0) return false;
+
         return true;
     }
 
@@ -484,6 +491,19 @@ namespace Boolean
 
     /// ***************************************************/
     /// PlanePoint
+
+    PlanePoint::PlanePoint(const XPlane & a, const XPlane & b, const XPlane & c) :
+        planes_{ a, b, c }
+    {
+        assert(orientation(a, b, c) != 0);
+        //m_pos = convertToPoint<Depeck>(a, b, c);
+#ifdef PREP_DEBUG_INFO
+        auto res = convertToPoint<Depick>(a, b, c);
+        coord[0] = res.x();
+        coord[1] = res.y();
+        coord[2] = res.z();
+#endif
+    }
 
     bool PlanePoint::value_equals(const PlanePoint &p) const
     {

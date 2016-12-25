@@ -11,7 +11,11 @@
 namespace Boolean
 {
     typedef uint32_t Index;
-    typedef Index VertexIndex;
+    //typedef Index VertexIndex;
+    struct VertexIndex
+    {
+        int b;
+    };
     typedef Index EdgeIndex;
     typedef Index MeshIndex;
 
@@ -29,6 +33,13 @@ namespace Boolean
 
         bool isCoincident(const PlanePoint& p) const;
         bool isCoincident(const cyPointT& p) const;
+        bool id_equals(const MyVertex& p) const;
+        bool has_on(const XPlane& p) const;
+        bool has_on(const PlaneLine& p) const
+        {
+            return has_on(p.plane(0)) &&
+                has_on(p.plane(1));
+        }
 
         Oriented_side orientation(const XPlane& plane) const;
 

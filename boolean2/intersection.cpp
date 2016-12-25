@@ -317,7 +317,15 @@ namespace Boolean
                 }
                 else
                 {
-                    eIdx = fh[i2]->edgeId((vertex_idx(tag[i2]) + 1) % 3);
+                    int vertex_order = vertex_idx(tag[i2]);
+                    if (fh[i2]->vertex((vertex_order + 1) % 3).has_on(fh[i]->supportingPlane()))
+                    {
+                        eIdx = fh[i2]->edgeId((vertex_order + 1) % 3);
+                    }
+                    else
+                    {
+                        eIdx = fh[i2]->edgeId((vertex_order + 2) % 3);
+                    }
                 }
 
                 id[i] = fh[i]->findVertex(pt, eIdx, tag[i], slots[i]);
@@ -389,7 +397,7 @@ namespace Boolean
             }
             else
             {
-                mergeVertices(id[0], id[1]);
+                pMem->mergeVertices(id[0], id[1]);
                 return;
             }
             //VertexIndex vid = std::min(id[0], id[1]);
@@ -488,7 +496,10 @@ namespace Boolean
 
                     if (!edge->inscts)
                     {
-                        edge->inscts = new EdgeInsctData(t[i]->supportingPlane(), bplane, edge->faceOrientation(t[i]));
+                        edge->inscts = new EdgeInsctData(
+                            t[i]->supportingPlane(),
+                            bplane,
+                            t[i], edge);
                     }
 
                     XR_assert(edge->inscts->checkOrientation(&epbi));
@@ -627,6 +638,11 @@ namespace Boolean
 
     VertexIndex* EdgeInsctData::point(const PlanePoint & p, const XPlane * plane)
     {
+        assert(line.has_on(p));
+        if (plane)
+        {
+            assert(plane->has_on(p));
+        }
         VertexIndex* result = find_point(p);
         if (!result)
         {
@@ -654,6 +670,7 @@ namespace Boolean
                 return &(*itr);
         }
         Vertex v{ INVALID_UINT32, eIdx };
+        assert(checkOrientation(p, eIdx));
         points.push_back(v);
         return &points.back();
     }
@@ -671,6 +688,57 @@ namespace Boolean
         else {
             return false;
         }
+    }
+
+    bool FaceInsctData::checkOrientation(const Vertex & p) const
+    {
+        if (!xvertex(p.vId).has_on(splane_))
+        {
+            return false;
+        }
+
+        MyEdge& edge = xedge(p.eId);
+        int a = xvertex(edge.ends[0]).has_on(splane_);
+        int b = xvertex(edge.ends[1]).has_on(splane_);
+
+        if (a + b == 2)
+        {
+            return false;
+        }
+
+        if (edge.inscts && !xvertex(p.vId).has_on(edge.inscts->line))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    bool FaceInsctData::checkOrientation(const PlanePoint & vertex, EdgeSIndex eId) const
+    {
+        if (!splane_.has_on(vertex))
+        {
+            return false;
+        }
+
+        if (eId < 0)
+        {
+            return true;
+        }
+
+        MyEdge& edge = xedge(eId);
+        int a = xvertex(edge.ends[0]).has_on(splane_);
+        int b = xvertex(edge.ends[1]).has_on(splane_);
+
+        if (a + b == 2)
+        {
+            return false;
+        }
+
+        if (edge.inscts && !edge.inscts->line.has_on(vertex))
+        {
+            return false;
+        }
+        return true;
     }
 
 

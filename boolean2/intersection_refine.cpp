@@ -32,6 +32,8 @@ namespace Boolean
     {
         if (isRefined()) return;
 
+        assert(checkOrientation());
+
         PlaneLine plane_rep_edge(triangle->supportingPlane(), triangle->boundingPlane(which_edge));
         if (triangle->edge(which_edge).faceOrientation(triangle) > 0)
         {
@@ -755,11 +757,14 @@ namespace Boolean
     void FaceInsctData::resolveIntersection(Triangle* triangle)
     //void FaceInsctData::resolveIntersection(Triangle* pTri, std::vector<VertexIndex>* strayVertices)
     {
+        if (inscts.size() <= 1) return;
+
         struct FacePbiTessData
         {
             PbiList::iterator pbi_itr;
             PbiList* container_itr;
             std::vector<LinOrderItem> points;
+            //MeshIndex mesh_idx;
         };
 
         typedef PbiLists::iterator PbiListsItr;
@@ -790,7 +795,7 @@ namespace Boolean
                         LineInsctResultType insct_res = plane_based_line_intersection(
                             pbiItr->vertPlane, pbiItr2->vertPlane,
                             xvertex(pbi_itrs[0]->ends[0]), xvertex(pbi_itrs[0]->ends[1]),
-                            xvertex(pbi_itrs[0]->ends[0]), xvertex(pbi_itrs[0]->ends[1]),
+                            xvertex(pbi_itrs[1]->ends[0]), xvertex(pbi_itrs[1]->ends[1]),
                             &insct_obj, &coplanar_obj
                         );
 
@@ -808,6 +813,7 @@ namespace Boolean
                                 FacePbiTessData *tessItem = new FacePbiTessData;
                                 tessItem->container_itr = &(set_itrs[i]->second);
                                 tessItem->pbi_itr = pbi_itrs[i];
+                                //tessItem->mesh_idx = set_itrs[i]->first;
 
                                 auto insertRes = tessData.insert(
                                     decltype(tessData)::value_type(
@@ -914,6 +920,7 @@ namespace Boolean
         //    }
         //}
 
+        std::map<PbiList*, std::vector<int>> garbage;
         for (auto &item : tessData)
         {
             FacePbiTessData* tess_pbi_info = item.second;
@@ -954,16 +961,26 @@ namespace Boolean
             newPbi.back().ends[1] = tess_pbi_info->pbi_itr->ends[1];
 
             PbiList* pbi_list = tess_pbi_info->container_itr;
-            XR::vec_quick_delete(tess_pbi_info->pbi_itr, *pbi_list);
+            //XR::vec_quick_delete(tess_pbi_info->pbi_itr, *pbi_list);
+            garbage[pbi_list].push_back(tess_pbi_info->pbi_itr-pbi_list->begin());
             pbi_list->insert(pbi_list->end(), newPbi.begin(), newPbi.end());
             newPbi.clear();
+        }
+
+        for (auto& group : garbage)
+        {
+            std::sort(group.second.begin(), group.second.end(), std::greater<int>());
+            for (auto pbi_itr : group.second)
+            {
+                XR::vec_quick_delete(pbi_itr, *group.first);
+            }
         }
     }
 
     void FaceInsctData::removeOverlapPbi()
     {
         typedef PbiList::iterator PbiIterator;
-        std::map<VertexIndex, std::set<PbiIterator>> sparse_graph;
+        std::map<VertexIndex, std::set<FacePbi*>> sparse_graph;
         //std::vector<decltype(inscts[0].begin())> garbage;
 
         for (auto &insct_itr : inscts)
@@ -973,7 +990,7 @@ namespace Boolean
             for (PbiIterator pbi_itr = pbi_list.begin(); pbi_itr != pbi_list.end(); ++pbi_itr)
             {
                 bool found = false;
-                for (PbiIterator alreadyHere : sparse_graph[pbi_itr->ends[0]]) // search in current graph
+                for (FacePbi* alreadyHere : sparse_graph[pbi_itr->ends[0]]) // search in current graph
                 {
                     if (alreadyHere->ends[0] == pbi_itr->ends[1] ||
                         alreadyHere->ends[1] == pbi_itr->ends[1]) // if has
@@ -1008,13 +1025,14 @@ namespace Boolean
                 }
                 else
                 {
-                    sparse_graph[pbi_itr->ends[0]].insert(pbi_itr);
-                    sparse_graph[pbi_itr->ends[1]].insert(pbi_itr);
+                    sparse_graph[pbi_itr->ends[0]].insert(&*pbi_itr);
+                    sparse_graph[pbi_itr->ends[1]].insert(&*pbi_itr);
                 }
             }
 
             const int number_of_overlap = garbage.size();
-            for (auto& pbi_itr : garbage)
+            std::sort(garbage.begin(), garbage.end(), std::greater<PbiIterator>());
+            for (PbiIterator pbi_itr : garbage)
             {
                 XR::vec_quick_delete(pbi_itr, pbi_list);
             }
@@ -1073,6 +1091,8 @@ namespace Boolean
     void FaceInsctData::refine(Triangle* triangle)
     {
         if (isRefined()) return;
+
+        assert(checkOrientation());
 
         removeOverlapPbi();
         if (inscts.size() >= 2)

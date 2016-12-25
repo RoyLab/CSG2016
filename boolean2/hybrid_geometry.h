@@ -133,6 +133,11 @@ namespace Boolean
         IResolveLineIntersection<T1, T2, T3, T4>* coplanar_obj = nullptr
     )
     {
+        assert(orientation(a, a0) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(a, a1) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(b, b0) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(b, b1) == ON_ORIENTED_BOUNDARY);
+
         Oriented_side side[4];
         side[0] = orientation(b, a0);
         side[1] = orientation(b, a1);

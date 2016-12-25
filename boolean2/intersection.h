@@ -58,20 +58,49 @@ namespace Boolean
         VertexIndex* find_point(const PlanePoint & p);
 
         // debug
-        bool checkOrientation(const EdgePbi* pbi)
+        bool checkOrientation(const EdgePbi* pbi) const
         {
             return linear_order(line, pbi->ends[0], pbi->ends[1]) > 0;
         }
 
+        bool checkOrientation() const
+        {
+            //check pbi
+            auto itr = const_cast<EdgeInsctData*>(this)->pbi_begin(); // lazy to write a const version of iterator
+            for (; itr; ++itr)
+            {
+                if (!checkOrientation(itr.pointer()))
+                {
+                    return false;
+                }
+            }
+            // check point
+            for (auto& p : points)
+            {
+                if (line.dot(p.plane_rep) <= 0)
+                {
+                    return false;
+                }
+
+                if (!xvertex(p.vertex_idx).has_on(line))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
 	public:
-        EdgeInsctData(const XPlane& sp, const XPlane& bp, int face_ori)
+        EdgeInsctData(const XPlane& sp, const XPlane& bp, const IPolygon* poly, const MyEdge* edge)
         {
             line = PlaneLine(sp, bp);
+            int face_ori = edge->faceOrientation(poly);
             assert(face_ori != 0);
             if (face_ori > 0)
             {
                 line.inverse();
             }
+            assert(linear_order(line, edge->ends[0], edge->ends[1]) > 0);
         }
         //class PbiPairIterator
         //{
@@ -154,6 +183,29 @@ namespace Boolean
         Vertex* point(const PlanePoint&, EdgeSIndex eIdx);
 
         bool checkOrientation(const FacePbi* pbi) const;
+        bool checkOrientation(const Vertex& vertex) const;
+        bool checkOrientation(const PlanePoint& vertex, EdgeSIndex eId) const;
+        bool checkOrientation() const
+        {
+            //check pbi
+            auto itr = const_cast<FaceInsctData*>(this)->pbi_begin(); // lazy to write a const version of iterator
+            for (; itr; ++itr)
+            {
+                if (!checkOrientation(itr.pointer()))
+                {
+                    return false;
+                }
+            }
+            // check point
+            for (auto& p : points)
+            {
+                if (!checkOrientation(p))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
 
     public:
         //class PbiPairIterator

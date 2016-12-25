@@ -20,7 +20,7 @@ namespace Boolean
         for (EdgeIndex item : *edges)
         {
             MyEdge &e = xedge(item);
-            if (e.ends[0] == other || e.ends[1] == other)
+            if (vertex_id_equals(e.ends[0], other) || e.ends[1] == other)
             {
                 if (result)
                     *result = item;
@@ -88,6 +88,23 @@ namespace Boolean
         else
         {
             return (p == vertex_rep()) == 0 ? false: true;
+        }
+    }
+
+    bool MyVertex::id_equals(const MyVertex & p) const
+    {
+        return (merge_ > -1 && merge_ == p.merge_);
+    }
+
+    bool MyVertex::has_on(const XPlane & p) const
+    {
+        if (isPlaneRep())
+        {
+            return p.has_on(plane_rep());
+        }
+        else
+        {
+            return p.has_on(vertex_rep());
         }
     }
 
@@ -195,13 +212,14 @@ namespace Boolean
 
     VertexIndex MyEdge::theOtherVId(VertexIndex thiz) const
     {
-        if (ends[0] == thiz)
+        if (vertex_id_equals(ends[0], thiz))
         {
             return ends[1];
         }
         else
         {
-            assert(ends[1] == thiz);
+            //assert(ends[1] == thiz);
+            assert(vertex_id_equals(ends[1], thiz));
             return ends[0];
         }
     }

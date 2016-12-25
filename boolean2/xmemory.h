@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
-#include <macros.h>
 #include <deque>
 #include <set>
 
+#include <macros.h>
 #include "preps.h"
 #include "global.h"
 #include "RegularMesh.h"
@@ -45,6 +45,7 @@ namespace Boolean
         EdgeIndex getEdgeId(VertexIndex a, VertexIndex b, IPolygon* facePtr);
         const std::vector<EdgeIndex>& get_merged_edges(VertexIndex id) const;
         void add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid);
+        void mergeVertices(VertexIndex a, VertexIndex b);
 
         void clear();
 
@@ -59,8 +60,12 @@ namespace Boolean
     };
 
     /// useful functions
-    void mergeVertices(VertexIndex a, VertexIndex b);
     void mergeVertices(std::set<VertexIndex>& indices);
+    inline bool vertex_id_equals(VertexIndex a, VertexIndex b)
+    {
+        if (a == b) return true;
+        return xvertex(a).id_equals(xvertex(b));
+    }
 
     /// gramma sugar
     inline const MyEdge& xcedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
