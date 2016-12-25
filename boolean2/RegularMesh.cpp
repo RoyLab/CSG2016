@@ -199,7 +199,10 @@ namespace Boolean
     VertexIndex Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*& slot)
     {
         assert(tag == INNER);
-        if (!inscts) inscts = new FaceInsctData(this);
+        if (!inscts)
+        {
+            inscts = new FaceInsctData(this);
+        }
         slot = &inscts->point(pt, eIdx)->vId;
         return *slot;
     }

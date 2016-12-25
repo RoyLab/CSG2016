@@ -336,45 +336,6 @@ namespace Boolean
             }
         }
 
-        //if (tag[0] == INNER)
-        //{
-        //    assert(tag[1] != INNER);
-
-        //    if (is_edge(tag[1]))
-        //    {
-        //        eIdx = fh[1]->edgeId(edge_idx(tag[1]));
-        //    }
-        //    else
-        //    {
-        //        eIdx = fh[1]->edgeId((vertex_idx(tag[1]) + 1) % 3);
-        //    }
-
-        //    id[0] = fh[0]->findVertex(pt, eIdx, tag[0], slots[0]);
-        //}
-        //else
-        //{
-        //    id[0] = fh[0]->findNonFaceVertex(pt, tag[0], slots[0]);
-        //}
-
-        //if (tag[1] == INNER)
-        //{
-        //    assert(tag[0] != INNER);
-
-        //    if (is_edge(tag[0]))
-        //    {
-        //        eIdx = fh[0]->edgeId(edge_idx(tag[0]));
-        //    }
-        //    else
-        //    {
-        //        eIdx = fh[0]->edgeId((vertex_idx(tag[0]) + 1) % 3);
-        //    }
-        //    id[1] = fh[1]->findVertex(pt, eIdx, tag[1], slots[1]);
-        //}
-        //else
-        //{
-        //    id[1] = fh[1]->findNonFaceVertex(pt, tag[1], slots[1]);
-        //}
-
         if (id[0] == id[1])
         {
             if (id[0] == INVALID_UINT32)
@@ -400,24 +361,6 @@ namespace Boolean
                 pMem->mergeVertices(id[0], id[1]);
                 return;
             }
-            //VertexIndex vid = std::min(id[0], id[1]);
-            //if (is_vertex(tag[0]) && is_vertex(tag[1]))
-            //{
-            //    VertexIndex vertex_main = INVALID_UINT32, 
-            //        vertex_aux = INVALID_UINT32;
-
-            //    if (*slots[0] == vid)
-            //    {
-            //        mergeBrepVertices(*slots[0], *slots[1]);
-            //    }
-            //    else
-            //    {
-            //        mergeBrepVertices(*slots[1], *slots[0]);
-            //    }
-            //}
-
-            //*(slots[0]) = *(slots[1]) = vid;
-            //return vid;
         }
 	}
 
