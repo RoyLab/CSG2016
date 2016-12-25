@@ -26,7 +26,7 @@ namespace Boolean
 {
     extern int xrcount;
     void tessellation(std::vector<Boolean::RegularMesh*>& meshes, std::vector<Triangle*> insct_triangles);
-    void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, VertexIndex);
+    void doClassification(Octree*, CSGTree<RegularMesh>*, std::vector<RegularMesh*>&, RegularMesh*, VertexIndex, RegularMesh*);
     void doIntersection(std::vector<RegularMesh*>&, std::vector<Octree::Node*>&, std::vector<Triangle*>& insct_triangles);
 
     void initContext() {}
@@ -48,9 +48,14 @@ namespace Boolean
         cyPointT basePoint[2];
         for (uint32_t i = 0; i < seed.size(); i++)
         {
+            if (GlobalData::getObject()->get_main_vertexId(seed[i]) != seed[i])
+            {
+                continue;
+            }
+
             MyVertex& vRef = xvertex(seed[i]);
             basePoint[0] = vRef.vertex_rep();
-            auto eItr = vRef.edges().begin();
+            auto eItr = vRef.edges_local().begin();
 
             VertexIndex base[2];
             MyEdge& edge = xedge(*eItr++);
@@ -65,7 +70,7 @@ namespace Boolean
                 VertexIndex theother = edge.theOtherVId(seed[i]);
                     //edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
 
-                if (!vertex_id_equals(theother, base[0]) && !collinear(basePoint[0], basePoint[1], xvertex(theother).vertex_rep()))
+                if (!vertex_id_equals_simple(theother, base[0]) && !collinear(basePoint[0], basePoint[1], xvertex(theother).vertex_rep()))
                 {
                     base[1] = theother;
                     break;
@@ -74,12 +79,12 @@ namespace Boolean
 
             assert(!xvertex(base[0]).isPlaneRep());
             assert(!xvertex(base[1]).isPlaneRep());
-            assert(eItr != vRef.edges().end());
+            assert(eItr != vRef.edges_local().end());
 
             XPlane pbase;
             pbase.construct_from_three_vertices(basePoint[0], basePoint[1], xvertex(base[1]).vertex_rep());
             bool got = false;
-            while (eItr != vRef.edges().end())
+            while (eItr != vRef.edges_local().end())
             {
                 MyEdge& edge = xedge(*eItr++);
                 VertexIndex theother = edge.theOtherVId(seed[i]);
@@ -176,7 +181,6 @@ extern "C"
 		pCsg->createCSGTreeFromExpr(expr, meshes.data(), meshes.size());
 		pCsg->makePositiveAndLeftHeavy();
 
-		RegularMesh* csgResult = new RegularMesh;
 
         XTIMER_HELPER(setClock("octree"));
         Octree* pOctree = new Octree();
@@ -205,9 +209,24 @@ extern "C"
 
         XTIMER_HELPER(setClock("classify"));
         VertexIndex seed = pickSeed(xmins);
-        doClassification(pOctree, pCsg, meshes, csgResult, seed);
+        RegularMesh* csgResult = new RegularMesh;
+        RegularMesh* debug_mesh = new RegularMesh;
+
+        try
+        {
+            doClassification(pOctree, pCsg, meshes, csgResult, seed, debug_mesh);
+        }
+        catch (std::exception& e)
+        {
+            XLOG_ERROR << "Bugs here.";
+        }
+
         XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
         csgResult->invCoords(center, scale);
+
+        debug_mesh->invCoords(center, scale);
+        //RegularMesh::writeFile(*debug_mesh, "D:/debug.off");
+        delete debug_mesh;
 
 		SAFE_DELETE(pCsg);
 		SAFE_DELETE(pOctree);

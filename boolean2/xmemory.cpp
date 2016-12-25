@@ -38,38 +38,38 @@ namespace Boolean
         return vertices.size() - 1;
     }
 
-    EdgeIndex GlobalData::getEdgeId(VertexIndex a, VertexIndex b, IPolygon * facePtr)
+    EdgeIndex GlobalData::get_edge_id_local_scope(VertexIndex a, VertexIndex b, IPolygon * facePtr)
     {
         assert(a < vertices.size());
         MyVertex& one = xvertex(a);
 
         EdgeIndex target;
-        bool res = one.findEdge(b, &target);
+        bool res = one.findEdge_local(b, &target);
 
         if (!res)
         {
             MyVertex& theother = xvertex(b);
-            assert(!theother.findEdge(a));
+            assert(!theother.findEdge_local(a));
             
             target = edges.size();
             edges.emplace_back(a, b);
 
-            one.add_edge(target);
-            theother.add_edge(target);
+            one.add_edge_local(target);
+            theother.add_edge_local(target);
         }
         xedge(target).addAjacentFace(a, b, facePtr);
         return target;
     }
 
-    const std::vector<EdgeIndex>& GlobalData::get_merged_edges(VertexIndex id) const
-    {
-        return mergedvertices_[id].edges;
-    }
+    //const std::vector<EdgeIndex>& GlobalData::get_merged_edges(VertexIndex id) const
+    //{
+    //    return mergedvertices_[id].edges;
+    //}
 
-    void GlobalData::add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid)
-    {
-        mergedvertices_[mergeid].edges.push_back(edgeid);
-    }
+    //void GlobalData::add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid)
+    //{
+    //    //mergedvertices_[mergeid].edges.push_back(edgeid);
+    //}
 
     void GlobalData::dumpIntersectionToXyzFile(const std::string &fileName, const cyPointT& center, const cyPointT& scale)
     {
@@ -122,6 +122,18 @@ namespace Boolean
         //MyVertex& vRef = xvertex(*slots[(to + 1) % 2]),
         //    &vMerge = xvertex(*slots[to]);
 
+    VertexIndex GlobalData::get_main_vertexId(VertexIndex v) const
+    {
+        if (xvertex(v).merge_ >= 0)
+        {
+            return *mergedvertices_[xvertex(v).merge_].refs.begin();
+        }
+        else
+        {
+            return v;
+        }
+    }
+
     void GlobalData::mergeVertices(VertexIndex a, VertexIndex b)
     {
         MyVertex& va = xvertex(a);
@@ -139,8 +151,8 @@ namespace Boolean
                 last.refs.insert(a);
                 last.refs.insert(b);
 
-                last.edges.insert(last.edges.end(), va.edges_.begin(), va.edges_.end());
-                last.edges.insert(last.edges.end(), vb.edges_.begin(), vb.edges_.end());
+                //last.edges.insert(last.edges.end(), va.edges_.begin(), va.edges_.end());
+                //last.edges.insert(last.edges.end(), vb.edges_.begin(), vb.edges_.end());
             }
             else
             {
@@ -148,7 +160,7 @@ namespace Boolean
                 MergedVertex& now = mergedvertices_[vb.merge_];
 
                 now.refs.insert(a);
-                now.edges.insert(now.edges.end(), va.edges_.begin(), va.edges_.end());
+                //now.edges.insert(now.edges.end(), va.edges_.begin(), va.edges_.end());
             }
         }
         else
@@ -159,7 +171,7 @@ namespace Boolean
                 MergedVertex& now = mergedvertices_[va.merge_];
 
                 now.refs.insert(b);
-                now.edges.insert(now.edges.end(), vb.edges_.begin(), vb.edges_.end());
+                //now.edges.insert(now.edges.end(), vb.edges_.begin(), vb.edges_.end());
             }
             else
             {
@@ -172,7 +184,7 @@ namespace Boolean
                 MergedVertex& gotovanish = mergedvertices_[vb.merge_];
 
                 now.refs.insert(gotovanish.refs.begin(), gotovanish.refs.end());
-                now.edges.insert(now.edges.end(), gotovanish.edges.begin(), gotovanish.edges.end());
+                //now.edges.insert(now.edges.end(), gotovanish.edges.begin(), gotovanish.edges.end());
 
                 for (VertexIndex vidx : gotovanish.refs)
                 {

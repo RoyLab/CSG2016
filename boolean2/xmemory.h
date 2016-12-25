@@ -23,7 +23,7 @@ namespace Boolean
     struct MergedVertex
     {
         std::set<VertexIndex> refs;
-        std::vector<EdgeIndex> edges;
+        //std::vector<EdgeIndex> edges;
     };
 
     class GlobalData
@@ -42,9 +42,10 @@ namespace Boolean
 
         int insertVertices(cyPointT* begin, cyPointT* end);
         VertexIndex insertVertex(PlanePoint& pt);
-        EdgeIndex getEdgeId(VertexIndex a, VertexIndex b, IPolygon* facePtr);
-        const std::vector<EdgeIndex>& get_merged_edges(VertexIndex id) const;
-        void add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid);
+        EdgeIndex get_edge_id_local_scope(VertexIndex a, VertexIndex b, IPolygon* facePtr);
+        //const std::vector<EdgeIndex>& get_merged_edges(VertexIndex id) const;
+        //void add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid);
+        VertexIndex get_main_vertexId(VertexIndex) const;
         void mergeVertices(VertexIndex a, VertexIndex b);
 
         void clear();
@@ -92,10 +93,11 @@ namespace Boolean
     inline std::vector<RegularMesh*>& xmeshlist() { return GlobalData::getObject()->meshes; }
 
     /// more  gramma sugar
-    inline bool vertex_id_equals(VertexIndex a, VertexIndex b)
+    inline bool vertex_id_equals_simple(VertexIndex a, VertexIndex b)
     {
-        if (a == b) return true;
-        return xvertex(a).id_equals(xvertex(b));
+        //if (a == b) return true;
+        //return xvertex(a).merge_equals(xvertex(b));
+        return a == b;
     }
 
     //inline int linear_order(const PlaneLine& l, VertexIndex a, VertexIndex b) { return linear_order(l, xvertex(a), xvertex(b)); }

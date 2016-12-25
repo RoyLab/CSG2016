@@ -106,8 +106,8 @@ namespace Boolean
     class SubPolygon : public IPolygon
     {
     public:
-        SubPolygon(MeshIndex meshId, uint32_t d, uint32_t i = INVALID_UINT32):
-            IPolygon(i, meshId),  eIds(d), vIds(d), m_degree(d) {}
+        SubPolygon(const Triangle* tri, uint32_t d, uint32_t i = INVALID_UINT32):
+            IPolygon(i, tri->meshId()),  eIds(d), vIds(d), m_degree(d), father_(tri){}
 
         template <class ForwardIterator>
         void constructFromVertexList(const ForwardIterator& a, const ForwardIterator& b);
@@ -126,6 +126,7 @@ namespace Boolean
     protected:
         std::vector<EdgeIndex> eIds;
         std::vector<VertexIndex> vIds;
+        const Triangle* father_;
 
         const uint32_t m_degree;
     };
@@ -133,7 +134,7 @@ namespace Boolean
     class SubPolygonWithHoles : public IPolygon
     {
     public:
-        SubPolygonWithHoles(uint32_t meshId, std::vector<std::vector<VertexIndex>>& loops, uint32_t i = INVALID_UINT32 );
+        SubPolygonWithHoles(const Triangle* tri, std::vector<std::vector<VertexIndex>>& loops, uint32_t i = INVALID_UINT32 );
         ~SubPolygonWithHoles() {}
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
@@ -156,7 +157,7 @@ namespace Boolean
             std::vector<VertexIndex> vIds;
         };
         std::vector<Loop> loops_;
-
+        const Triangle* father_;
     };
 
 	class RegularMesh
@@ -205,19 +206,24 @@ namespace Boolean
     inline void SubPolygon::constructFromVertexList(const ForwardIterator & a, const ForwardIterator & b)
     {
         ForwardIterator itr = a;
-        VertexIndex v0, v1;
+        //VertexIndex v0, v1;
         auto pMem = GlobalData::getObject();
 
-        for (uint32_t i = 0; i < degree(); i++)
+        for (int i = 0; i < degree(); i++)
         {
-            v0 = *itr; ++itr;
-            if (itr != b)
-                v1 = *itr;
-            else
-                v1 = *a;
+            //v0 = *itr; ++itr;
+            //if (itr != b)
+            //    v1 = *itr;
+            //else
+            //    v1 = *a;
 
-            vIds[i] = v0;
-            eIds[i] = pMem->getEdgeId(v0, v1, this);
+            vIds[i] = pMem->get_main_vertexId(*itr);
+            ++itr;
+        }
+
+        for (int i = 0; i < degree(); i++)
+        {
+            eIds[i] = pMem->get_edge_id_local_scope(vIds[i], vIds[(i+1)%degree()], this);
         }
     }
 }

@@ -632,24 +632,26 @@ namespace Boolean
                     if (alreadyHere->ends[0] == pbi_itr->ends[1] ||
                         alreadyHere->ends[1] == pbi_itr->ends[1]) // if has
                     {
-                        for (auto& nInfo : pbi_itr->neighbor)
-                        {
-                            bool unique = true; // search if the neighInfo is already there, == std::find
-                            for (auto& nInfo2 : alreadyHere->neighbor)
-                            {
-                                if (nInfo.first == nInfo.first)
-                                {
-                                    unique = false;
-                                    break;
-                                }
-                            }
+                        //for (auto& nInfo : pbi_itr->neighbor)
+                        //{
+                        //    bool unique = true; // search if the neighInfo is already there, == std::find
+                        //    for (auto& nInfo2 : alreadyHere->neighbor)
+                        //    {
+                        //        if (nInfo.first == nInfo.first)
+                        //        {
+                        //            unique = false;
+                        //            break;
+                        //        }
+                        //    }
 
-                            if (unique)
-                            {
-                                //alreadyHere->neighbor.push_back(nInfo);
-                                alreadyHere->neighbor.insert(nInfo);
-                            }
-                        }
+                        //    if (!unique)
+                        //    {
+                        //        //alreadyHere->neighbor.push_back(nInfo);
+                        //        alreadyHere->neighbor.insert(nInfo);
+                        //    }
+                        //}
+                        alreadyHere->neighbor.insert(pbi_itr->neighbor.begin(), pbi_itr->neighbor.end());
+
                         found = true;
                         break;
                     }

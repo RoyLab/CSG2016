@@ -6,21 +6,21 @@
 
 namespace Boolean
 {
-    bool MyVertex::findEdge(VertexIndex other, EdgeIndex * result) const
+    bool MyVertex::findEdge_local(VertexIndex other, EdgeIndex * result) const
     {
         const std::vector<EdgeIndex>* edges = nullptr;
-        if (merge_ < 0)
-        {
-            edges = &edges_;
-        }
-        else {
-            edges = &GlobalData::getObject()->get_merged_edges(merge_);
-        }
-
+        //if (merge_ < 0)
+        //{
+        //    edges = &edges_;
+        //}
+        //else {
+        //    edges = &GlobalData::getObject()->get_merged_edges(merge_);
+        //}
+        edges = &edges_;
         for (EdgeIndex item : *edges)
         {
             MyEdge &e = xedge(item);
-            if (vertex_id_equals(e.ends[0], other) || vertex_id_equals(e.ends[1], other))
+            if (vertex_id_equals_simple(e.ends[0], other) || vertex_id_equals_simple(e.ends[1], other))
             {
                 if (result)
                 {
@@ -33,28 +33,30 @@ namespace Boolean
 
     }
 
-    const std::vector<EdgeIndex>& MyVertex::edges() const
+    const std::vector<EdgeIndex>& MyVertex::edges_local() const
     {
-        if (merge_ < 0)
-        {
-            return edges_;
-        }
-        else
-        {
-            return GlobalData::getObject()->get_merged_edges(merge_);
-        }
+        return edges_;
+        //if (merge_ < 0)
+        //{
+        //    return edges_;
+        //}
+        //else
+        //{
+        //    return GlobalData::getObject()->get_merged_edges(merge_);
+        //}
     }
 
-    void MyVertex::add_edge(EdgeIndex edge_idx)
+    void MyVertex::add_edge_local(EdgeIndex edge_idx)
     {
-        if (merge_ < 0)
-        {
-            edges_.push_back(edge_idx);
-        }
-        else
-        {
-            GlobalData::getObject()->add_merged_edges(merge_, edge_idx);
-        }
+        edges_.push_back(edge_idx);
+        //if (merge_ < 0)
+        //{
+        //    edges_.push_back(edge_idx);
+        //}
+        //else
+        //{
+        //    GlobalData::getObject()->add_merged_edges(merge_, edge_idx);
+        //}
     }
 
     Oriented_side MyVertex::orientation(const XPlane & p) const
@@ -93,7 +95,7 @@ namespace Boolean
         }
     }
 
-    bool MyVertex::id_equals(const MyVertex & p) const
+    bool MyVertex::merge_equals(const MyVertex & p) const
     {
         return (merge_ > -1 && merge_ == p.merge_);
     }
@@ -152,8 +154,11 @@ namespace Boolean
 
     void MyEdge::addAjacentFace(VertexIndex s, VertexIndex e, IPolygon * fPtr)
     {
+        assert(s == ends[0] && e == ends[1] 
+            || s == ends[1] && e == ends[0]);
+
         int ori = 1;
-        if (!vertex_id_equals(s, ends[0])) ori = -1;
+        if (!vertex_id_equals_simple(s, ends[0])) ori = -1;
 
         FaceIterator itr(*this);
         for (; itr; ++itr)
@@ -214,14 +219,14 @@ namespace Boolean
 
     VertexIndex MyEdge::theOtherVId(VertexIndex thiz) const
     {
-        if (vertex_id_equals(ends[0], thiz))
+        if (vertex_id_equals_simple(ends[0], thiz))
         {
             return ends[1];
         }
         else
         {
             //assert(ends[1] == thiz);
-            assert(vertex_id_equals(ends[1], thiz));
+            assert(vertex_id_equals_simple(ends[1], thiz));
             return ends[0];
         }
     }

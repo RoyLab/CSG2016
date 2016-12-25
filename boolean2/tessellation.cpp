@@ -146,7 +146,7 @@ namespace Boolean
 
 
             void get_loop_from_cross_point(const PlanePoint& chosen_ponit, const cyPointT& anchor_point, 
-                const IntersectionResult&, LoopLocation& loop_loc, bool near_anchor = false) const;
+                const IntersectionResult&, LoopLocation& loop_loc, bool near_anchor) const;
 
             Loop& get_loop(std::vector<Component*>& comp, LoopLocation& loc) const
             {
@@ -595,8 +595,21 @@ namespace Boolean
 
                 // we have get the connection pair, retreive the related loop
                 std::pair<LoopLocation, LoopLocation> loop_loc_pair;
-                get_loop_from_cross_point(chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(), insct_pair.first, loop_loc_pair.first);
-                get_loop_from_cross_point(chosen_vertex.plane_rep(), anchor_vertex.vertex_rep(), insct_pair.second, loop_loc_pair.second, false);
+                get_loop_from_cross_point(
+                    chosen_vertex.plane_rep(), 
+                    anchor_vertex.vertex_rep(), 
+                    insct_pair.first,
+                    loop_loc_pair.first, 
+                    true
+                );
+
+                get_loop_from_cross_point(
+                    chosen_vertex.plane_rep(),
+                    anchor_vertex.vertex_rep(),
+                    insct_pair.second, 
+                    loop_loc_pair.second,
+                    false
+                );
 
                 rel_table.set_sibling_or_outer(loop_loc_pair.second, loop_loc_pair.first);
 
@@ -638,7 +651,7 @@ namespace Boolean
         {
             // add subpolygon
             const int degree = static_cast<int>(loop.cloop.size());
-            SubPolygon *spoly = new SubPolygon(triangle_->meshId(), degree);
+            SubPolygon *spoly = new SubPolygon(triangle_, degree);
 
             std::vector<VertexIndex> vertices(degree);
             for (int i = 0; i < degree; i++)
@@ -678,11 +691,11 @@ namespace Boolean
                 vertices[i].resize(degree);
                 for (int j = 0; j < degree; ++j)
                 {
-                    vertices[i][j] = nodes_[loop->nloop[i]].vertex_id;
+                    vertices[i][j] = nodes_[loop->nloop[j]].vertex_id;
                 }
             }
             SubPolygonWithHoles *spoly = new 
-                SubPolygonWithHoles(triangle_->meshId(), vertices);
+                SubPolygonWithHoles(triangle_, vertices);
 
             // add neighborInfo
             for (int i = 0; i < loops.size(); ++i)
@@ -772,7 +785,7 @@ namespace Boolean
                 {
                     for (int i = 0; i < node.connections.size(); ++i)
                     {
-                        int loop_idx = get_loop_id(insct_res.node_idx, i, chosen_point);
+                        int loop_idx = get_loop_id(insct_res.node_idx, i, anchor_point);
                         if (loop_idx >= 0)
                         {
                             loop_loc.loop_index = loop_idx;
@@ -784,7 +797,7 @@ namespace Boolean
                 {
                     for (int i = 0; i < node.connections.size(); ++i)
                     {
-                        int loop_idx = get_loop_id(insct_res.node_idx, i, anchor_point);
+                        int loop_idx = get_loop_id(insct_res.node_idx, i, chosen_point);
                         if (loop_idx >= 0)
                         {
                             loop_loc.loop_index = loop_idx;
@@ -1025,17 +1038,13 @@ namespace Boolean
             if (outer_itr == table_[outer.component_idx].end())
             {
                 ++num_loop_;
-            }
-            else
-            {
                 table_[outer.component_idx].emplace(outer.loop_index, OuterInnerTable::Node());
             }
             ++num_loop_;
 
-            auto inner_node = table_[inner.component_idx][inner.loop_index];
+            auto& inner_node = table_[inner.component_idx][inner.loop_index];
             inner_node.father_comp = outer.component_idx;
             inner_node.father_loop = outer.loop_index;
-
         }
 
         bool TessGraph::OuterInnerTable::is_inner_or_sibling(int inner, int outer) const
@@ -1142,7 +1151,10 @@ namespace Boolean
         for (Triangle* triangle : insct_triangles)
         {
             triangle->refine();
+        }
 
+        for (Triangle* triangle : insct_triangles)
+        {
             TessGraph tg(triangle);
             if (tg.tessellate())
                 triangle->invalidate();

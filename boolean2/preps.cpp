@@ -121,7 +121,7 @@ namespace Boolean
         }
 
         base->at(maxIndex) = std::copysign(1.0, approxNormal[maxIndex]);
-        base->at(3) = debug_data_[maxIndex] > 0 ? -p[maxIndex] : p[maxIndex];
+        base->at(3) = base->at(maxIndex) > 0 ? -p[maxIndex] : p[maxIndex];
         assert(has_on(p));
     }
 

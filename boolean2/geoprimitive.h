@@ -33,7 +33,7 @@ namespace Boolean
 
         bool isCoincident(const PlanePoint& p) const;
         bool isCoincident(const cyPointT& p) const;
-        bool id_equals(const MyVertex& p) const;
+        bool merge_equals(const MyVertex& p) const;
         bool has_on(const XPlane& p) const;
         bool has_on(const PlaneLine& p) const
         {
@@ -43,9 +43,9 @@ namespace Boolean
 
         Oriented_side orientation(const XPlane& plane) const;
 
-        bool findEdge(VertexIndex other, EdgeIndex* result = nullptr) const;
-        const std::vector<EdgeIndex>& edges() const;
-        void add_edge(EdgeIndex edge_idx);
+        bool findEdge_local(VertexIndex other, EdgeIndex* result = nullptr) const;
+        const std::vector<EdgeIndex>& edges_local() const;
+        void add_edge_local(EdgeIndex edge_idx);
 
         const PlanePoint& plane_rep() const;
         const cyPointT& vertex_rep() const;

@@ -16,6 +16,8 @@ namespace Boolean
 {
     typedef uint32_t MeshId;
 
+    static RegularMesh* g_debug_mesh;
+
     struct SSeed
     {
         EdgeIndex edgeId;
@@ -44,7 +46,7 @@ namespace Boolean
             vInds[i] = REL_OUTSIDE;
 
         // 找到那些on boundary的mesh，通过遍历所有的边上的面，查看它们的meshId
-        for (auto &edgeId : seedV.edges())
+        for (auto &edgeId : seedV.edges_local())
         {
             MyEdge& eRef = xedge(edgeId);
             MyVertex& theOther = eRef.theOtherVertex(seedId);
@@ -61,7 +63,7 @@ namespace Boolean
         // 找到一个包含有效面，且周围面的不共面的边，赋值edgeId
         // 这里会有隐含的假设：这个极点必须是原始点（应该是对的）
         bool flag = false;
-        for (auto &edgeId : seedV.edges())
+        for (auto &edgeId : seedV.edges_local())
         {
             MyEdge& eRef = xedge(edgeId);
             MyVertex& theOther = eRef.theOtherVertex(seedId);
@@ -93,8 +95,8 @@ namespace Boolean
             if (flag) break;
         }
         assert(flag);
-        assert(vertex_id_equals(xedge(seed.edgeId).ends[0], seedId)
-            || vertex_id_equals(xedge(seed.edgeId).ends[1] ,seedId));
+        assert(vertex_id_equals_simple(xedge(seed.edgeId).ends[0], seedId)
+            || vertex_id_equals_simple(xedge(seed.edgeId).ends[1] ,seedId));
 
         // 赋值pFace
         MyEdge& eRef = xedge(seed.edgeId);
@@ -167,7 +169,13 @@ namespace Boolean
                     }
                 }
             }
-            assert(flag);
+
+            //if (!flag)
+            //{
+            //    g_debug_mesh->faces().push_back(polygon);
+            //    throw std::exception();
+            //}
+            //assert(flag);
 #endif
         }
 
@@ -239,15 +247,17 @@ namespace Boolean
 
     void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
         std::vector<RegularMesh*>& meshList, RegularMesh* result,
-        VertexIndex seedId)
+        VertexIndex seedId, RegularMesh* debug_mesh)
     {
+        g_debug_mesh = debug_mesh;
+
         uint32_t nMesh = meshList.size();
         CSGTreeOld* tree = pCSG->auxiliary();
         CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
 
         SSeed tmpSeed;
         MyVertex& seedV = xvertex(seedId);
-        tmpSeed.edgeId = *seedV.edges().begin();
+        tmpSeed.edgeId = *seedV.edges_local().begin();
         MyEdge& seedE = xedge(tmpSeed.edgeId);
 
         tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));

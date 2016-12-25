@@ -129,9 +129,9 @@ namespace Boolean
 			for (int j = 0; j < 3; j++)
 				face->vIds[j] = tmpIdx[j]+offset;
 
-			face->eIds[2] = memmgr->getEdgeId(face->vIds[0], face->vIds[1], face);
-			face->eIds[0] = memmgr->getEdgeId(face->vIds[1], face->vIds[2], face);
-			face->eIds[1] = memmgr->getEdgeId(face->vIds[2], face->vIds[0], face);
+			face->eIds[2] = memmgr->get_edge_id_local_scope(face->vIds[0], face->vIds[1], face);
+			face->eIds[0] = memmgr->get_edge_id_local_scope(face->vIds[1], face->vIds[2], face);
+			face->eIds[1] = memmgr->get_edge_id_local_scope(face->vIds[2], face->vIds[0], face);
 
 			m_faces[i] = face;
 		}
@@ -164,7 +164,7 @@ namespace Boolean
     bool Triangle::coherentEdge(int whichEdge) const
     {
         MyEdge& thisEdge = edge(whichEdge);
-        if (vertex_id_equals(thisEdge.ends[0], vertexId((whichEdge + 1) % 3)))
+        if (vertex_id_equals_simple(thisEdge.ends[0], vertexId((whichEdge + 1) % 3)))
             return true;
         else return false;
     }
@@ -481,32 +481,44 @@ namespace Boolean
             convertToCGALPoint<CGALPoint>(pTri->point(1)), convertToCGALPoint<CGALPoint>(pTri->point(2)));
     }
 
-    SubPolygonWithHoles::SubPolygonWithHoles(uint32_t meshId, std::vector<std::vector<VertexIndex>>& loops, uint32_t i):
-        IPolygon(i, meshId)
+    SubPolygonWithHoles::SubPolygonWithHoles(const Triangle* tri, std::vector<std::vector<VertexIndex>>& loops, uint32_t i):
+        IPolygon(i, tri->meshId()),  father_(tri)
     {
         loops_.resize(loops.size());
         int count = 0;
         for (auto& loop : loops)
         {
             auto itr = loop.begin();
-            VertexIndex v0, v1;
+            //VertexIndex v0, v1;
             auto pMem = GlobalData::getObject();
 
+            loops_[count].vIds.resize(loop.size());
+            loops_[count].eIds.resize(loop.size());
             for (int i = 0; i < loop.size(); i++)
             {
-                v0 = *itr; ++itr;
-                if (itr != loop.end())
-                {
-                    v1 = *itr;
-                }
-                else
-                {
-                    v1 = loop.front();
-                }
+                //v0 = *itr; ++itr;
+                //if (itr != loop.end())
+                //{
+                //    v1 = *itr;
+                //}
+                //else
+                //{
+                //    v1 = loop.front();
+                //}
 
-                loops_[count].vIds[i] = v0;
-                loops_[count].eIds[i] = pMem->getEdgeId(v0, v1, this);
+                loops_[count].vIds[i] = pMem->get_main_vertexId(*itr);
+                ++itr;
             }
+
+            for (int i = 0; i < loop.size(); ++i)
+            {
+                loops_[count].eIds[i] = pMem->get_edge_id_local_scope(
+                    loops_[count].vIds[i], 
+                    loops_[count].vIds[(i+1)% loop.size()],
+                    this
+                );
+            }
+
             ++count;
         }
     }
@@ -528,8 +540,99 @@ namespace Boolean
 
     VertexIndex SubPolygonWithHoles::get_rep_vertex(EdgeIndex id) const
     {
-        assert(0);
-        return VertexIndex();
+        assert(orientation(supportingPlane(), (vertex(0, 0))) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(supportingPlane(), (vertex(0, 1))) == ON_ORIENTED_BOUNDARY);
+        assert(orientation(supportingPlane(), (vertex(0, 2))) == ON_ORIENTED_BOUNDARY);
+
+        int edgeIndexInFace = -1, edgeIndexInFace2 = -1;
+        for (int i = 0; i < loops_.size(); ++i)
+        {
+            for (int j = 0; j < loops_[i].vIds.size(); ++j)
+            {
+                if (edgeId(i, j) == id)
+                {
+                    edgeIndexInFace = i;
+                    edgeIndexInFace2 = j;
+                    break;
+                }
+            }
+        }
+        assert(edgeIndexInFace != -1);
+
+        VertexIndex vIdInPlane;
+        XPlane boundPlane, tmpPlane;
+        MyEdge& edge = xedge(id);
+
+        // find init point
+        for (int i = 0; i < loops_.size(); ++i)
+        {
+            for (int j = 0; j < loops_[i].vIds.size(); ++j)
+            {
+                vIdInPlane = vertexId(i, j);
+
+                // find a bounding plane
+                bool flag = false;
+                for (auto &neigh : *edge.neighbor)
+                {
+                    if (neigh.second.type == NeighborInfo::Edge)
+                    {
+                        for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
+                            fItr; fItr.incrementToTriangle())
+                        {
+                            assert(fItr.face()->getType() == IPolygon::TRIANGLE);
+                            tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
+                            if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                            {
+                                boundPlane = tmpPlane;
+                                flag = true;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        assert(neigh.second.type == NeighborInfo::Face);
+                        XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
+                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
+                        {
+                            boundPlane = tmpPlane;
+                            break;
+                        }
+                    }
+                    if (flag) break;
+                }
+                if (boundPlane.is_valid()) break;
+            }
+        }
+        assert(boundPlane.is_valid());
+
+        // correct the direction of bounding plane
+        PlaneLine edgeLine(supportingPlane(), boundPlane);
+        assert(!supportingPlane().id_equals(boundPlane));
+        int tmpSide = linear_order(edgeLine, 
+            xvertex(vertexId(edgeIndexInFace, (edgeIndexInFace2 + 1) % loops_[edgeIndexInFace].vIds.size())),
+            xvertex(vertexId(edgeIndexInFace, edgeIndexInFace2))
+        );
+
+        assert(tmpSide != 0);
+        if (tmpSide < 0)
+            boundPlane.inverse();
+
+        // pick a correct rep vertex
+        VertexIndex repVertexId = INVALID_UINT32;
+        for (int i = 0; i < loops_.size(); ++i)
+        {
+            for (int j = 0; j < loops_[i].vIds.size(); ++j)
+            {
+                if (orientation(boundPlane, xvertex(vertexId(i, j))) == ON_POSITIVE_SIDE)
+                {
+                    repVertexId = vertexId(i, j);
+                    break;
+                }
+            }
+        }
+        assert(repVertexId != INVALID_UINT32);
+        return repVertexId;
     }
 
     MyEdge & SubPolygonWithHoles::edge(int i, int j) const
