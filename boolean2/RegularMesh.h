@@ -58,8 +58,8 @@ namespace Boolean
 
         MyEdge& edge(int i) const;
         MyVertex& vertex(int i)const;
-        uint32_t edgeId(int i) const { return eIds[i]; }
-        uint32_t vertexId(int i) const { return vIds[i]; }
+        EdgeIndex edgeId(int i) const { return eIds[i]; }
+        VertexIndex vertexId(int i) const { return vIds[i]; }
 
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
@@ -83,8 +83,8 @@ namespace Boolean
 
     protected:
 		//CGALTriangle cgalTri;
-        uint32_t eIds[3];
-        uint32_t vIds[3];
+        EdgeIndex eIds[3];
+        VertexIndex vIds[3];
 
         // normal point to inside, edge orientation incoherent with sp x bp
 		XPlane bPlanes[3]; 
@@ -119,8 +119,8 @@ namespace Boolean
 
         MyEdge& edge(int i) const;
         MyVertex& vertex(int i)const;
-        uint32_t edgeId(int i) const { return eIds[i]; }
-        uint32_t vertexId(int i) const { return vIds[i]; }
+        EdgeIndex edgeId(int i) const { return eIds[i]; }
+        VertexIndex vertexId(int i) const { return vIds[i]; }
         uint32_t degree() const { return m_degree; }
 
     protected:
@@ -144,8 +144,8 @@ namespace Boolean
 
         MyEdge& edge(int i, int j) const;
         MyVertex& vertex(int i, int j)const;
-        uint32_t edgeId(int i, int j) const { return loops_[i].eIds[j]; }
-        uint32_t vertexId(int i, int j) const { return loops_[i].vIds[j]; }
+        EdgeIndex edgeId(int i, int j) const { return loops_[i].eIds[j]; }
+        VertexIndex vertexId(int i, int j) const { return loops_[i].vIds[j]; }
 
     protected:
         // 0---------------1

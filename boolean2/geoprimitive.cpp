@@ -6,7 +6,7 @@
 
 namespace Boolean
 {
-    bool MyVertex::findEdge(EdgeIndex other, EdgeIndex * result) const
+    bool MyVertex::findEdge(VertexIndex other, EdgeIndex * result) const
     {
         const std::vector<EdgeIndex>* edges = nullptr;
         if (merge_ < 0)
@@ -20,10 +20,12 @@ namespace Boolean
         for (EdgeIndex item : *edges)
         {
             MyEdge &e = xedge(item);
-            if (vertex_id_equals(e.ends[0], other) || e.ends[1] == other)
+            if (vertex_id_equals(e.ends[0], other) || vertex_id_equals(e.ends[1], other))
             {
                 if (result)
+                {
                     *result = item;
+                }
                 return true;
             }
         }
@@ -151,7 +153,7 @@ namespace Boolean
     void MyEdge::addAjacentFace(VertexIndex s, VertexIndex e, IPolygon * fPtr)
     {
         int ori = 1;
-        if (s != ends[0]) ori = -1;
+        if (!vertex_id_equals(s, ends[0])) ori = -1;
 
         FaceIterator itr(*this);
         for (; itr; ++itr)

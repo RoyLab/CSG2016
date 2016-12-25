@@ -11,11 +11,11 @@
 namespace Boolean
 {
     typedef uint32_t Index;
-    //typedef Index VertexIndex;
-    struct VertexIndex
-    {
-        int b;
-    };
+    typedef Index VertexIndex;
+    //struct VertexIndex
+    //{
+        //int b;
+    //};
     typedef Index EdgeIndex;
     typedef Index MeshIndex;
 
@@ -43,7 +43,7 @@ namespace Boolean
 
         Oriented_side orientation(const XPlane& plane) const;
 
-        bool findEdge(EdgeIndex other, EdgeIndex* result = nullptr) const;
+        bool findEdge(VertexIndex other, EdgeIndex* result = nullptr) const;
         const std::vector<EdgeIndex>& edges() const;
         void add_edge(EdgeIndex edge_idx);
 

@@ -164,7 +164,7 @@ namespace Boolean
     bool Triangle::coherentEdge(int whichEdge) const
     {
         MyEdge& thisEdge = edge(whichEdge);
-        if (thisEdge.ends[0] == vertexId((whichEdge + 1) % 3))
+        if (vertex_id_equals(thisEdge.ends[0], vertexId((whichEdge + 1) % 3)))
             return true;
         else return false;
     }

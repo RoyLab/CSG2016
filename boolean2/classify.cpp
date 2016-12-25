@@ -93,7 +93,8 @@ namespace Boolean
             if (flag) break;
         }
         assert(flag);
-        assert(xedge(seed.edgeId).ends[0] == seedId || xedge(seed.edgeId).ends[1] == seedId);
+        assert(vertex_id_equals(xedge(seed.edgeId).ends[0], seedId)
+            || vertex_id_equals(xedge(seed.edgeId).ends[1] ,seedId));
 
         // 赋值pFace
         MyEdge& eRef = xedge(seed.edgeId);
@@ -326,7 +327,7 @@ namespace Boolean
                         if (curEdge.neighbor)
                         {
                             // 但因为共面的存在，有些neigh可能记录的相邻，但不在相邻面当中，这没关系！
-                            //assert(curEdge.faceCount() >= 4); // 如果这是一个相交而成的边，那么一定会有超过4个polygon在周围
+                            //assert(curEdge.faceCount() >= 4); //  ，那么一定会有超过4个polygon在周围
                             for (; fItr; ++fItr)
                             {
                                 if (!fItr.face())

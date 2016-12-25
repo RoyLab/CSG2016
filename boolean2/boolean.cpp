@@ -54,18 +54,18 @@ namespace Boolean
 
             VertexIndex base[2];
             MyEdge& edge = xedge(*eItr++);
-            VertexIndex theother =
-                edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+            VertexIndex theother = edge.theOtherVId(seed[i]);
+                //edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
             base[0] = theother;
             basePoint[1] = xvertex(base[0]).vertex_rep();
 
             while (1)
             {
                 MyEdge& edge = xedge(*eItr++);
-                VertexIndex theother =
-                    edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+                VertexIndex theother = edge.theOtherVId(seed[i]);
+                    //edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
 
-                if (theother != base[0] && !collinear(basePoint[0], basePoint[1], xvertex(theother).vertex_rep()))
+                if (!vertex_id_equals(theother, base[0]) && !collinear(basePoint[0], basePoint[1], xvertex(theother).vertex_rep()))
                 {
                     base[1] = theother;
                     break;
@@ -82,8 +82,8 @@ namespace Boolean
             while (eItr != vRef.edges().end())
             {
                 MyEdge& edge = xedge(*eItr++);
-                VertexIndex theother =
-                    edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
+                VertexIndex theother = edge.theOtherVId(seed[i]);
+                    //edge.ends[0] == seed[i] ? edge.ends[1] : edge.ends[0];
                 MyVertex& vRef2 = xvertex(theother);
                 if (!vRef2.isPlaneRep() && pbase.orientation(vRef2.vertex_rep()) != ON_ORIENTED_BOUNDARY)
                 {

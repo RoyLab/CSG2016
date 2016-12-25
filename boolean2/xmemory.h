@@ -61,11 +61,6 @@ namespace Boolean
 
     /// useful functions
     void mergeVertices(std::set<VertexIndex>& indices);
-    inline bool vertex_id_equals(VertexIndex a, VertexIndex b)
-    {
-        if (a == b) return true;
-        return xvertex(a).id_equals(xvertex(b));
-    }
 
     /// gramma sugar
     inline const MyEdge& xcedge(EdgeIndex id) { return GlobalData::getObject()->edges[id]; }
@@ -97,6 +92,12 @@ namespace Boolean
     inline std::vector<RegularMesh*>& xmeshlist() { return GlobalData::getObject()->meshes; }
 
     /// more  gramma sugar
+    inline bool vertex_id_equals(VertexIndex a, VertexIndex b)
+    {
+        if (a == b) return true;
+        return xvertex(a).id_equals(xvertex(b));
+    }
+
     //inline int linear_order(const PlaneLine& l, VertexIndex a, VertexIndex b) { return linear_order(l, xvertex(a), xvertex(b)); }
     //inline Oriented_side orientation(const XPlane& p, VertexIndex v) { return orientation(p, xvertex(v)); }
 
