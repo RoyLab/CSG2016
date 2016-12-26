@@ -185,6 +185,7 @@ namespace Boolean
         bool checkOrientation(const FacePbi* pbi) const;
         bool checkOrientation(const Vertex& vertex) const;
         bool checkOrientation(const PlanePoint& vertex, EdgeSIndex eId) const;
+        bool checkOrientation(const PlanePoint& vertex) const;
         bool checkOrientation() const
         {
             //check pbi

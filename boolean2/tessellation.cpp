@@ -162,7 +162,7 @@ namespace Boolean
 
             std::vector<Node>       nodes_;
             std::vector<Connection> connections_;
-            const Triangle*         triangle_;
+            ExternPtr const Triangle*         triangle_;
             int                     face_pbi_offset_;
         };
 
@@ -1064,7 +1064,8 @@ namespace Boolean
                     IndexPair ancestor;
                     bool has_father = get_ancestor(i, node.first, ancestor);
 
-                    if (dict.find(ancestor) == dict.end())
+                    auto ancestor_itr = dict.find(ancestor);
+                    if (ancestor_itr == dict.end())
                     {
                         dict[ancestor] = result.size();
                         result.emplace_back();
@@ -1077,7 +1078,7 @@ namespace Boolean
                     }
                     else
                     {
-                        cur_complex = &result[ancestor];
+                        cur_complex = &result[ancestor_itr->second];
                     }
 
                     if (has_father)

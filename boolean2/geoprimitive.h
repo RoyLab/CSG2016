@@ -12,17 +12,13 @@ namespace Boolean
 {
     typedef uint32_t Index;
     typedef Index VertexIndex;
-    //struct VertexIndex
-    //{
-        //int b;
-    //};
     typedef Index EdgeIndex;
     typedef Index MeshIndex;
 
     typedef int32_t SIndex;
-    typedef Index VertexSIndex;
-    typedef Index EdgeSIndex;
-    typedef Index MeshSIndex;
+    typedef SIndex VertexSIndex;
+    typedef SIndex EdgeSIndex;
+    typedef SIndex MeshSIndex;
 
     class MyVertex
     {

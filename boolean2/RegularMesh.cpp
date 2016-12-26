@@ -137,6 +137,14 @@ namespace Boolean
 		}
 	}
 
+    void RegularMesh::clearFaces()
+    {
+        for (FaceT* ptr: m_faces)
+        {
+            delete ptr;
+        }
+    }
+
 	void RegularMesh::prepareBoolean()
 	{
 		assert(!memmgr || memmgr == GlobalData::getObject());

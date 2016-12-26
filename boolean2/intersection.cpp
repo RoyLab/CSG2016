@@ -684,5 +684,4 @@ namespace Boolean
         return true;
     }
 
-
 }

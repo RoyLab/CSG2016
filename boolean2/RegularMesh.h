@@ -126,7 +126,7 @@ namespace Boolean
     protected:
         std::vector<EdgeIndex> eIds;
         std::vector<VertexIndex> vIds;
-        const Triangle* father_;
+        ExternPtr const Triangle* father_;
 
         const uint32_t m_degree;
     };
@@ -179,7 +179,9 @@ namespace Boolean
 
         RegularMesh() :m_center(0, 0, 0), m_scale(1, 1, 1) {}
 		RegularMesh(const XR::OffFile& file, uint32_t meshId); // triangle mesh
-		~RegularMesh() {}
+        ~RegularMesh() {}
+
+        void clearFaces();
 
         // csg related
 		bool& inverse() { return m_bInverse; }

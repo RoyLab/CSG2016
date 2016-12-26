@@ -138,6 +138,7 @@ extern "C"
 		SAFE_DELETE(result);
         for (auto mesh : meshlist)
         {
+            mesh->clearFaces();
 			SAFE_DELETE(mesh);
         }
 
