@@ -184,30 +184,6 @@ namespace Boolean
         assert(!hasNeighbor || edge.neighbor->size());
         if (!edge.neighbor || edge.neighbor->empty()) return;
 
-        // remove repetitive neighborInfo, must before <find repVertex>
-        // because subpolygon use neighborInfo to find a splitPlane
-        //if (!edge.noOverlapNeighbor)
-        //{
-        //    edge.noOverlapNeighbor = true;
-        //    std::set<MeshId> meshSets;
-        //    std::vector<NeighborInfo> newNeighbor;
-        //    for (auto &neigh : *edge.neighbor)
-        //    {
-        //        if (meshSets.find(neigh.first) == meshSets.end())
-        //        {
-        //            newNeighbor.push_back(neigh);
-        //            meshSets.insert(neigh.first);
-        //        }
-        //    }
-        //    edge.neighbor->swap(newNeighbor);
-        //}
-
-        // find the represented vertex
-        //VertexIndex repVertexId;
-        //if (seed.pFace->getType() == IPolygon::TRIANGLE)
-            //repVertexId = GetRepVertex_TRI(seed.edgeId, (Triangle*)seed.pFace);
-        //else
-            //repVertexId = GetRepVertex_SPOLY(seed.edgeId, (SubPolygon*)seed.pFace);
         MyVertex& repVertex = xvertex(seed.pFace->get_rep_vertex(seed.edgeId));
 
         // correct the relation
@@ -304,9 +280,20 @@ namespace Boolean
                     continue;
 
                 CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
-
-                calcFaceIndicator(curSeed, relTab, seedFlag?false:true);
                 if (seedFlag) seedFlag = false; // only for debug use
+
+                try
+                {
+                    calcFaceIndicator(curSeed, relTab, seedFlag?false:true);
+                }
+                catch (int e)
+                {
+                    if (e == 1)
+                    {
+                        curSeed.pFace->mark = VISITED;
+                        continue;
+                    }
+                }
 
                 relation = ParsingCSGTree(meshList[curMeshId], relTab.data(), 
                     nMesh, tree0, curTreeLeaves, dummyForest);

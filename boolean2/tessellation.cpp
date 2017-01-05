@@ -313,6 +313,15 @@ namespace Boolean
 
         bool TessGraph::tessellate()
         {
+            // check if there is boundary node(s)
+            for (int i = 0; i < nodes_.size(); ++i)
+            {
+                if (nodes_[i].connections.size() == 1)
+                {
+                    return false;
+                }
+            }
+
             std::stack<ConnectionIndex> edge_stack;
             std::vector<Component*> components;
             const int con_sz = static_cast<int>(connections_.size());
@@ -1157,8 +1166,11 @@ namespace Boolean
         for (Triangle* triangle : insct_triangles)
         {
             TessGraph tg(triangle);
-            if (tg.tessellate())
-                triangle->invalidate();
+            if (!tg.tessellate())
+            {
+                XLOG_ERROR << "Encounter bad tessellation.";
+            }
+            triangle->invalidate();
         }
     }
 }

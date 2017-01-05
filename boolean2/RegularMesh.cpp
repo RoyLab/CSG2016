@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <xgeometry.h>
+#include <xlogger.h>
 
 #include "adaptive.h"
 #include "geometry.hpp"
@@ -451,7 +452,11 @@ namespace Boolean
                 break;
             }
         }
-        assert(repVertexId != INVALID_UINT32);
+        if (repVertexId == INVALID_UINT32)
+        {
+            XLOG_ERROR << "may be there is self-intersection.";
+            throw 1;
+        }
         return repVertexId;
     }
 
