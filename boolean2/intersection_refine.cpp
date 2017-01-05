@@ -481,7 +481,7 @@ namespace Boolean
 
         struct FacePbiTessData
         {
-            PbiList::iterator pbi_itr;
+            PbiList::size_type pbi_order;
             PbiList* container_itr;
             std::vector<LinOrderItem> points;
             //MeshIndex mesh_idx;
@@ -532,7 +532,7 @@ namespace Boolean
                             {
                                 FacePbiTessData *tessItem = new FacePbiTessData;
                                 tessItem->container_itr = &(set_itrs[i]->second);
-                                tessItem->pbi_itr = pbi_itrs[i];
+                                tessItem->pbi_order = pbi_itrs[i]-tessItem->container_itr->begin();
                                 //tessItem->mesh_idx = set_itrs[i]->first;
 
                                 auto insertRes = tessData.insert(
@@ -545,8 +545,10 @@ namespace Boolean
                                 pbi_search_result = insertRes.first;
                             }
 
+                            PlaneLine line(triangle->supportingPlane(), pbi_itrs[i]->vertPlane);
                             for (int j = 0; j < insct_count[i]; ++j)
                             {
+                                assert(line.dot(insct_item_slots[2 * i + j].plane) > 0);
                                 pbi_search_result->second->points.
                                     push_back(insct_item_slots[2*i+j]);
                             }
@@ -561,7 +563,8 @@ namespace Boolean
         for (auto &item : tessData)
         {
             FacePbiTessData* tess_pbi_info = item.second;
-            PlaneLine line(triangle->supportingPlane(), tess_pbi_info->pbi_itr->vertPlane);
+            FacePbi* pbi_ptr = &tess_pbi_info->container_itr->at(tess_pbi_info->pbi_order);
+            PlaneLine line(triangle->supportingPlane(), pbi_ptr->vertPlane);
 
             LinOrderObj<LinOrderItem> orderObj(line);
             auto &inserted = tess_pbi_info->points;
@@ -580,26 +583,26 @@ namespace Boolean
             );
 
             // template inherent prep, neighbor
-            FacePbi template_insct_data = *tess_pbi_info->pbi_itr;
+            FacePbi template_insct_data = *pbi_ptr;
             template_insct_data.pends[0] = XPlane();
             template_insct_data.pends[1] = XPlane();
 
             std::vector<FacePbi> newPbi(inserted.size() + 1, template_insct_data);
             std::map<VertexIndex, uint32_t> vertex_vecidx_dict;
-            vertex_vecidx_dict[tess_pbi_info->pbi_itr->ends[0]] = 0;
-            vertex_vecidx_dict[tess_pbi_info->pbi_itr->ends[1]] = inserted.size() + 1;
+            vertex_vecidx_dict[pbi_ptr->ends[0]] = 0;
+            vertex_vecidx_dict[pbi_ptr->ends[1]] = inserted.size() + 1;
             for (int i = 0; i < inserted.size(); i++)
             {
                 vertex_vecidx_dict[inserted[i].vertex_idx] = i + 1;
                 newPbi[i].ends[1] = inserted[i].vertex_idx;
                 newPbi[i + 1].ends[0] = inserted[i].vertex_idx;
             }
-            newPbi[0].ends[0] = tess_pbi_info->pbi_itr->ends[0];
-            newPbi.back().ends[1] = tess_pbi_info->pbi_itr->ends[1];
+            newPbi[0].ends[0] = pbi_ptr->ends[0];
+            newPbi.back().ends[1] = pbi_ptr->ends[1];
 
             PbiList* pbi_list = tess_pbi_info->container_itr;
             //XR::vec_quick_delete(tess_pbi_info->pbi_itr, *pbi_list);
-            garbage[pbi_list].push_back(tess_pbi_info->pbi_itr-pbi_list->begin());
+            garbage[pbi_list].push_back(tess_pbi_info->pbi_order);
             pbi_list->insert(pbi_list->end(), newPbi.begin(), newPbi.end());
             newPbi.clear();
         }

@@ -559,7 +559,7 @@ namespace Boolean
                                         insct_triangles.push_back(t[i]);
                                     }
                                 }
-                                assert(cgalTriTriCheck(fh0, fh1));
+                                //assert(cgalTriTriCheck(fh0, fh1));
 								adjGraph->setValue(meshId[0], meshId[1], true);
                             }
 						}
@@ -638,6 +638,11 @@ namespace Boolean
         if (!xvertex(p.vId).has_on(splane_))
         {
             return false;
+        }
+
+        if (p.eId < 0)
+        {
+            return true;
         }
 
         MyEdge& edge = xedge(p.eId);
