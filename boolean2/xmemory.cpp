@@ -93,6 +93,7 @@ namespace Boolean
         points.clear();
         ppoints.clear();
         meshes.clear();
+        mergedvertices_.clear();
     }
 
     //void mergeVertices(VertexIndex to, VertexIndex from)

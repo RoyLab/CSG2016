@@ -280,7 +280,6 @@ namespace Boolean
                     continue;
 
                 CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
-                if (seedFlag) seedFlag = false; // only for debug use
 
                 try
                 {
@@ -294,6 +293,7 @@ namespace Boolean
                         continue;
                     }
                 }
+                if (seedFlag) seedFlag = false; // only for debug use
 
                 relation = ParsingCSGTree(meshList[curMeshId], relTab.data(), 
                     nMesh, tree0, curTreeLeaves, dummyForest);

@@ -48,6 +48,9 @@
 #define MAX_MESH_COUNT 10000
 
 
+//#include <vld.h>
+
+
 #include "global.h"
 #include "csgdefs.h"
 #include "CGALext.h"

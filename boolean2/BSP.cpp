@@ -11,9 +11,20 @@ namespace Boolean
         mp_root = buildRecursion(faces);
     }
 
+    void RecursiveRelease(BSPTree::Node* node)
+    {
+        if (!node->isLeaf())
+        {
+            RecursiveRelease(node->negChild);
+            RecursiveRelease(node->posChind);
+        }
+        delete node;
+    }
+
     void BSPTree::reset()
     {
-        SAFE_DELETE(mp_root);
+        RecursiveRelease(mp_root);
+        mp_root = nullptr;
     }
 
     Oriented_side BSPTree::classify(const MyVertex & v, XPlane * bspPlane) const

@@ -313,7 +313,7 @@ namespace Boolean
                         line = PlaneLine(splane_, plane_a);
                         make_good(line, xvertex(item.vertex_idx), &item);
 
-                        LinOrderItem& item1 = item_->at(counts_->at(1)++);
+                        LinOrderItem& item1 = item_->at(2 + counts_->at(1)++);
                         item1.vertex_idx = this_vertex_idx;
                         item1.plane = plane_a;
                         line = PlaneLine(splane_, plane_b);
@@ -411,7 +411,7 @@ namespace Boolean
                     if (a0.isPlaneRep())
                     {
                         item.plane = aux.plane_a0;
-                        item.plane.inverse();
+                        //item.plane.inverse();
                     }
                     else
                     {
@@ -429,7 +429,7 @@ namespace Boolean
                     if (a1.isPlaneRep())
                     {
                         item.plane = aux.plane_a1;
-                        item.plane.inverse();
+                        //item.plane.inverse();
                     }
                     else
                     {
@@ -543,12 +543,12 @@ namespace Boolean
 
                                 assert(insertRes.second); // insertion succeed
                                 pbi_search_result = insertRes.first;
-                            }
+                            }   
 
                             PlaneLine line(triangle->supportingPlane(), pbi_itrs[i]->vertPlane);
                             for (int j = 0; j < insct_count[i]; ++j)
                             {
-                                assert(line.dot(insct_item_slots[2 * i + j].plane) > 0);
+                                XR_assert(line.dot(insct_item_slots[2 * i + j].plane) > 0);
                                 pbi_search_result->second->points.
                                     push_back(insct_item_slots[2*i+j]);
                             }

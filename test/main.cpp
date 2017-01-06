@@ -7,6 +7,7 @@
 
 #include "boolean.h"
 #include "cgaleval.h"
+//#include <vld.h>
 
 std::stringstream getValidStream(std::ifstream& file)
 {

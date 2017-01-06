@@ -21,6 +21,7 @@
 #include "csg.h"
 #include "intersection.h"
 
+//#include <vld.h>
 
 namespace Boolean
 {
