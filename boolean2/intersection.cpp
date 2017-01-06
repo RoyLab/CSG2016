@@ -638,9 +638,9 @@ namespace Boolean
 					}
 					else antiOverlapSet = searchRes->second;
 
-					for (auto fh0 : *meshItr[0]->second)
+					for (auto fh0 : meshItr[0]->second)
 					{
-						for (auto fh1 : *meshItr[1]->second)
+						for (auto fh1 : meshItr[1]->second)
 						{
 							uint32_t triId[2] = { fh0->id(), fh1->id() };
 							IndexPair triIdPair;

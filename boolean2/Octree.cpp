@@ -8,7 +8,7 @@
 
 namespace Boolean
 {
-    int xrcount;
+    int xrcount, pre_count, after_count;
     namespace
     {
         typedef cyPointT Vec3d;
@@ -146,16 +146,15 @@ namespace Boolean
         {
             auto pcMesh = mp_meshes[i];
 			auto &faces = pcMesh->faces();
+            auto &pTable = root->triTable[i];
 
 			for (auto fPtr : faces)
             {
                 root->triCount++;
-                auto &pTable = root->triTable[i];
-                if (!pTable)
-                    pTable = new TriList;
-
 				assert(fPtr->getType() == IPolygon::TRIANGLE);
-                pTable->push_back(reinterpret_cast<Triangle*>(fPtr));
+                Triangle* triangle = reinterpret_cast<Triangle*>(fPtr);
+                triangle->load_coords(coords_);
+                pTable.push_back(triangle);
             }
         }
         return root;
@@ -215,34 +214,60 @@ namespace Boolean
                 pChild->pParent = root;
             }
 
+            double centers[8][3], radius[8][3];
+            for (int i = 0; i < 8; ++i)
+            {
+                Node &child = root->pChildren[i];
+                cyPointT t1 = child.bbox.center<cyPointT>();
+                cyPointT t2 = child.bbox.diagonal<cyPointT>()*0.5;
+                centers[i][0] = t1.x;
+                centers[i][1] = t1.y;
+                centers[i][2] = t1.z;
+
+                radius[i][0] = t2.x;
+                radius[i][1] = t2.y;
+                radius[i][2] = t2.z;
+            }
+
             for (auto &triTab: root->triTable)
             {
                 uint32_t meshId = triTab.first;
                 RegularMesh* pMesh = mp_meshes[meshId];
-                TriList &parentMeshes = *triTab.second;
+                TriList &parentMeshes = triTab.second;
 
                 const size_t tn = parentMeshes.size();
                 for (size_t i = 0; i < tn; i++)
                 {
                     auto fh = parentMeshes[i];
-                    const cyPointT* pts[3] = { &fh->point(0), &fh->point(1), &fh->point(2) };
+                    assert(sizeof(cyPointT) == sizeof(Real) * 3);
+                    Real *raw_pts = coords_[fh->get_coords_id()];
+                    //Real raw_pts[3][3];
+                    //memcpy(raw_pts, coords_[fh->get_coords_id()], sizeof(Real)*9);
+                    const cyPointT(*pts)[3] = reinterpret_cast<const cyPointT(*)[3]>(raw_pts);
 
                     for (unsigned j = 0; j < 8; j++)
                     {
                         Node &child = root->pChildren[j];
-                        TriList* triList = nullptr;
                         int pointCount = 0; // -1 no intersection, 1 bbox in box, 0 bbox not in box
 
-                        if (child.bbox.isInclude_left_open_right_close(*pts[0])) pointCount++;
-                        if (child.bbox.isInclude_left_open_right_close(*pts[1])) pointCount++;
-                        if (child.bbox.isInclude_left_open_right_close(*pts[2])) pointCount++;
+                        ++pre_count;
 
-                        if (pointCount > 0 || fasterTriboxtest(*pts[0], *pts[1], *pts[2], child.bbox))
+                        if (child.bbox.isInclude_left_open_right_close((*pts)[0])) pointCount++;
+                        if (child.bbox.isInclude_left_open_right_close((*pts)[1])) pointCount++;
+                        if (child.bbox.isInclude_left_open_right_close((*pts)[2])) pointCount++;
+
+                        //if (pointCount > 0 || fasterTriboxtest(*pts[0], *pts[1], *pts[2], child.bbox))
+                        Real(*pts_mat)[3][3] = reinterpret_cast<Real(*)[3][3]>(raw_pts);
+                        if (pointCount > 0 || triBoxOverlap(centers[j], radius[j], *pts_mat) == 1)
                         {
-                            if (!triList)
-                                triList = child.triTable.emplace(meshId, new TriList()).first->second;
+                            ++after_count;
+                            if (!child.cache_handle || child.cache_handle->first != meshId)
+                            {
+                                auto res = child.triTable.emplace(meshId, TriList());
+                                child.cache_handle = &*(res.first);
+                            }
 
-                            triList->push_back(fh);
+                            child.cache_handle->second.push_back(fh);
                             child.triCount++;
 
                             if (pointCount == 3)

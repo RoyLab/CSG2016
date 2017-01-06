@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <deque>
 #include <map>
 
 #include <macros.h>
@@ -27,7 +28,7 @@ namespace Boolean
         typedef CGAL::Vector_3<Depick> Vector;
         typedef XR::BoundingBox NodeShape;
         typedef std::vector<Triangle*> TriList;
-        typedef std::map<uint32_t, TriList*> TriTableT;
+        typedef std::map<uint32_t, TriList> TriTableT;
 
     public:
         struct Node
@@ -41,10 +42,14 @@ namespace Boolean
             TriTableT   triTable;
             size_t      triCount = 0;
 
+            TriTableT::value_type* cache_handle = nullptr;
+
+            double      center[3], diag[3];
+
             virtual ~Node() { 
                 SAFE_DELETE_ARRAY(pChildren); 
-                for (auto pair : triTable)
-                    SAFE_DELETE(pair.second);
+                //for (auto pair : triTable)
+                    //SAFE_DELETE(pair.second);
             }
         };
 
@@ -66,7 +71,8 @@ namespace Boolean
         Node*					mp_root = nullptr;
 		RegularMesh* const*     mp_meshes = nullptr;
         size_t					m_nMesh = 0;
-		
+        std::deque<Real[9]>     coords_;
+
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
         STATIC_PROPERTY(int, MAX_LEVEL);
     };
