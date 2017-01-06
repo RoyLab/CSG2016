@@ -147,24 +147,26 @@ namespace Boolean
                 }
 				return INTERSECT_ON_POINT;
 			}
+            else
+            {
+                int posId = posCount[0];
+                int id1 = (posId + 1) % 3;
+                int id2 = (posId + 2) % 3;
+                posA = pr.boundingPlane(id2);
+                posB = pr.boundingPlane(id1);
 
-			int posId = posCount[0];
-			int id1 = (posId + 1) % 3;
-			int id2 = (posId + 2) % 3;
-			posA = pr.boundingPlane(id2);
-			posB = pr.boundingPlane(id1);
-
-			if (id1 == zeroCount[0])
-			{
-				tagA = vertex_tag(id1);
-				tagB = edge_tag(id1);
-			}
-			else
-			{
-				tagA = edge_tag(id2);
-				tagB = vertex_tag(id2);
-			}
-			return INTERSECT_ON_LINE;
+                if (id1 == zeroCount[0])
+                {
+                    tagA = vertex_tag(id1);
+                    tagB = edge_tag(id1);
+                }
+                else
+                {
+                    tagA = edge_tag(id2);
+                    tagB = vertex_tag(id2);
+                }
+                return INTERSECT_ON_LINE;
+            }
 		}
 		else if (zeroCount.size() == 2)
 		{
@@ -295,46 +297,145 @@ namespace Boolean
 		return INTERSECT_ON_LINE;
 	}
 
-	void addAndMerge(Triangle* fh[2], PlanePoint& pt, PosTag tag[2], VertexIndex id[2])
-	{
-		auto pMem = GlobalData::getObject();
-		//uint32_t id[2];
-        VertexIndex *slots[2];
-
-        EdgeIndex eIdx = INVALID_UINT32;
-
-        for (int i = 0; i < 2; i++)
+    void add_with_hint(Triangle *fh, Triangle* fh2, const PlanePoint& pt,
+        VertexIndex *&slot, PosTag tag, PosTag tag2, int i2, VertexIndex hint)
+    {
+        if (tag == INNER)
         {
-            int i2 = (i == 0)? 1: 0;
+            assert(tag2 != INNER);
 
-            if (tag[i] == INNER)
+            EdgeIndex eIdx = INVALID_UINT32;
+            if (is_edge(tag2))
             {
-                assert(tag[i2] != INNER);
-
-                if (is_edge(tag[i2]))
-                {
-                    eIdx = fh[i2]->edgeId(edge_idx(tag[i2]));
-                }
-                else
-                {
-                    int vertex_order = vertex_idx(tag[i2]);
-                    if (fh[i2]->vertex((vertex_order + 1) % 3).has_on(fh[i]->supportingPlane()))
-                    {
-                        eIdx = fh[i2]->edgeId((vertex_order + 1) % 3);
-                    }
-                    else
-                    {
-                        eIdx = fh[i2]->edgeId((vertex_order + 2) % 3);
-                    }
-                }
-
-                id[i] = fh[i]->findVertex(pt, eIdx, tag[i], slots[i]);
+                eIdx = fh2->edgeId(edge_idx(tag2));
             }
             else
             {
-                id[i] = fh[i]->findNonFaceVertex(pt, tag[i], slots[i]);
+                int vertex_order = vertex_idx(tag2);
+                if (fh2->vertex((vertex_order + 1) % 3).has_on(fh->supportingPlane()))
+                {
+                    eIdx = fh2->edgeId((vertex_order + 1) % 3);
+                }
+                else
+                {
+                    eIdx = fh2->edgeId((vertex_order + 2) % 3);
+                }
+            }
+
+            fh->findFaceVertex(pt, eIdx,
+                PlaneLine(fh2->supportingPlane(), pt.plane(2)), slot, &hint);
+        }
+        else
+        {
+            if (is_edge(tag))
+            {
+                if (tag2 == INNER)
+                {
+                    fh->findEdgeVertex(pt, tag, pt.plane(i2), slot, &hint);
+                }
+                else
+                {
+                    fh->findEdgeVertex(pt, tag, pt.plane(i2), pt.plane(2), slot, &hint);
+                }
+            }
+            else
+            {
+                fh->findCornerVertex(tag, slot);
             }
         }
+    }
+
+    void add_without_hint(Triangle *fh, Triangle* fh2, const PlanePoint& pt, 
+        VertexIndex *&slot, PosTag tag, PosTag tag2, int i2)
+    {
+        if (tag == INNER)
+        {
+            assert(tag2 != INNER);
+
+            EdgeIndex eIdx = INVALID_UINT32;
+            if (is_edge(tag2))
+            {
+                eIdx = fh2->edgeId(edge_idx(tag2));
+            }
+            else
+            {
+                int vertex_order = vertex_idx(tag2);
+                if (fh2->vertex((vertex_order + 1) % 3).has_on(fh->supportingPlane()))
+                {
+                    eIdx = fh2->edgeId((vertex_order + 1) % 3);
+                }
+                else
+                {
+                    eIdx = fh2->edgeId((vertex_order + 2) % 3);
+                }
+            }
+
+            fh->findFaceVertex(pt, eIdx,
+                PlaneLine(fh2->supportingPlane(), pt.plane(2)), slot);
+        }
+        else
+        {
+            if (is_edge(tag))
+            {
+                if (tag2 == INNER)
+                {
+                    fh->findEdgeVertex(pt, tag, pt.plane(i2), slot);
+                }
+                else
+                {
+                    fh->findEdgeVertex(pt, tag, pt.plane(i2), pt.plane(2), slot);
+                }
+            }
+            else
+            {
+                fh->findCornerVertex(tag, slot);
+            }
+        }
+    }
+
+    // the three planes of pt should be: fh's splane, fh2's splane, a boundary plane
+	void addAndMerge(Triangle* fh[2], PlanePoint& pt, PosTag tag[2], VertexIndex id[2])
+	{
+		auto pMem = GlobalData::getObject();
+        VertexIndex *slots[2] = {nullptr};
+
+        int type[2] = { 0 };
+        for (int i = 0; i < 2; ++i)
+        {
+            if (tag[i] == INNER)
+            {
+                type[i] = 3;
+            }
+            else if (is_edge(tag[i]))
+            {
+                type[i] = 2;
+            }
+            else
+            {
+                type[i] = 1;
+            }
+        }
+
+        int this_id = type[0] > type[1] ? 1 : 0;
+        int i2 = (this_id == 0) ? 1 : 0;
+
+        add_without_hint(fh[this_id], fh[i2], pt, slots[this_id],
+            tag[this_id], tag[i2], i2);
+
+        id[this_id] = *slots[this_id];
+
+        std::swap(this_id, i2);
+        if (id[i2] == INVALID_UINT32)
+        {
+            add_without_hint(fh[this_id], fh[i2], pt, slots[this_id],
+                tag[this_id], tag[i2], i2);
+        }
+        else
+        {
+            add_with_hint(fh[this_id], fh[i2], pt, slots[this_id],
+                tag[this_id], tag[i2], i2, id[i2]);
+        }
+        id[this_id] = *slots[this_id];
 
         if (id[0] == id[1])
         {
@@ -506,6 +607,11 @@ namespace Boolean
 		adjGraph = new AdjacentGraph(meshes.size());
 		auto &meshList = meshes;
 
+        // debug info
+        int check_count = 0;
+        int test_count = 0;
+        int collison_count = 0;
+
 		for (Octree::Node* leaf : intersectLeaves)
 		{
 			auto iEnd = leaf->triTable.cend();
@@ -543,6 +649,7 @@ namespace Boolean
 							int id0 = fh0->id();
 							int id1 = fh1->id();
 
+                            ++check_count;
 							if (antiOverlapSet->find(triIdPair) != antiOverlapSet->end())
 								continue;
 
@@ -550,6 +657,7 @@ namespace Boolean
 
                             if (insctTest(fh0, fh1, antiOverlapSet, meshId))
                             {
+                                ++collison_count;
                                 Triangle* t[2] = {fh0, fh1};
                                 for (int i = 0; i < 2; i++)
                                 {
@@ -559,8 +667,15 @@ namespace Boolean
                                         insct_triangles.push_back(t[i]);
                                     }
                                 }
-                                //assert(cgalTriTriCheck(fh0, fh1));
+                                assert(cgalTriTriCheck(fh0, fh1));
 								adjGraph->setValue(meshId[0], meshId[1], true);
+                            }
+
+                            
+                            if (++test_count % 500000 == 0)
+                            {
+                                XLOG_INFO << "Processing " << check_count << " / " 
+                                    << test_count << " / " << collison_count << " triangle pairs.";
                             }
 						}
 					}
@@ -579,40 +694,51 @@ namespace Boolean
         return nullptr;
     }
 
-    VertexIndex* EdgeInsctData::point(const PlanePoint & p, const XPlane * plane)
+    VertexIndex * EdgeInsctData::find_point(const XPlane & p)
+    {
+        
+        for (auto itr = points.begin(); itr != points.end(); itr++)
+        {
+            if (line.linear_coincident_no_check(p, itr->plane_rep))
+            {
+                return &itr->vertex_idx;
+            }
+        }
+        return nullptr;
+    }
+
+    VertexIndex* EdgeInsctData::point(const PlanePoint & p, const XPlane& plane)
     {
         assert(line.has_on(p));
-        if (plane)
-        {
-            assert(plane->has_on(p));
-        }
-        VertexIndex* result = find_point(p);
+        assert(plane.has_on(p));
+        assert(line.dot(plane) != 0);
+
+        VertexIndex* result = nullptr;
+        result = find_point(plane);
+
         if (!result)
         {
-            if (plane)
-            {
-                points.push_back(Vertex{ INVALID_UINT32, *plane });
-            }
-            else
-            {
-                XPlane pick_plane = line.pick_positive_vertical_plane(p);
-                points.push_back(Vertex{ INVALID_UINT32, pick_plane });
-            }
-
+            points.push_back(Vertex{ INVALID_UINT32, plane });
             line.make_positive(points.back().plane_rep);
             result = &(points.back().vertex_idx);
         }
         return result;
     }
 
-    auto FaceInsctData::point(const PlanePoint &p, EdgeSIndex eIdx)->Vertex*
+    auto FaceInsctData::point(const PlanePoint &p, EdgeSIndex eIdx, const PlaneLine& pline)->Vertex*
     {
+        assert(pline.dot(splane_) != 0);
         for (auto itr = points.begin(); itr != points.end(); itr++)
         {
-            if (xvertex(itr->vId).isCoincident(p))
-                return &(*itr);
+            if (orientation(splane_, pline.plane(0), itr->line.plane(0), itr->line.plane(1)) == 0)
+            {
+                if (orientation(splane_, pline.plane(1), itr->line.plane(0), itr->line.plane(1)) == 0)
+                {
+                    return &(*itr);
+                }
+            }
         }
-        Vertex v{ INVALID_UINT32, eIdx };
+        Vertex v{ INVALID_UINT32, eIdx, pline};
         assert(checkOrientation(p, eIdx));
         points.push_back(v);
         return &points.back();

@@ -231,13 +231,14 @@ namespace Boolean
                         PlanePoint newPoint(splane_, plane_a, thirdPlane);
 
                         std::vector<VertexIndex*> vecs;
-                        FaceInsctData::Vertex* face_new_pos = insct_->point(newPoint, TRIPLE_CROSS_0);
+                        FaceInsctData::Vertex* face_new_pos = insct_->point(newPoint, TRIPLE_CROSS_0, PlaneLine(plane_a, thirdPlane));
                         vecs.push_back(&face_new_pos->vId);
 
                         // 去所有的邻居看一看
                         VertexIndex minVal = face_new_pos->vId,
                             *cur_vertex_id = nullptr;
 
+                        PlaneLine verts[2] = { PlaneLine(splane_, pbis_[0]->vertPlane), PlaneLine(splane_, pbis_[1]->vertPlane) };
                         for (int i = 0; i < 2; i++)
                         {
                             int i2 = (i + 1) % 2;
@@ -264,7 +265,7 @@ namespace Boolean
                                     assert(neiInfo.second.type == NeighborInfo::Face);
                                     assert(neiInfo.second.pTrangle->inscts);
 
-                                    face_new_pos = neiInfo.second.pTrangle->inscts->point(newPoint, TRIPLE_CROSS_0);
+                                    face_new_pos = neiInfo.second.pTrangle->inscts->point(newPoint, TRIPLE_CROSS_0, verts[i2]);
                                     cur_vertex_id = &face_new_pos->vId;
                                 }
 

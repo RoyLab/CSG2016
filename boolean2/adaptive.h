@@ -897,75 +897,89 @@ namespace Boolean
 	}
 
     template <class MatrixT>
+    inline REAL early_reject(const MatrixT& mat, REAL det2x2[12], REAL det2x2a[12],
+        REAL det2x2b[12], REAL e[12], REAL det2x2mul[6], REAL &eb1, REAL &eb2, REAL &eb3)
+    {
+        Det2x2_Head(0, 0, 1, det2x2a[0], det2x2b[0], det2x2[0]);
+        Det2x2_Head(0, 0, 2, det2x2a[1], det2x2b[1], det2x2[1]);
+        Det2x2_Head(0, 0, 3, det2x2a[2], det2x2b[2], det2x2[2]);
+        Det2x2_Head(0, 2, 3, det2x2a[3], det2x2b[3], det2x2[3]);
+        Det2x2_Head(0, 3, 1, det2x2a[4], det2x2b[4], det2x2[4]);
+        Det2x2_Head(0, 1, 2, det2x2a[5], det2x2b[5], det2x2[5]);
+        Det2x2_Head(2, 2, 3, det2x2a[6], det2x2b[6], det2x2[6]);
+        Det2x2_Head(2, 3, 1, det2x2a[7], det2x2b[7], det2x2[7]);
+        Det2x2_Head(2, 1, 2, det2x2a[8], det2x2b[8], det2x2[8]);
+        Det2x2_Head(2, 0, 1, det2x2a[9], det2x2b[9], det2x2[9]);
+        Det2x2_Head(2, 0, 2, det2x2a[10], det2x2b[10], det2x2[10]);
+        Det2x2_Head(2, 0, 3, det2x2a[11], det2x2b[11], det2x2[11]);
+
+        e[0] = ::abs(det2x2[0]) + (::abs(det2x2a[0]) + ::abs(det2x2b[0]));
+        e[1] = ::abs(det2x2[1]) + (::abs(det2x2a[1]) + ::abs(det2x2b[1]));
+        e[2] = ::abs(det2x2[2]) + (::abs(det2x2a[2]) + ::abs(det2x2b[2]));
+
+        e[3] = ::abs(det2x2[3]) + (::abs(det2x2a[3]) + ::abs(det2x2b[3]));
+        e[4] = ::abs(det2x2[4]) + (::abs(det2x2a[4]) + ::abs(det2x2b[4]));
+        e[5] = ::abs(det2x2[5]) + (::abs(det2x2a[5]) + ::abs(det2x2b[5]));
+
+        e[6] = ::abs(det2x2[6]) + (::abs(det2x2a[6]) + ::abs(det2x2b[6]));
+        e[7] = ::abs(det2x2[7]) + (::abs(det2x2a[7]) + ::abs(det2x2b[7]));
+        e[8] = ::abs(det2x2[8]) + (::abs(det2x2a[8]) + ::abs(det2x2b[8]));
+
+        e[9] = ::abs(det2x2[9]) + (::abs(det2x2a[9]) + ::abs(det2x2b[9]));
+        e[10] = ::abs(det2x2[10]) + (::abs(det2x2a[10]) + ::abs(det2x2b[10]));
+        e[11] = ::abs(det2x2[11]) + (::abs(det2x2a[11]) + ::abs(det2x2b[11]));
+
+        REAL det = 0.0;
+        for (int i = 0; i < 6; i++)
+        {
+            det2x2mul[i] = det2x2[i] * det2x2[i + 6];
+        }
+
+        REAL ta = det2x2mul[0] + det2x2mul[1];
+        REAL tb = det2x2mul[2] + det2x2mul[3];
+        REAL tc = det2x2mul[4] + det2x2mul[5];
+        det = ta + tb + tc;
+        REAL eb0 = ::abs(ta + tb) + ::abs(det);
+        eb1 = ::abs(ta) + ::abs(tb) + ::abs(tc);
+
+#define DetxErr(i) (::abs(det2x2[i]*e[i+6]) + :: abs(det2x2[i+6]*e[i]))
+        eb2 = (DetxErr(0) + DetxErr(1))
+            + (DetxErr(2) + DetxErr(3))
+            + (DetxErr(4) + DetxErr(5));
+
+        eb3 = (e[0] * e[6] + e[1] * e[7])
+            + (e[2] * e[8] + e[3] * e[9])
+            + (e[4] * e[10] + e[5] * e[11]);
+
+
+        REAL eb = eb0 * err4x4A0 + eb1 * err4x4A1 +
+            eb2 * err4x4A2 + eb3 * err4x4A3;
+        if ((det > eb) != (det < -eb))
+        {
+            //REAL det2 = exactDet4x4Sign(mat);
+            //if (!((det2*det > 0.0) || (det2 == 0.0 && det == 0.0)))
+            //{
+            //	assert(0);
+            //	goto mark1;
+            //}
+
+            return det;
+        }
+
+        return 0;
+    }
+
+    template <class MatrixT>
     inline REAL adaptiveDet4x4Sign(const MatrixT& mat)
 	{
 	//mark1:
-		REAL det2x2[12], det2x2a[12], det2x2b[12], e[12];
-		Det2x2_Head(0, 0, 1, det2x2a[0], det2x2b[0], det2x2[0]);
-		Det2x2_Head(0, 0, 2, det2x2a[1], det2x2b[1], det2x2[1]);
-		Det2x2_Head(0, 0, 3, det2x2a[2], det2x2b[2], det2x2[2]);
-		Det2x2_Head(0, 2, 3, det2x2a[3], det2x2b[3], det2x2[3]);
-		Det2x2_Head(0, 3, 1, det2x2a[4], det2x2b[4], det2x2[4]);
-		Det2x2_Head(0, 1, 2, det2x2a[5], det2x2b[5], det2x2[5]);
-		Det2x2_Head(2, 2, 3, det2x2a[6], det2x2b[6], det2x2[6]);
-		Det2x2_Head(2, 3, 1, det2x2a[7], det2x2b[7], det2x2[7]);
-		Det2x2_Head(2, 1, 2, det2x2a[8], det2x2b[8], det2x2[8]);
-		Det2x2_Head(2, 0, 1, det2x2a[9], det2x2b[9], det2x2[9]);
-		Det2x2_Head(2, 0, 2, det2x2a[10], det2x2b[10], det2x2[10]);
-		Det2x2_Head(2, 0, 3, det2x2a[11], det2x2b[11], det2x2[11]);
-		
-		e[0] = ::abs(det2x2[0]) + (::abs(det2x2a[0]) + ::abs(det2x2b[0]));
-		e[1] = ::abs(det2x2[1]) + (::abs(det2x2a[1]) + ::abs(det2x2b[1]));
-		e[2] = ::abs(det2x2[2]) + (::abs(det2x2a[2]) + ::abs(det2x2b[2]));
 
-		e[3] = ::abs(det2x2[3]) + (::abs(det2x2a[3]) + ::abs(det2x2b[3]));
-		e[4] = ::abs(det2x2[4]) + (::abs(det2x2a[4]) + ::abs(det2x2b[4]));
-		e[5] = ::abs(det2x2[5]) + (::abs(det2x2a[5]) + ::abs(det2x2b[5]));
-
-		e[6] = ::abs(det2x2[6]) + (::abs(det2x2a[6]) + ::abs(det2x2b[6]));
-		e[7] = ::abs(det2x2[7]) + (::abs(det2x2a[7]) + ::abs(det2x2b[7]));
-		e[8] = ::abs(det2x2[8]) + (::abs(det2x2a[8]) + ::abs(det2x2b[8]));
-
-		e[9] = ::abs(det2x2[9]) + (::abs(det2x2a[9]) + ::abs(det2x2b[9]));
-		e[10] = ::abs(det2x2[10]) + (::abs(det2x2a[10]) + ::abs(det2x2b[10]));
-		e[11] = ::abs(det2x2[11]) + (::abs(det2x2a[11]) + ::abs(det2x2b[11]));
-
-		REAL det = 0.0, det2x2mul[6];
-		for (int i = 0; i < 6; i++)
-		{
-			det2x2mul[i] = det2x2[i] * det2x2[i+6];
-		}
-
-		REAL ta = det2x2mul[0] + det2x2mul[1];
-		REAL tb = det2x2mul[2] + det2x2mul[3];
-		REAL tc = det2x2mul[4] + det2x2mul[5];
-		det = ta + tb + tc;
-		REAL eb0 = ::abs(ta + tb) + ::abs(det);
-		REAL eb1 = ::abs(ta) + ::abs(tb) + ::abs(tc);
-
-#define DetxErr(i) (::abs(det2x2[i]*e[i+6]) + :: abs(det2x2[i+6]*e[i]))
-		REAL eb2 = (DetxErr(0) + DetxErr(1))
-			+ (DetxErr(2) + DetxErr(3))
-			+ (DetxErr(4) + DetxErr(5));
-
-		REAL eb3 = (e[0]*e[6] + e[1]*e[7])
-			+ (e[2]*e[8] + e[3]*e[9]) 
-			+ (e[4]*e[10] + e[5]*e[11]);
-
-
-		REAL eb = eb0 * err4x4A0 + eb1 * err4x4A1 + 
-			eb2 * err4x4A2 + eb3 * err4x4A3;
-		if ((det > eb) != (det < -eb))
-		{
-			//REAL det2 = exactDet4x4Sign(mat);
-			//if (!((det2*det > 0.0) || (det2 == 0.0 && det == 0.0)))
-			//{
-			//	assert(0);
-			//	goto mark1;
-			//}
-
-			return det;
-		}
+		REAL det2x2[12], det2x2a[12], det2x2b[12], e[12], det2x2mul[6], eb1, eb2, eb3;
+        REAL det = early_reject(mat, det2x2, det2x2a, det2x2b, e, det2x2mul, eb1, eb2, eb3);
+        if (det != 0)
+        {
+            return det;
+        }
 
 		REAL Declare_Var, Declare_VarEX, det2x2multail[6];
 		for (int i = 0; i < 6; i++)
@@ -985,7 +999,7 @@ namespace Boolean
 		int l2 = fast_expansion_sum_zeroelim(l1, sum1, 4, sumc, sum2);
 
 		det = estimate(l2, sum2);
-		eb = eb1 * err4x4A1 + eb2 * err4x4A2 + eb3 * err4x4A3;
+		REAL eb = eb1 * err4x4A1 + eb2 * err4x4A2 + eb3 * err4x4A3;
 		if ((det > eb) != (det < -eb))
 		{
 			//REAL det2 = exactDet4x4Sign(mat);

@@ -133,6 +133,8 @@ namespace Boolean
         int linear_order_unsafe(const XPlane& a, const cyPointT& b) const;
         int linear_order_unsafe(const cyPointT& a, const XPlane& b) const;
 
+        bool linear_coincident_no_check(const XPlane& a, const XPlane& b) const;
+
         void make_positive(XPlane& input) const;
         Real dot(const XPlane&) const;
         Real dot(const Real*) const;
@@ -181,6 +183,8 @@ namespace Boolean
         const XPlane& plane(int i) const { return planes_[i]; }
         bool value_equals(const PlanePoint& p) const;
         bool value_equals(const cyPointT& p) const;
+
+        bool check_positive() const;
 
         cyPointT toVertexBased() const 
         { 

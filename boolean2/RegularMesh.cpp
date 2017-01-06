@@ -205,19 +205,37 @@ namespace Boolean
         return vertexId(edgeIndexInFace);
     }
 
-    VertexIndex Triangle::findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*& slot)
+    VertexIndex Triangle::findFaceVertex(const PlanePoint& pt, 
+        EdgeIndex eIdx, const PlaneLine& line, VertexIndex*&slot, VertexIndex* hint)
     {
-        assert(tag == INNER);
         if (!inscts)
         {
             inscts = new FaceInsctData(this);
         }
-        slot = &inscts->point(pt, eIdx)->vId;
+        
+        bool found = false;
+        if (hint)
+        {
+            for (auto &pts : inscts->points)
+            {
+                if (pts.vId == *hint)
+                {
+                    slot = &pts.vId;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found)
+        {
+            slot = &inscts->point(pt, eIdx, line)->vId;
+        }
         return *slot;
     }
 
-
-    VertexIndex Triangle::findNonFaceVertex(const PlanePoint & pt, PosTag tag, VertexIndex *&slot)
+    VertexIndex Triangle::findEdgeVertex(const PlanePoint & pt, PosTag tag, const XPlane& vert1,
+        const XPlane& vert2, VertexIndex *&slot, VertexIndex* hint)
     {
         EdgeInsctData **pp_insct_data = nullptr;
         MyEdge* edge = nullptr;
@@ -229,12 +247,11 @@ namespace Boolean
             if (!*pp_insct_data)
             {
                 *pp_insct_data = new EdgeInsctData(
-                    supportingPlane(), 
-                    boundingPlane(0), 
+                    supportingPlane(),
+                    boundingPlane(0),
                     this, edge
                 );
             }
-            slot = (*pp_insct_data)->point(pt);
             break;
         case EDGE_1:
             //pp_insct_data = &xedge(eIds[1]).inscts;
@@ -248,7 +265,6 @@ namespace Boolean
                     this, edge
                 );
             }
-            slot = (*pp_insct_data)->point(pt);
             break;
         case EDGE_2:
             //pp_insct_data = &xedge(eIds[2]).inscts;
@@ -262,8 +278,113 @@ namespace Boolean
                     this, edge
                 );
             }
-            slot = (*pp_insct_data)->point(pt);
             break;
+        default:
+            throw 1;
+        }
+
+        bool found = false;
+        if (hint)
+        {
+            for (auto &pts : edge->inscts->points)
+            {
+                if (pts.vertex_idx == *hint)
+                {
+                    slot = &pts.vertex_idx;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found)
+        {
+            if ((*pp_insct_data)->line.dot(vert1) == 0)
+            {
+                slot = (*pp_insct_data)->point(pt, vert2);
+            }
+            else
+            {
+                slot = (*pp_insct_data)->point(pt, vert1);
+            }
+        }
+        return *slot;
+    }
+
+    VertexIndex Triangle::findEdgeVertex(const PlanePoint & pt, PosTag tag, 
+        const XPlane& vert, VertexIndex *&slot, VertexIndex* hint)
+    {
+        EdgeInsctData **pp_insct_data = nullptr;
+        MyEdge* edge = nullptr;
+        switch (tag)
+        {
+        case EDGE_0:
+            edge = &xedge(eIds[0]);
+            pp_insct_data = &edge->inscts;
+            if (!*pp_insct_data)
+            {
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(),
+                    boundingPlane(0),
+                    this, edge
+                );
+            }
+            break;
+        case EDGE_1:
+            //pp_insct_data = &xedge(eIds[1]).inscts;
+            edge = &xedge(eIds[1]);
+            pp_insct_data = &edge->inscts;
+            if (!*pp_insct_data)
+            {
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(),
+                    boundingPlane(1),
+                    this, edge
+                );
+            }
+            break;
+        case EDGE_2:
+            //pp_insct_data = &xedge(eIds[2]).inscts;
+            edge = &xedge(eIds[2]);
+            pp_insct_data = &edge->inscts;
+            if (!*pp_insct_data)
+            {
+                *pp_insct_data = new EdgeInsctData(
+                    supportingPlane(),
+                    boundingPlane(2),
+                    this, edge
+                );
+            }
+            break;
+        default:
+            throw 1;
+        }
+
+        bool found = false;
+        if (hint)
+        {
+            for (auto &pts : edge->inscts->points)
+            {
+                if (pts.vertex_idx == *hint)
+                {
+                    slot = &pts.vertex_idx;
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (!found)
+        {
+            slot = (*pp_insct_data)->point(pt, vert);
+        }
+        return *slot;
+    }
+
+    VertexIndex Triangle::findCornerVertex(PosTag tag, VertexIndex *&slot)
+    {
+        switch(tag)
+        {
         case VER_0:
             slot = &vIds[0];
             break;
@@ -361,6 +482,18 @@ namespace Boolean
                 edge(i).inscts->refine(this, i);
             }
         }
+    }
+
+    void Triangle::load_coords(std::deque<Real[9]>& container)
+    {
+        tmp_id = container.size();
+        container.emplace_back();
+        cyPointT pts=point(0);
+        memcpy(container.back(), &pts, sizeof(Real) * 3);
+        pts = point(1);
+        memcpy(container.back()+3, &pts, sizeof(Real) * 3);
+        pts = point(2);
+        memcpy(container.back()+6, &pts, sizeof(Real) * 3);
     }
 
     void SubPolygon::get_vertices_for_dumping(std::vector<VertexIndex>& output) const

@@ -12,27 +12,12 @@
 #define PREP_DEBUG_INFO
 #endif
 
-//#define USE_CGAL_PREDICATES
-//#define USE_CGAL_PREDICATES_CHECK
-
-#ifdef USE_CGAL_PREDICATES_CHECK
-#undef USE_CGAL_PREDICATES
-#endif
-
 //#define NDEBUG
 
 #ifdef XR_PROFILE
 
 #ifdef XR_DEBUG
 #undef XR_DEBUG
-#endif
-
-#ifdef USE_CGAL_PREDICATES
-#undef USE_CGAL_PREDICATES
-#endif
-
-#ifdef USE_CGAL_PREDICATES_CHECK
-#undef USE_CGAL_PREDICATES_CHECK
 #endif
 
 #ifdef PREP_DEBUG_INFO

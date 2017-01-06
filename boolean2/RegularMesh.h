@@ -1,6 +1,8 @@
 #pragma once
 #include <macros.h>
 
+#include <deque>
+
 #include "global.h"
 #include "preps.h"
 #include "offio.h"
@@ -68,8 +70,10 @@ namespace Boolean
         VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const;
 
 		// search
-        VertexIndex findVertex(const PlanePoint& pt, EdgeIndex eIdx, PosTag tag, VertexIndex*&);
-        VertexIndex findNonFaceVertex(const PlanePoint& pt, PosTag tag, VertexIndex*&);
+        VertexIndex findFaceVertex(const PlanePoint& pt, EdgeIndex eIdx, const PlaneLine& line, VertexIndex*&, VertexIndex* hint = nullptr);
+        VertexIndex findEdgeVertex(const PlanePoint& pt, PosTag tag, const XPlane& vert, VertexIndex*&, VertexIndex* hint = nullptr);
+        VertexIndex findEdgeVertex(const PlanePoint&, PosTag, const XPlane&, const XPlane&, VertexIndex*&, VertexIndex* hint = nullptr);
+        VertexIndex findCornerVertex(PosTag, VertexIndex*&);
 
 		// manipulate
 		void calcSupportingPlane();
@@ -81,6 +85,10 @@ namespace Boolean
         void invalidate() { bIsValid = false; }
         TYPE getType() const { return TRIANGLE; }
 
+        // octree
+        int get_coords_id() const { assert(tmp_id > -1); return tmp_id; }
+        void load_coords(std::deque<Real[9]>&);
+
     protected:
 		//CGALTriangle cgalTri;
         EdgeIndex eIds[3];
@@ -89,6 +97,7 @@ namespace Boolean
         // normal point to inside, edge orientation incoherent with sp x bp
 		XPlane bPlanes[3]; 
 
+        int tmp_id = -1;
         bool bIsValid = true;
 	};
 

@@ -5,6 +5,30 @@
 
 namespace Boolean
 {
+
+//#define USE_CGAL_PREDICATES
+#define USE_CGAL_PREDICATES_CHECK
+
+#ifdef USE_CGAL_PREDICATES_CHECK
+#undef USE_CGAL_PREDICATES
+#endif
+
+#ifdef XR_PROFILE
+
+#ifdef XR_DEBUG
+#undef XR_DEBUG
+#endif
+
+#ifdef USE_CGAL_PREDICATES
+#undef USE_CGAL_PREDICATES
+#endif
+
+#ifdef USE_CGAL_PREDICATES_CHECK
+#undef USE_CGAL_PREDICATES_CHECK
+#endif
+
+#endif
+
     namespace
     {
         Real mat2x2det(const Real* mat[2])
@@ -327,6 +351,12 @@ namespace Boolean
         }
     }
 
+    bool PlaneLine::linear_coincident_no_check(const XPlane & a, const XPlane & b) const
+    {
+        assert(dot(a) != 0 && dot(b) != 0);
+        return orientation(planes_[0], planes_[1], a, b) == 0;
+    }
+
     int PlaneLine::linear_order(const PlanePoint & a, const PlanePoint & b) const
     {
         //for (int i = 0; i < 3; i++)
@@ -495,8 +525,7 @@ namespace Boolean
     PlanePoint::PlanePoint(const XPlane & a, const XPlane & b, const XPlane & c) :
         planes_{ a, b, c }
     {
-        assert(orientation(a, b, c) != 0);
-        //m_pos = convertToPoint<Depeck>(a, b, c);
+        assert(check_positive());
 #ifdef PREP_DEBUG_INFO
         auto res = convertToPoint<Depick>(a, b, c);
         coord[0] = res.x();
@@ -507,7 +536,6 @@ namespace Boolean
 
     bool PlanePoint::value_equals(const PlanePoint &p) const
     {
-        //return m_pos == p.m_pos;
         return plane(0).has_on(p)
             && plane(1).has_on(p)
             && plane(2).has_on(p);
@@ -518,6 +546,11 @@ namespace Boolean
         return plane(0).has_on(p)
             && plane(1).has_on(p)
             && plane(2).has_on(p);
+    }
+
+    bool PlanePoint::check_positive() const
+    {
+        return orientation(planes_[0], planes_[1], planes_[2]) > 0;
     }
 
     /// ***************************************************/

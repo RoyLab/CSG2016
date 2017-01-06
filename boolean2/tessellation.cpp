@@ -162,8 +162,8 @@ namespace Boolean
 
             std::vector<Node>       nodes_;
             std::vector<Connection> connections_;
-            ExternPtr const Triangle*         triangle_;
-            int                     face_pbi_offset_;
+            ExternPtr const Triangle*         triangle_ = nullptr;
+            int                     face_pbi_offset_ = 0;
         };
 
 
@@ -209,6 +209,8 @@ namespace Boolean
             triangle_ = tri;
             Node node = { -1 };
             std::map<VertexIndex, NodeIndex> vertex_node_dict;
+
+            // add all nodes
             for (int i = 0; i < 3; i++)
             {
                 node.vertex_id = triangle_->vertexId(i);
@@ -236,6 +238,7 @@ namespace Boolean
                 }
             }
 
+            // add edge pbi
             for (int i = 0; i < 3; i++)
             {
                 auto& e = triangle_->edge(i);
@@ -263,6 +266,8 @@ namespace Boolean
 
             if (!triangle_->inscts) return;
 
+            // add face pbi
+            face_pbi_offset_ = connections_.size();
             auto pbi_itr = triangle_->inscts->pbi_begin();
             while (pbi_itr)
             {
@@ -313,7 +318,7 @@ namespace Boolean
 
         bool TessGraph::tessellate()
         {
-            // check if there is boundary node(s)
+            // check if there is boundary node(s)---degree == 1
             for (int i = 0; i < nodes_.size(); ++i)
             {
                 if (nodes_[i].connections.size() == 1)
@@ -495,14 +500,19 @@ namespace Boolean
 
                 // decide the farest cross point with the same color
                 // to determine the outerloop of the current component
-                for (int i = face_pbi_offset_; i < connections_.size(); i++)
+                for (int j = face_pbi_offset_; j < connections_.size(); j++)
                 {
-                    assert(connections_[i].pbi &&
-                        connections_[i].pbi->is_derived_cls());
+                    assert(connections_[j].pbi &&
+                        connections_[j].pbi->is_derived_cls());
 
-                    const Connection& test_con = connections_[i];
+                    const Connection& test_con = connections_[j];
                     if (test_con.component_index != cur_component_idx) continue;
 
+                    if (!test_con.pbi->is_derived_cls())
+                    {
+                        XLOG_ERROR << "pbi is not a face pbi.";
+                        throw 1;
+                    }
                     FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(test_con.pbi);
 
                     ResolveObj resolve_obj;
@@ -524,7 +534,7 @@ namespace Boolean
                                 insct_pair.first.plane, test_plane) > 0)
                             {
                                 insct_pair.first.is_con_type = true;
-                                insct_pair.first.con_idx = i;
+                                insct_pair.first.con_idx = j;
                                 insct_pair.first.plane = test_plane;
                             }
                         }
@@ -542,17 +552,17 @@ namespace Boolean
                         }
                     }
                     ++pbi_itr;
-                }
+                } // loop connections
 
                 // decide the closest cross point related the outerloop that 
                 // does not belong to the inner or siblings as the father (however still can be siblings)
-                for (int i = face_pbi_offset_; i < connections_.size(); i++)
+                for (int j = face_pbi_offset_; j < connections_.size(); j++)
                 {
-                    assert(connections_[i].pbi &&
-                        connections_[i].pbi->is_derived_cls());
+                    assert(connections_[j].pbi &&
+                        connections_[j].pbi->is_derived_cls());
 
-                    const Connection& test_con = connections_[i];
-                    if (rel_table.is_inner_or_sibling(test_con.component_index, i)) continue;
+                    const Connection& test_con = connections_[j];
+                    if (rel_table.is_inner_or_sibling(test_con.component_index, j)) continue;
 
                     FacePbi* pbi_itr = reinterpret_cast<FacePbi*>(test_con.pbi);
 
@@ -568,7 +578,7 @@ namespace Boolean
 
                     if (insct_res == Intersect)
                     {
-                        if (!resolve_obj.get_intersect_node_id()) // pbi insct
+                        if (!resolve_obj.is_vertex_intersection()) // pbi insct
                         {
                             XPlane test_plane = pbi_itr->vertPlane;
                             split_line.make_positive(test_plane);
@@ -579,7 +589,7 @@ namespace Boolean
                                 )
                             {
                                 insct_pair.second.is_con_type = true;
-                                insct_pair.second.con_idx = i;
+                                insct_pair.second.con_idx = j;
                                 insct_pair.second.plane = test_plane;
                             }
                         }
@@ -881,7 +891,7 @@ namespace Boolean
                 }
                 else
                 {
-                    assert(side[1] == ON_ORIENTED_BOUNDARY);
+                    assert(side[3] == ON_ORIENTED_BOUNDARY);
                     // intersect on anchor vertex
                     insct_node_id = node_ids_[1];
                 }

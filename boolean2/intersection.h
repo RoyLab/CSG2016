@@ -54,8 +54,9 @@ namespace Boolean
 
 		void refine(Triangle* triangle, int which_edge);
         bool isRefined() const { return bRefined; }
-        VertexIndex* point(const PlanePoint&, const XPlane* plane = nullptr);
+        VertexIndex* point(const PlanePoint&, const XPlane& plane);
         VertexIndex* find_point(const PlanePoint & p);
+        VertexIndex* find_point(const XPlane & p);
 
         // debug
         bool checkOrientation(const EdgePbi* pbi) const
@@ -171,7 +172,12 @@ namespace Boolean
     {
     public:
         // eId: -1 means tess intersection, -2 means from by propagate at that stage
-        struct Vertex { VertexIndex vId; EdgeSIndex eId; };
+        struct Vertex 
+        { 
+            VertexIndex vId; 
+            EdgeSIndex eId;
+            PlaneLine line;
+        };
         typedef std::vector<FacePbi> PbiList;
         typedef std::map<MeshIndex, PbiList> PbiLists;
         typedef std::vector<Vertex> VertexList;
@@ -180,7 +186,7 @@ namespace Boolean
 
         void refine(Triangle*);
         bool isRefined() const { return bRefined; }
-        Vertex* point(const PlanePoint&, EdgeSIndex eIdx);
+        Vertex* point(const PlanePoint&, EdgeSIndex eIdx, const PlaneLine&);
 
         bool checkOrientation(const FacePbi* pbi) const;
         bool checkOrientation(const Vertex& vertex) const;
@@ -209,43 +215,6 @@ namespace Boolean
         }
 
     public:
-        //class PbiPairIterator
-        //{
-        //public:
-        //    PbiPairIterator(FaceInsctData* target);
-        //    void operator++();
-        //    operator bool() const;
-
-        //private:
-        //    PbiLists::iterator outer_end_, inner_end_;
-        //    PbiLists::iterator outer_cur_, inner_cur_;
-
-        //    PbiList::iterator outer_pbi_end_, inner_pbi_end_;
-        //    PbiList::iterator outer_pbi_cur_, inner_pbi_cur_;
-        //};
-
-        //class PbiIterator
-        //{
-        //public:
-        //    PbiIterator(FaceInsctData* target);
-        //    void operator++();
-        //    FacePbi* operator->() const;
-        //    FacePbi* pointer() const;
-        //    operator bool() const;
-
-        //private:
-        //    PbiLists::iterator end_;
-        //    PbiLists::iterator cur_;
-
-        //    PbiList::iterator pbi_end_;
-        //    PbiList::iterator pbi_cur_;
-        //};
-
-        //PbiPairIterator pbi_pair_begin()
-        //{
-        //    return PbiPairIterator(this);
-        //}
-
 
         static void assignInnerPtr(PbiLists::iterator o,
             PbiList::iterator& begin, PbiList::iterator& end)
