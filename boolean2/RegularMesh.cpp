@@ -114,6 +114,10 @@ namespace Boolean
 		cyPointT* pPts = reinterpret_cast<cyPointT*>(file.vertices.get());
 		int offset = memmgr->insertVertices(pPts, pPts + file.nVertices);
 
+        // gen boundingbox
+        bbox_ = XR::BoundingBox(pPts, pPts + file.nVertices);
+
+        // add faces
 		m_faces.resize(file.nFaces);
 		int n, ptr = 0;
 		int* indices = file.indices.get();
@@ -619,12 +623,6 @@ namespace Boolean
     MyVertex& Triangle::vertex(int i) const
     {
         return xvertex(vertexId(i));
-    }
-
-    CGALTriangle convertToCGALTriangle(const Triangle* pTri)
-    {
-        return CGALTriangle(convertToCGALPoint<CGALPoint>(pTri->point(0)),
-            convertToCGALPoint<CGALPoint>(pTri->point(1)), convertToCGALPoint<CGALPoint>(pTri->point(2)));
     }
 
     SubPolygonWithHoles::SubPolygonWithHoles(const Triangle* tri, std::vector<std::vector<VertexIndex>>& loops, uint32_t i):

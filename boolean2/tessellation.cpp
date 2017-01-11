@@ -342,6 +342,7 @@ namespace Boolean
                 while (!edge_stack.empty())
                 {
                     ConnectionIndex cur_con_idx = edge_stack.top();
+                    ConnectionIndex head_con_idx = cur_con_idx;
                     Connection& first_con = connections_[cur_con_idx];
                     edge_stack.pop();
 
@@ -398,13 +399,20 @@ namespace Boolean
                             cur_con->loop_index_right = loop_index;
                         }
 
-                        // end loop
-                        if (cur_node_idx == headnode) break;
-
-                        // update
+                        // update connection
                         cur_con_idx = findnext(nodes_[cur_node_idx], cur_con_idx);
                         cur_con = &connections_[cur_con_idx];
+
+                        // end loop
+                        if (cur_node_idx == headnode &&
+                            cur_con_idx == head_con_idx)
+                        {
+                            break;
+                        }
+
+                        // update node
                         cur_node_idx = (cur_con->ends[0] == cur_node_idx) ? cur_con->ends[1] : cur_con->ends[0];
+
                     }
                     cur_component->push_back(std::move(cur_loop));
                 }

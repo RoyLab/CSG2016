@@ -11,7 +11,6 @@
 #include "xgeometry.h"
 
 
-
 namespace Boolean
 {
     enum NodeType
@@ -57,7 +56,7 @@ namespace Boolean
 		Octree() {}
         ~Octree(){ release(); }
 
-        void build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, std::vector<Node*>* isectNodes = nullptr);
+        void build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, bool split_normal = false, std::vector<Node*>* isectNodes = nullptr);
 
         void release(); // not release meshlist
         Node* getRoot() const { return mp_root; }
@@ -72,10 +71,14 @@ namespace Boolean
 		RegularMesh* const*     mp_meshes = nullptr;
         size_t					m_nMesh = 0;
         std::deque<Real[9]>     coords_;
+        bool                    split_normal_ = false;
 
         STATIC_PROPERTY(int, MAX_TRIANGLE_COUNT);
         STATIC_PROPERTY(int, MAX_LEVEL);
     };
+
+    Relation PolyhedralInclusionTest(cyPointT& point, Octree* pOctree, 
+        std::vector<RegularMesh*>& pMesh, unsigned meshId, bool IsInverse, int *cross = nullptr);
 
 }// namespace BOOLEAN
 

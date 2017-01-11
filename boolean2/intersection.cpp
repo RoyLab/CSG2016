@@ -593,8 +593,8 @@ namespace Boolean
 #ifdef XR_PROFILE
         XLOG_FATAL << "assert is not turnoff!";
 #endif
-        CGALTriangle tr0 = convertToCGALTriangle(t0);
-        CGALTriangle tr1 = convertToCGALTriangle(t1);
+        CGALTriangle tr0 = convertToCGALTriangle<Depick>(t0);
+        CGALTriangle tr1 = convertToCGALTriangle<Depick>(t1);
 
         return CGAL::do_intersect(tr0, tr1);
     }

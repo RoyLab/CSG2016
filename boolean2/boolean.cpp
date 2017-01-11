@@ -155,14 +155,34 @@ extern "C"
         }
 
 		GlobalData* pMem = GlobalData::getObject();
+        XR::BoundingBox aabb(meshes[0]->bbox());
+        for (int i = 1; i < meshes.size(); ++i)
+        {
+            aabb.include_bbox(meshes[i]->bbox());
+        }
+
         std::vector<VertexIndex> xmins;
-		XR::BoundingBox aabb(pMem->points.begin(), pMem->points.end(), xmins);
+        double xmin = 1e99;
+        for (int i = 0; i < pMem->vertices.size(); ++i)
+        {
+            double x = pMem->vertices[i].vertex_rep().x;
+            if (x <= xmin)
+            {
+                if (xmin > x)
+                {
+                    xmin = x;
+                    xmins.clear();
+                }
+                xmins.push_back(i);
+            }
+        }
 
         double logDieta = -2;
         if (pMem->points.size() > 1e6) logDieta = -5;
         else if (pMem->points.size() < 1000) logDieta = 0;
         exactinit(logDieta);
 
+        // transform vertices coordinates
 		cyPointT center, scale;
 		for (int i = 0; i < 3; i++)
 		{
@@ -176,13 +196,18 @@ extern "C"
 			fp_filter(reinterpret_cast<Real*>(&pMem->points[i]));
 		}
 
+        for (int i = 0; i < meshes.size(); ++i)
+        {
+            meshes[i]->set_transform(center, scale);
+        }
+
+        // do some initialization
 		for (auto mesh : meshes)
 			mesh->prepareBoolean();
 
 		CSGTree<RegularMesh>* pCsg = new CSGTree<RegularMesh>;
 		pCsg->createCSGTreeFromExpr(expr, meshes.data(), meshes.size());
 		pCsg->makePositiveAndLeftHeavy();
-
 
         XTIMER_HELPER(setClock("octree"));
         Octree* pOctree = new Octree();
@@ -191,7 +216,7 @@ extern "C"
 
 		auto cgalbbox = Bbox_3(-1,-1,-1, 1, 1, 1);
 		cgalbbox = enlarge(cgalbbox, padding);
-		pOctree->build(meshes, cgalbbox, &intersectLeaves);
+		pOctree->build(meshes, cgalbbox, false, &intersectLeaves);
         XLOG_INFO << "build octree time: " << XTIMER_HELPER(milliseconds("octree")) << " ms";
         XLOG_INFO << "Number of triaabb test: " << xrcount <<" / " << pre_count << " / " << after_count;
 
@@ -224,9 +249,9 @@ extern "C"
         }
 
         XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
-        csgResult->invCoords(center, scale);
 
-        debug_mesh->invCoords(center, scale);
+        csgResult->set_transform(center, scale);
+        debug_mesh->set_transform(center, scale);
         //RegularMesh::writeFile(*debug_mesh, "D:/debug.off");
         delete debug_mesh;
 

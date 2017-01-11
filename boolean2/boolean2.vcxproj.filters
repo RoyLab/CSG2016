@@ -127,5 +127,8 @@
     <ClCompile Include="intersection_refine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PointInMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -103,7 +103,7 @@ namespace Boolean
 
         inline bool triboxtest(const Triangle* pTri, const XR::BoundingBox& bbox)
         {
-            CGALTriangle cgalTri = convertToCGALTriangle(pTri);
+            //CGALTriangle cgalTri = convertToCGALTriangle<Depick>(pTri);
 
             //bool res =  CGAL::do_intersect(CGAL::Bbox_3(bbox.minVal(0), bbox.minVal(1),
             //    bbox.minVal(2), bbox.maxVal(0), bbox.maxVal(1), bbox.maxVal(2)), cgalTri);
@@ -160,9 +160,11 @@ namespace Boolean
         return root;
     }
 
-    void Octree::build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, std::vector<Node*>* isectNodes)
+    void Octree::build(const std::vector<RegularMesh*>& meshList, const Bbox_3& bbox, bool split_normal, std::vector<Node*>* isectNodes)
     {
         if (!meshList.size()) throw std::exception("mesh list size 0.");
+
+        split_normal_ = split_normal;
 
         mp_meshes = meshList.data();
         m_nMesh = meshList.size();
@@ -175,17 +177,22 @@ namespace Boolean
     {
         assert(root);
 
-        if (root->triTable.size() <= 1)
-        {
-            root->type = NODE_SIMPLE;
-        }
-        else if (root->triCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
+        if (root->triCount <= MAX_TRIANGLE_COUNT || level > MAX_LEVEL)
         {
             root->type = NODE_COMPOUND;
             if (isectNodes) isectNodes->push_back(root);
         }
         else
         {
+            if (root->triTable.size() <= 1)
+            {
+                if (!split_normal_ || root->triCount <= MAX_TRIANGLE_COUNT)
+                {
+                    root->type = NODE_SIMPLE;
+                    return;
+                }
+            }
+
             root->type = NODE_MIDSIDE;
             root->pChildren = new Node[8];
 

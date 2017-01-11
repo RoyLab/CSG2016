@@ -232,177 +232,194 @@ namespace Boolean
         CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
 
         SSeed tmpSeed;
-        MyVertex& seedV = xvertex(seedId);
-        tmpSeed.edgeId = *seedV.edges_local().begin();
-        MyEdge& seedE = xedge(tmpSeed.edgeId);
-
-        tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
-        calcEdgeIndicatorByExtremity(seedId, tmpSeed, 
-            *reinterpret_cast<FullIndicatorVector*>(tmpSeed.eIndicators.get()), nMesh);
-
-        MeshId curMeshId;
+        MeshId curMeshId = 0;
         std::queue<IPolygon*> faceQueue;
         std::queue<SSeed> intraQueue, interQueue;
-        bool added, inverse;
+        bool added = false, inverse = false;
         std::pair<uint32_t, uint32_t> inversePair;
-        Relation relation;
+        Relation relation = REL_NOT_AVAILABLE;
         TestTree dummyForest;
         std::vector<Relation> relTab(nMesh);
         std::vector<EdgeIndex> edges;
 
-        interQueue.push(tmpSeed);
-        tmpSeed.pFace->mark = SEEDED0;
-        assert(tmpSeed.pFace->isValid());
-        while (!interQueue.empty())
+        bool is_first_seed = true;
+        for (int imesh = 0; imesh < xmeshlist().size(); ++imesh)
         {
-            SSeed curSeed = interQueue.front();
-            interQueue.pop();
-
-            if (curSeed.pFace->mark == VISITED)
-                continue;
-
-            assert(intraQueue.empty());
-            curSeed.pFace->mark = SEEDED1;
-            intraQueue.push(curSeed);
-
-            curMeshId = curSeed.pFace->meshId();
-            inverse = meshList[curMeshId]->inverse();
-            if (inverse)
-                inversePair.first = result->faces().size();
-
-            bool seedFlag = true;
-            while (!intraQueue.empty())
+            RegularMesh* mesh = xmeshlist()[imesh];
+            for (int iface = 0; iface = mesh->faces().size(); ++iface)
             {
-                curSeed = intraQueue.front();
-                intraQueue.pop();
-
-                if (curSeed.pFace->mark == VISITED)
-                    continue;
-
-                CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
-
-                try
+                if (is_first_seed)
                 {
-                    calcFaceIndicator(curSeed, relTab, seedFlag?false:true);
+                    MyVertex& seedV = xvertex(seedId);
+                    tmpSeed.edgeId = *seedV.edges_local().begin();
+                    //MyEdge& seedE = xedge(tmpSeed.edgeId);
+
+                    tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
+                    calcEdgeIndicatorByExtremity(seedId, tmpSeed,
+                        *reinterpret_cast<FullIndicatorVector*>(tmpSeed.eIndicators.get()), nMesh);
+                    is_first_seed = false;
                 }
-                catch (int e)
+                else
                 {
-                    if (e == 1)
-                    {
-                        curSeed.pFace->mark = VISITED;
-                        continue;
-                    }
+                    MyVertex& seedV = xvertex(seedId);
+                    tmpSeed.edgeId = *seedV.edges_local().begin();
                 }
-                if (seedFlag) seedFlag = false; // only for debug use
 
-                relation = ParsingCSGTree(meshList[curMeshId], relTab.data(), 
-                    nMesh, tree0, curTreeLeaves, dummyForest);
-                assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
-
-                added = (relation == REL_SAME); 
-                faceQueue.push(curSeed.pFace);
-                while (!faceQueue.empty())
+                interQueue.push(tmpSeed);
+                tmpSeed.pFace->mark = SEEDED0;
+                assert(tmpSeed.pFace->isValid());
+                while (!interQueue.empty())
                 {
-                    IPolygon* curFace = faceQueue.front();
-                    faceQueue.pop();
-                    if (curFace->mark == VISITED)
+                    SSeed curSeed = interQueue.front();
+                    interQueue.pop();
+
+                    if (curSeed.pFace->mark == VISITED)
                         continue;
 
-                    curFace->mark = VISITED;
-                    if (added)
-                        result->faces().push_back(curFace);
+                    assert(intraQueue.empty());
+                    curSeed.pFace->mark = SEEDED1;
+                    intraQueue.push(curSeed);
 
-                    edges.clear();
-                    curFace->getAllEdges(edges);
-                    //assert(edges.size() == curFace->degree());
+                    curMeshId = curSeed.pFace->meshId();
+                    inverse = meshList[curMeshId]->inverse();
+                    if (inverse)
+                        inversePair.first = result->faces().size();
 
-                    // flood filling, bfs
-                    for (int i = 0; i < edges.size(); i++)
+                    bool seedFlag = true;
+                    while (!intraQueue.empty())
                     {
-                        MyEdge& curEdge = xedge(edges[i]);
-                        MyEdge::FaceIterator fItr(curEdge);
-                        if (curEdge.neighbor)
+                        curSeed = intraQueue.front();
+                        intraQueue.pop();
+
+                        if (curSeed.pFace->mark == VISITED)
+                            continue;
+
+                        CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
+
+                        try
                         {
-                            // 但因为共面的存在，有些neigh可能记录的相邻，但不在相邻面当中，这没关系！
-                            //assert(curEdge.faceCount() >= 4); //  ，那么一定会有超过4个polygon在周围
-                            for (; fItr; ++fItr)
+                            calcFaceIndicator(curSeed, relTab, seedFlag ? false : true);
+                        }
+                        catch (int e)
+                        {
+                            if (e == 1)
                             {
-                                if (!fItr.face())
+                                curSeed.pFace->mark = VISITED;
+                                continue;
+                            }
+                        }
+                        if (seedFlag) seedFlag = false; // only for debug use
+
+                        relation = ParsingCSGTree(meshList[curMeshId], relTab.data(),
+                            nMesh, tree0, curTreeLeaves, dummyForest);
+                        assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
+
+                        added = (relation == REL_SAME);
+                        faceQueue.push(curSeed.pFace);
+                        while (!faceQueue.empty())
+                        {
+                            IPolygon* curFace = faceQueue.front();
+                            faceQueue.pop();
+                            if (curFace->mark == VISITED)
+                                continue;
+
+                            curFace->mark = VISITED;
+                            if (added)
+                                result->faces().push_back(curFace);
+
+                            edges.clear();
+                            curFace->getAllEdges(edges);
+                            //assert(edges.size() == curFace->degree());
+
+                            // flood filling, bfs
+                            for (int i = 0; i < edges.size(); i++)
+                            {
+                                MyEdge& curEdge = xedge(edges[i]);
+                                MyEdge::FaceIterator fItr(curEdge);
+                                if (curEdge.neighbor)
                                 {
-                                    XLOG_ERROR << "Edge with less than two neighboring faces.";
-                                    continue;
-                                }
-
-                                if (!fItr.face()->isValid()) continue;
-
-                                tmpSeed.edgeId = edges[i];
-                                tmpSeed.pFace = fItr.face();
-
-                                for (int i = 0; i < nMesh; i++)
-                                {
-                                    Indicator tmpInd = REL_NOT_AVAILABLE;
-                                    switch (relTab[i])
+                                    // 但因为共面的存在，有些neigh可能记录的相邻，但不在相邻面当中，这没关系！
+                                    //assert(curEdge.faceCount() >= 4); //  ，那么一定会有超过4个polygon在周围
+                                    for (; fItr; ++fItr)
                                     {
-                                    case REL_SAME:
-                                    case REL_OPPOSITE:
-                                        tmpInd = REL_ON_BOUNDARY;
-                                        break;
-                                    default:
-                                        tmpInd = relTab[i];
-                                        break;
-                                    }
-                                    tmpSeed.eIndicators->at(i) = tmpInd;
-                                }
+                                        if (!fItr.face())
+                                        {
+                                            XLOG_ERROR << "Edge with less than two neighboring faces.";
+                                            continue;
+                                        }
 
-                                for (auto& nInfo : *curEdge.neighbor)
-                                    tmpSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
+                                        if (!fItr.face()->isValid()) continue;
 
-                                if (fItr.face()->meshId() == curMeshId)
-                                {
-                                    if (fItr.face()->mark < SEEDED1)
-                                    {
-                                        tmpSeed.pFace->mark = SEEDED1;
-                                        intraQueue.push(tmpSeed);
+                                        tmpSeed.edgeId = edges[i];
+                                        tmpSeed.pFace = fItr.face();
+
+                                        for (int i = 0; i < nMesh; i++)
+                                        {
+                                            Indicator tmpInd = REL_NOT_AVAILABLE;
+                                            switch (relTab[i])
+                                            {
+                                            case REL_SAME:
+                                            case REL_OPPOSITE:
+                                                tmpInd = REL_ON_BOUNDARY;
+                                                break;
+                                            default:
+                                                tmpInd = relTab[i];
+                                                break;
+                                            }
+                                            tmpSeed.eIndicators->at(i) = tmpInd;
+                                        }
+
+                                        for (auto& nInfo : *curEdge.neighbor)
+                                            tmpSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
+
+                                        if (fItr.face()->meshId() == curMeshId)
+                                        {
+                                            if (fItr.face()->mark < SEEDED1)
+                                            {
+                                                tmpSeed.pFace->mark = SEEDED1;
+                                                intraQueue.push(tmpSeed);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (fItr.face()->mark < SEEDED0)
+                                            {
+                                                tmpSeed.pFace->mark = SEEDED0;
+                                                interQueue.push(tmpSeed);
+                                            }
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    if (fItr.face()->mark < SEEDED0)
+                                    for (; fItr; ++fItr)
                                     {
-                                        tmpSeed.pFace->mark = SEEDED0;
-                                        interQueue.push(tmpSeed);
+                                        if (!fItr.face())
+                                        {
+                                            XLOG_ERROR << "Edge with less than two neighboring faces.";
+                                            continue;
+                                        }
+                                        if (!fItr.face()->isValid() || fItr.face()->meshId() != curMeshId) continue;
+                                        if (fItr.face()->mark < SEEDED2)
+                                        {
+                                            faceQueue.push(fItr.face());
+                                            fItr.face()->mark = SEEDED2;
+                                        }
                                     }
                                 }
                             }
                         }
-                        else
-                        {
-                            for (; fItr; ++fItr)
-                            {
-                                if (!fItr.face())
-                                {
-                                    XLOG_ERROR << "Edge with less than two neighboring faces.";
-                                    continue;
-                                }
-                                if (!fItr.face()->isValid() || fItr.face()->meshId() != curMeshId) continue;
-                                if (fItr.face()->mark < SEEDED2)
-                                {
-                                    faceQueue.push(fItr.face());
-                                    fItr.face()->mark = SEEDED2;
-                                }
-                            }
-                        }
+                    } // loop inseed mesh
+
+                    if (inverse)
+                    {
+                        inversePair.second = result->faces().size();
+                        result->inverseMap.push_back(inversePair);
                     }
-                }
-                //break;
-            }
-            if (inverse)
-            {
-                inversePair.second = result->faces().size();
-                result->inverseMap.push_back(inversePair);
-            }
-            //break;
-        }
+                } // loop seed
+            } // face loop
+        } // mesh loop
+
         SAFE_DELETE_ARRAY(curTreeLeaves);
     }
 

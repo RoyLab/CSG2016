@@ -1,5 +1,6 @@
 #pragma once
 #include <macros.h>
+#include <xgeometry.h>
 
 #include <deque>
 
@@ -48,6 +49,7 @@ namespace Boolean
     public:
 		FaceInsctData* inscts = nullptr;
         bool add_as_insct_triangle = false;
+        int octree_mark = -1;
 
 		Triangle(uint32_t meshId, uint32_t i): IPolygon(i, meshId) {}
         ~Triangle();
@@ -102,13 +104,20 @@ namespace Boolean
 	};
 
     template <class CGALPointT>
-    CGALPointT convertToCGALPoint(const cyPointT& pt)
+    inline CGALPointT convertToCGALPoint(const cyPointT& pt)
     {
         return CGALPointT(pt.x, pt.y, pt.z);
     }
 
-    CGALTriangle convertToCGALTriangle(const Triangle*);
-
+    template <class Kernel>
+    inline typename Kernel::Triangle_3 convertToCGALTriangle(const Triangle* tri)
+    {
+        return typename Kernel::Triangle_3(
+            convertToCGALPoint<typename Kernel::Point_3>(tri->point(0)),
+            convertToCGALPoint<typename Kernel::Point_3>(tri->point(1)),
+            convertToCGALPoint<typename Kernel::Point_3>(tri->point(2))
+        );
+    }
 
     // 0---------------1
     //       edge 0
@@ -181,6 +190,7 @@ namespace Boolean
 		uint32_t m_id;
 		bool m_bInverse = false;
         cyPointT m_center, m_scale;
+        XR::BoundingBox bbox_;
 
 	public:
 		static RegularMesh* loadFromFile(const char*, uint32_t id);
@@ -198,11 +208,12 @@ namespace Boolean
 		uint32_t id() const { return m_id; }
 
         /// do not actually change te coordinates
-        void invCoords(const cyPointT& c, const cyPointT& s) { m_center = c; m_scale = s; }
+        void set_transform(const cyPointT& c, const cyPointT& s) { m_center = c; m_scale = s; }
 
 		// access
 		std::vector<FaceT*>& faces() { return m_faces; }
 		const std::vector<FaceT*>& faces() const  {return m_faces; }
+        XR::BoundingBox bbox() const { return bbox_; }
 
         // geometry info
 		void prepareBoolean();
