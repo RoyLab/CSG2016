@@ -1,4 +1,6 @@
 #include "precompile.h"
+#include <xlogger.h>
+
 #include "geoprimitive.h"
 
 #include "xmemory.h"
@@ -183,6 +185,70 @@ namespace Boolean
             if (fh.ptr == ptr) return fh.orientation;
 
         return 0;
+    }
+
+    XPlane MyEdge::get_vertical_plane(const XPlane& splane, int* count) const
+    {
+        XPlane tmpPlane;
+        if (*count) *count = 0;
+        for (auto &neigh : *neighbor)
+        {
+            std::vector<XPlane> test_planes;
+            if (neigh.second.type == NeighborInfo::Edge)
+            {
+                for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
+                    fItr; fItr.incrementToTriangle())
+                {
+                    assert(fItr.face()->getType() == IPolygon::TRIANGLE);
+                    tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
+                    test_planes.push_back(tmpPlane);
+                }
+            }
+            else
+            {
+                assert(neigh.second.type == NeighborInfo::Face);
+                tmpPlane = neigh.second.pTrangle->supportingPlane();
+                test_planes.push_back(tmpPlane);
+            }
+
+            for (XPlane cur_test : test_planes)
+            {
+                if (*count) ++(*count);
+                if (!cur_test.parallel(splane))
+                {
+                    return cur_test;
+                }
+            }
+        }
+        return XPlane();
+    }
+
+    bool MyEdge::correct_plane_orientation(const IPolygon* face, XPlane& plane) const
+    {
+        VertexIndex prev = INVALID_UINT32, next = INVALID_UINT32;
+        face->get_edge_endpoint_in_order(*this, prev, next);
+        PlaneLine line(face->supportingPlane(), plane);
+        int tmpSide = linear_order(
+            line,
+            xvertex(next),
+            xvertex(prev)
+        );
+
+        if (tmpSide == 0)
+        {
+            XLOG_ERROR << "edge end points are coincident";
+            throw "";
+        }
+
+        if (tmpSide < 0)
+        {
+            plane.inverse();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     bool MyEdge::remove(const IPolygon *ptr)

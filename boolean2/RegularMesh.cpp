@@ -514,70 +514,43 @@ namespace Boolean
         assert(orientation(supportingPlane(), (vertex(1))) == ON_ORIENTED_BOUNDARY);
         assert(orientation(supportingPlane(), (vertex(2))) == ON_ORIENTED_BOUNDARY);
 
-        int edgeIndexInFace = -1;
-        for (int i = 0; i < degree(); i++)
-        {
-            if (edgeId(i) == id)
-            {
-                edgeIndexInFace = i;
-                break;
-            }
-        }
-        assert(edgeIndexInFace != -1);
-
-        VertexIndex vIdInPlane;
         XPlane boundPlane, tmpPlane;
         MyEdge& edge = xedge(id);
+        int test_plane_count = 0;
 
-        // find init point
-        for (int i = 2; i < degree(); i++)
+        if (!edge.neighbor)
         {
-            vIdInPlane = vertexId((edgeIndexInFace + i) % degree());
-
-            // find a bounding plane
-            bool flag = false;
-            for (auto &neigh : *edge.neighbor)
-            {
-                if (neigh.second.type == NeighborInfo::Edge)
-                {
-                    for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
-                        fItr; fItr.incrementToTriangle())
-                    {
-                        assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                        tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
-                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                        {
-                            boundPlane = tmpPlane;
-                            flag = true;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    assert(neigh.second.type == NeighborInfo::Face);
-                    XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
-                    if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                    {
-                        boundPlane = tmpPlane;
-                        break;
-                    }
-                }
-                if (flag) break;
-            }
-            if (boundPlane.is_valid()) break;
+            XLOG_ERROR << "Edges without a neighborhood becomes the seed";
+            throw "";
         }
-        assert(boundPlane.is_valid());
 
-        // correct the direction of bounding plane
-        PlaneLine edgeLine(supportingPlane(), boundPlane);
-        assert(!supportingPlane().id_equals(boundPlane));
-        int tmpSide = linear_order(edgeLine, xvertex(vertexId((edgeIndexInFace + 1) % degree())),
-            xvertex(vertexId(edgeIndexInFace)));
+        boundPlane = edge.get_vertical_plane(supportingPlane());
 
-        assert(tmpSide != 0);
-        if (tmpSide < 0)
-            boundPlane.inverse();
+        if (!boundPlane.is_valid())
+        {
+            XLOG_ERROR << "Cannot find a vertical plane. test: " << test_plane_count;
+            throw "";
+        }
+
+        //int edgeIndexInFace = -1;
+        //for (int i = 0; i < degree(); i++)
+        //{
+        //    if (edgeId(i) == id)
+        //    {
+        //        edgeIndexInFace = i;
+        //        break;
+        //    }
+        //}
+        //assert(edgeIndexInFace != -1);
+
+        //// correct the direction of bounding plane
+        //PlaneLine edgeLine(supportingPlane(), boundPlane);
+        //int tmpSide = linear_order(edgeLine, xvertex(vertexId((edgeIndexInFace + 1) % degree())),
+        //    xvertex(vertexId(edgeIndexInFace)));
+
+        //assert(tmpSide != 0);
+        //if (tmpSide < 0)
+        //    boundPlane.inverse();
 
         // pick a correct rep vertex
         VertexIndex repVertexId = INVALID_UINT32;
@@ -589,11 +562,13 @@ namespace Boolean
                 break;
             }
         }
+
         if (repVertexId == INVALID_UINT32)
         {
             XLOG_ERROR << "may be there is self-intersection.";
             throw 1;
         }
+
         return repVertexId;
     }
 
@@ -688,79 +663,52 @@ namespace Boolean
         assert(orientation(supportingPlane(), (vertex(0, 1))) == ON_ORIENTED_BOUNDARY);
         assert(orientation(supportingPlane(), (vertex(0, 2))) == ON_ORIENTED_BOUNDARY);
 
-        int edgeIndexInFace = -1, edgeIndexInFace2 = -1;
-        for (int i = 0; i < loops_.size(); ++i)
-        {
-            for (int j = 0; j < loops_[i].vIds.size(); ++j)
-            {
-                if (edgeId(i, j) == id)
-                {
-                    edgeIndexInFace = i;
-                    edgeIndexInFace2 = j;
-                    break;
-                }
-            }
-        }
-        assert(edgeIndexInFace != -1);
-
-        VertexIndex vIdInPlane;
-        XPlane boundPlane, tmpPlane;
+        XPlane boundPlane;
         MyEdge& edge = xedge(id);
+        int test_plane_count = 0;
 
-        // find init point
-        for (int i = 0; i < loops_.size(); ++i)
+        if (!edge.neighbor)
         {
-            for (int j = 0; j < loops_[i].vIds.size(); ++j)
-            {
-                vIdInPlane = vertexId(i, j);
-
-                // find a bounding plane
-                bool flag = false;
-                for (auto &neigh : *edge.neighbor)
-                {
-                    if (neigh.second.type == NeighborInfo::Edge)
-                    {
-                        for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
-                            fItr; fItr.incrementToTriangle())
-                        {
-                            assert(fItr.face()->getType() == IPolygon::TRIANGLE);
-                            tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
-                            if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                            {
-                                boundPlane = tmpPlane;
-                                flag = true;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        assert(neigh.second.type == NeighborInfo::Face);
-                        XPlane tmpPlane = neigh.second.pTrangle->supportingPlane();
-                        if (orientation(tmpPlane, xvertex(vIdInPlane)) != ON_ORIENTED_BOUNDARY)
-                        {
-                            boundPlane = tmpPlane;
-                            break;
-                        }
-                    }
-                    if (flag) break;
-                }
-                if (boundPlane.is_valid()) break;
-            }
+            XLOG_ERROR << "Edges without a neighborhood becomes the seed";
+            throw "";
         }
-        assert(boundPlane.is_valid());
 
-        // correct the direction of bounding plane
-        PlaneLine edgeLine(supportingPlane(), boundPlane);
-        assert(!supportingPlane().id_equals(boundPlane));
-        int tmpSide = linear_order(edgeLine, 
-            xvertex(vertexId(edgeIndexInFace, (edgeIndexInFace2 + 1) % loops_[edgeIndexInFace].vIds.size())),
-            xvertex(vertexId(edgeIndexInFace, edgeIndexInFace2))
-        );
+        boundPlane = edge.get_vertical_plane(supportingPlane());
 
-        assert(tmpSide != 0);
-        if (tmpSide < 0)
-            boundPlane.inverse();
+        if (!boundPlane.is_valid())
+        {
+            XLOG_ERROR << "Cannot find a vertical plane. test: " << test_plane_count;
+            throw "";
+        }
+
+        edge.correct_plane_orientation(this, boundPlane);
+
+        //// correct the direction of bounding plane
+        //int edgeIndexInFace = -1, edgeIndexInFace2 = -1;
+        //for (int i = 0; i < loops_.size(); ++i)
+        //{
+        //    for (int j = 0; j < loops_[i].vIds.size(); ++j)
+        //    {
+        //        if (edgeId(i, j) == id)
+        //        {
+        //            edgeIndexInFace = i;
+        //            edgeIndexInFace2 = j;
+        //            break;
+        //        }
+        //    }
+        //}
+        //assert(edgeIndexInFace != -1 && edgeIndexInFace2 != -1);
+
+        //PlaneLine edgeLine(supportingPlane(), boundPlane);
+        //assert(!supportingPlane().id_equals(boundPlane));
+        //int tmpSide = linear_order(edgeLine, 
+        //    xvertex(vertexId(edgeIndexInFace, (edgeIndexInFace2 + 1) % loops_[edgeIndexInFace].vIds.size())),
+        //    xvertex(vertexId(edgeIndexInFace, edgeIndexInFace2))
+        //);
+
+        //assert(tmpSide != 0);
+        //if (tmpSide < 0)
+        //    boundPlane.inverse();
 
         // pick a correct rep vertex
         VertexIndex repVertexId = INVALID_UINT32;
@@ -775,7 +723,13 @@ namespace Boolean
                 }
             }
         }
-        assert(repVertexId != INVALID_UINT32);
+
+        if (repVertexId == INVALID_UINT32)
+        {
+            XLOG_ERROR << "may be there is self-intersection.";
+            throw 1;
+        }
+
         return repVertexId;
     }
 

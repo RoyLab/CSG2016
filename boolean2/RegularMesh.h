@@ -30,6 +30,8 @@ namespace Boolean
         virtual TYPE getType() const = 0;
         virtual VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const = 0;
         virtual VertexIndex outer_vertex_id(int i) const = 0;
+        virtual bool get_edge_endpoint_in_order(const MyEdge&, 
+            VertexIndex &prev, VertexIndex& next) const = 0;
         virtual size_t outer_degree() const = 0;
         virtual bool isValid() const = 0;
 
@@ -69,6 +71,8 @@ namespace Boolean
         bool coherentEdge(int whichEdge) const; // 等价于MyEdge的faceOrientation
         VertexIndex getTheOtherVertex(EdgeIndex eId) const;
         VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const;
+        bool get_edge_endpoint_in_order(const MyEdge&,
+            VertexIndex &prev, VertexIndex& next) const;
 
 		// search
         VertexIndex findFaceVertex(const PlanePoint& pt, EdgeIndex eIdx, const PlaneLine& line, VertexIndex*&, VertexIndex* hint = nullptr);
@@ -143,6 +147,9 @@ namespace Boolean
         VertexIndex outer_vertex_id(int i) const { return vIds[i]; }
         size_t outer_degree() const { return vIds.size(); }
 
+        bool get_edge_endpoint_in_order(const MyEdge&,
+            VertexIndex &prev, VertexIndex& next) const;
+
     protected:
         std::vector<EdgeIndex> eIds;
         std::vector<VertexIndex> vIds;
@@ -170,6 +177,9 @@ namespace Boolean
 
         VertexIndex outer_vertex_id(int i) const { return loops_[0].vIds[i]; }
         size_t outer_degree() const { return loops_[0].vIds.size(); }
+
+        bool get_edge_endpoint_in_order(const MyEdge&,
+            VertexIndex &prev, VertexIndex& next) const;
 
     protected:
         // 0---------------1
