@@ -217,6 +217,36 @@ namespace Boolean
         return xvertex(theOtherVId(thiz));
     }
 
+    //EdgeSIndex MyEdge::get_non_coplanar_edge() const
+    //{
+    //    MyVertex& theOther = theOtherVertex(seedId);
+
+    //    auto fItr = MyEdge::ConstFaceIterator(*this);
+    //    if (fItr.face()->getType() == IPolygon::TRIANGLE)
+    //    {
+    //        const_cast< reinterpret_cast<Triangle*>(fItr.face())->calcSupportingPlane();
+    //    }
+    //    XPlane basePlane = fItr.face()->supportingPlane();
+    //    flag = false; // 是否有不共面的相邻面
+    //    for (; fItr; ++fItr)
+    //    {
+    //        if (!fItr.face()->isValid()) continue;
+
+    //        if (fItr.face()->getType() == IPolygon::TRIANGLE)
+    //        {
+    //            Triangle* pTri = (Triangle*)fItr.face();
+    //            pTri->calcSupportingPlane();
+    //        }
+
+    //        if (!basePlane.parallel(fItr.face()->supportingPlane()))
+    //        {
+    //            seed.edgeId = edgeId;
+    //            flag = true;
+    //            break;
+    //        }
+    //    }
+    //}
+
     VertexIndex MyEdge::theOtherVId(VertexIndex thiz) const
     {
         if (vertex_id_equals_simple(ends[0], thiz))

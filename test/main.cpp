@@ -33,10 +33,6 @@ void TestByMethod(std::vector<std::string>& names, std::string& expr, const std:
 
 int main(int argc, char* argv[])
 {
-    std::cout << (1 << 0) << std::endl;
-    system("pause");
-    return 0;
-
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
     cmd_parser.add<std::string>("method", 'm', "method used for evaluation", false, "my", cmdline::oneof<std::string>("cgal", "my", "cork"));

@@ -182,6 +182,9 @@ extern "C"
         else if (pMem->points.size() < 1000) logDieta = 0;
         exactinit(logDieta);
 
+        //std::vector<VertexIndex> xmins2;
+        //XR::BoundingBox aabb2(pMem->points.begin(), pMem->points.end(), xmins2);
+
         // transform vertices coordinates
 		cyPointT center, scale;
 		for (int i = 0; i < 3; i++)

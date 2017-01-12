@@ -47,7 +47,7 @@ namespace Boolean
         //void add_merged_edges(VertexIndex mergeid, EdgeIndex edgeid);
         VertexIndex get_main_vertexId(VertexIndex) const;
         void mergeVertices(VertexIndex a, VertexIndex b);
-
+        bool is_original_vertex(VertexIndex id) const { return id < points.size(); }
         void clear();
 
         // debug only

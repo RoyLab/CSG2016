@@ -11,7 +11,7 @@
 
 void TestByMethod(std::vector<std::string>& names, std::string& expr, const std::string& output, std::string method);
 
-int main2(int argc, char* argv[])
+int main22(int argc, char* argv[])
 {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("name", 'n', "self intersection", true);

@@ -29,11 +29,8 @@ namespace Boolean
         virtual void getAllEdges(std::vector<EdgeIndex>&) const = 0;
         virtual TYPE getType() const = 0;
         virtual VertexIndex get_rep_vertex(EdgeIndex edgeIdx) const = 0;
-
-        //virtual MyEdge& edge(int i) const;
-        //virtual uint32_t edgeId(int i) const = 0;
-        //virtual MyVertex& vertex(int i)const;
-        //virtual uint32_t vertexId(int i)const = 0;
+        virtual VertexIndex outer_vertex_id(int i) const = 0;
+        virtual size_t outer_degree() const = 0;
         virtual bool isValid() const = 0;
 
         XPlane supportingPlane() const { assert(sPlane.is_valid()); return sPlane; }
@@ -64,6 +61,8 @@ namespace Boolean
         MyVertex& vertex(int i)const;
         EdgeIndex edgeId(int i) const { return eIds[i]; }
         VertexIndex vertexId(int i) const { return vIds[i]; }
+        VertexIndex outer_vertex_id(int i) const { return vIds[i]; }
+        size_t outer_degree() const { return 3; }
 
         void get_vertices_for_dumping(std::vector<VertexIndex>&) const;
         void getAllEdges(std::vector<EdgeIndex>& output) const;
@@ -141,6 +140,9 @@ namespace Boolean
         VertexIndex vertexId(int i) const { return vIds[i]; }
         uint32_t degree() const { return m_degree; }
 
+        VertexIndex outer_vertex_id(int i) const { return vIds[i]; }
+        size_t outer_degree() const { return vIds.size(); }
+
     protected:
         std::vector<EdgeIndex> eIds;
         std::vector<VertexIndex> vIds;
@@ -165,6 +167,9 @@ namespace Boolean
         MyVertex& vertex(int i, int j)const;
         EdgeIndex edgeId(int i, int j) const { return loops_[i].eIds[j]; }
         VertexIndex vertexId(int i, int j) const { return loops_[i].vIds[j]; }
+
+        VertexIndex outer_vertex_id(int i) const { return loops_[0].vIds[i]; }
+        size_t outer_degree() const { return loops_[0].vIds.size(); }
 
     protected:
         // 0---------------1

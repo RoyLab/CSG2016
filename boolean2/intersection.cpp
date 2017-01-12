@@ -10,6 +10,8 @@
 #include "RegularMesh.h"
 #include "xmemory.h"
 
+#define FAST_DEBUG
+
 namespace Boolean
 {
 	namespace
@@ -667,7 +669,9 @@ namespace Boolean
                                         insct_triangles.push_back(t[i]);
                                     }
                                 }
+#ifndef FAST_DEBUG
                                 assert(cgalTriTriCheck(fh0, fh1));
+#endif
 								adjGraph->setValue(meshId[0], meshId[1], true);
                             }
 

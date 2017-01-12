@@ -38,7 +38,50 @@ namespace Boolean
         XLOG_ERROR << UNIMPLEMENTED_DECLARATION;
     }
 
-    void calcEdgeIndicatorByExtremity(VertexIndex seedId, SSeed& seed, FullIndicatorVector& inds, size_t nMesh)
+    void calcNormalSeed(VertexIndex seedId, SSeed& seed, size_t nMesh, Octree* pOctree)
+    {
+        FullIndicatorVector vInds(nMesh);
+        MyVertex& seedV = xvertex(seedId);
+        cyPointT seedPts = seedV.vertex_rep();
+        for (int i = 0; i < nMesh; i++)
+        {
+            vInds[i] = REL_UNKNOWN;
+        }
+
+        // 找到那些on boundary的mesh，通过遍历所有的边上的面，查看它们的meshId
+        for (auto &edgeId : seedV.edges_local())
+        {
+            MyEdge& eRef = xedge(edgeId);
+            MyVertex& theOther = eRef.theOtherVertex(seedId);
+            if (theOther.isPlaneRep()) continue; // 过滤掉非原始边
+
+            auto fItr = MyEdge::ConstFaceIterator(eRef);
+            for (; fItr; ++fItr)
+            {
+                if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue; // 过滤掉非原始面
+                vInds[fItr.face()->meshId()] = REL_ON_BOUNDARY;
+            }
+        }
+
+        for (int i = 0; i < nMesh; i++)
+        {
+            if (vInds[i] == REL_UNKNOWN)
+            {
+                vInds[i] = PolyhedralInclusionTest(
+                    seedPts, 
+                    pOctree, 
+                    xmeshlist(), 
+                    i, 
+                    xmeshlist()[i]->inverse()
+                );
+            }
+        }
+
+        calcEdgeIndicator(seedId, seed.edgeId, vInds,
+            *(FullIndicatorVector*)seed.eIndicators.get());
+    }
+
+    void calcFirstSeed(VertexIndex seedId, SSeed& seed, size_t nMesh)
     {
         FullIndicatorVector vInds(nMesh);
         MyVertex& seedV = xvertex(seedId);
@@ -113,7 +156,8 @@ namespace Boolean
         }
         assert(flag);
 
-        calcEdgeIndicator(seedId, seed.edgeId, vInds, inds);
+        calcEdgeIndicator(seedId, seed.edgeId, vInds, 
+            *(FullIndicatorVector*)seed.eIndicators.get());
     }
 
     Relation vRelation2fRelation(Oriented_side rel, XPlane& testPlane, XPlane& refPlane)
@@ -134,16 +178,6 @@ namespace Boolean
                 return REL_OPPOSITE;
         }
     }
-
-    //VertexIndex GetRepVertex_SPOLY(EdgeIndex edgeId, SubPolygon* polygon)
-    //{
-
-    //}
-
-    //VertexIndex GetRepVertex_TRI(EdgeIndex edgeId, Triangle* polygon)
-    //{
-
-    //}
 
     void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab, bool hasNeighbor)
     {
@@ -226,12 +260,13 @@ namespace Boolean
         VertexIndex seedId, RegularMesh* debug_mesh)
     {
         g_debug_mesh = debug_mesh;
+        GlobalData* pMem = GlobalData::getObject();
 
         uint32_t nMesh = meshList.size();
         CSGTreeOld* tree = pCSG->auxiliary();
         CSGTreeNode** curTreeLeaves = new CSGTreeNode*[nMesh];
 
-        SSeed tmpSeed;
+        SSeed tmpSeed; tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
         MeshId curMeshId = 0;
         std::queue<IPolygon*> faceQueue;
         std::queue<SSeed> intraQueue, interQueue;
@@ -242,27 +277,52 @@ namespace Boolean
         std::vector<Relation> relTab(nMesh);
         std::vector<EdgeIndex> edges;
 
-        bool is_first_seed = true;
+        int seed_count = 0;
         for (int imesh = 0; imesh < xmeshlist().size(); ++imesh)
         {
             RegularMesh* mesh = xmeshlist()[imesh];
-            for (int iface = 0; iface = mesh->faces().size(); ++iface)
+            for (int iface = 0; iface < mesh->faces().size(); ++iface)
             {
-                if (is_first_seed)
+                IPolygon* cur_face = mesh->faces()[iface];
+                if (!cur_face->isValid() ||
+                    cur_face->mark == VISITED)
+                {
+                    continue;
+                }
+
+                if (seed_count == 0)
                 {
                     MyVertex& seedV = xvertex(seedId);
                     tmpSeed.edgeId = *seedV.edges_local().begin();
-                    //MyEdge& seedE = xedge(tmpSeed.edgeId);
-
-                    tmpSeed.eIndicators.reset(new FullIndicatorVector(nMesh));
-                    calcEdgeIndicatorByExtremity(seedId, tmpSeed,
-                        *reinterpret_cast<FullIndicatorVector*>(tmpSeed.eIndicators.get()), nMesh);
-                    is_first_seed = false;
+                    calcFirstSeed(seedId, tmpSeed, nMesh);
+                    ++seed_count;
                 }
                 else
                 {
-                    MyVertex& seedV = xvertex(seedId);
-                    tmpSeed.edgeId = *seedV.edges_local().begin();
+                    bool find_orig = false;
+                    int i;
+                    for (i = 0; i < cur_face->outer_degree(); ++i)
+                    {
+                        if (pMem->is_original_vertex(cur_face->outer_vertex_id(i)))
+                        {
+                            find_orig = true;
+                            break;
+                        }
+                    }
+
+                    if (!find_orig)
+                    {
+                        continue;
+                    }
+
+                    std::vector<EdgeIndex> edges;
+                    cur_face->getAllEdges(edges);
+
+                    tmpSeed.edgeId = edges[0];
+                    tmpSeed.pFace = cur_face;
+                    calcNormalSeed(cur_face->outer_vertex_id(i), tmpSeed, nMesh, pOctree);
+
+                    XLOG_DEBUG << "new seed " << seed_count;
                 }
 
                 interQueue.push(tmpSeed);

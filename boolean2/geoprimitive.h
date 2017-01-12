@@ -126,7 +126,6 @@ namespace Boolean
         VertexIndex ends[2];
         std::map<MeshIndex, NeighborInfo>* neighbor = nullptr;
         EdgeInsctData* inscts = nullptr;
-        //bool noOverlapNeighbor = false;
 
     public:
         MyEdge(VertexIndex a, VertexIndex b) : ends{ a, b }
@@ -142,6 +141,7 @@ namespace Boolean
         uint32_t faceCount() const;
         VertexIndex theOtherVId(VertexIndex thiz) const;
         MyVertex& theOtherVertex(VertexIndex thiz) const;
+        EdgeSIndex get_non_coplanar_edge() const;
 
     private:
         EdgeFaceHandle fhs[2];

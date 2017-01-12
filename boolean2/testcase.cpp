@@ -79,7 +79,7 @@ XRWY_DLL void test1()
 
     // sample mode
     //nb_points = 1;
-    //K::Point_3 sample(-3.02041, 3.50603, 3.58144);
+    //K::Point_3 sample = *poly.points_begin();
 
     std::vector<Point> points;
     points.reserve(nb_points);
