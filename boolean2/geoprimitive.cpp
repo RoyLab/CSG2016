@@ -190,7 +190,7 @@ namespace Boolean
     XPlane MyEdge::get_vertical_plane(const XPlane& splane, int* count) const
     {
         XPlane tmpPlane;
-        if (*count) *count = 0;
+        if (count) *count = 0;
         for (auto &neigh : *neighbor)
         {
             std::vector<XPlane> test_planes;
@@ -213,7 +213,9 @@ namespace Boolean
 
             for (XPlane cur_test : test_planes)
             {
-                if (*count) ++(*count);
+                if (cur_test.is_degenerate()) continue;
+
+                if (count) ++(*count);
                 if (!cur_test.parallel(splane))
                 {
                     return cur_test;
@@ -223,10 +225,10 @@ namespace Boolean
         return XPlane();
     }
 
-    bool MyEdge::correct_plane_orientation(const IPolygon* face, XPlane& plane) const
+    bool MyEdge::correct_plane_orientation(EdgeIndex thiz, const IPolygon* face, XPlane& plane) const
     {
         VertexIndex prev = INVALID_UINT32, next = INVALID_UINT32;
-        face->get_edge_endpoint_in_order(*this, prev, next);
+        face->get_edge_endpoint_in_order(thiz, prev, next);
         PlaneLine line(face->supportingPlane(), plane);
         int tmpSide = linear_order(
             line,

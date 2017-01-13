@@ -75,6 +75,9 @@ namespace Boolean
 
     static RayTriRelation RayFaceTest(K::Ray_3 &ray, K::Triangle_3& triangle)
     {
+        if (triangle.is_degenerate())
+            return RTR_NONE;
+
         bool result = CGAL::do_intersect(ray, triangle);
         if (!result) return RTR_NONE;
 

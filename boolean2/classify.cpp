@@ -58,6 +58,7 @@ namespace Boolean
             auto fItr = MyEdge::ConstFaceIterator(eRef);
             for (; fItr; ++fItr)
             {
+                if (!fItr.face()) break;
                 if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue; // 过滤掉非原始面
                 vInds[fItr.face()->meshId()] = REL_ON_BOUNDARY;
             }
@@ -98,6 +99,7 @@ namespace Boolean
             auto fItr = MyEdge::ConstFaceIterator(eRef);
             for (; fItr; ++fItr)
             {
+                if (!fItr.face()) break;
                 if (fItr.face()->getType() == IPolygon::SUBPOLYGON) continue; // 过滤掉非原始面
                 vInds[fItr.face()->meshId()] = REL_ON_BOUNDARY;
             }
@@ -109,15 +111,8 @@ namespace Boolean
         for (auto &edgeId : seedV.edges_local())
         {
             MyEdge& eRef = xedge(edgeId);
-            MyVertex& theOther = eRef.theOtherVertex(seedId);
-
+            XPlane base;
             auto fItr = MyEdge::FaceIterator(eRef);
-            if (fItr.face()->getType() == IPolygon::TRIANGLE)
-            {
-                reinterpret_cast<Triangle*>(fItr.face())->calcSupportingPlane();
-            }
-            XPlane basePlane = fItr.face()->supportingPlane();
-            flag = false; // 是否有不共面的相邻面
             for (; fItr; ++fItr)
             {
                 if (!fItr.face()->isValid()) continue;
@@ -125,21 +120,41 @@ namespace Boolean
                 if (fItr.face()->getType() == IPolygon::TRIANGLE)
                 {
                     Triangle* pTri = (Triangle*)fItr.face();
-                    pTri->calcSupportingPlane();
+                    try
+                    {
+                        pTri->calcSupportingPlane();
+                    }
+                    catch (...)
+                    {
+                        XLOG_ERROR << "degenerate triangle";
+                        pTri->mark = VISITED;
+                        continue;
+                    }
                 }
                 
-                if (!basePlane.parallel(fItr.face()->supportingPlane()))
+                if (!base.is_valid())
                 {
-                    seed.edgeId = edgeId;
-                    flag = true;
-                    break;
+                    base = fItr.face()->supportingPlane();
+                }
+                else
+                {
+                    if (!base.parallel(fItr.face()->supportingPlane()))
+                    {
+                        seed.edgeId = edgeId;
+                        flag = true;
+                        break;
+                    }
                 }
             }
             if (flag) break;
         }
-        assert(flag);
         assert(vertex_id_equals_simple(xedge(seed.edgeId).ends[0], seedId)
             || vertex_id_equals_simple(xedge(seed.edgeId).ends[1] ,seedId));
+
+        if (!flag)
+        {
+            throw "";
+        }
 
         // 赋值pFace
         MyEdge& eRef = xedge(seed.edgeId);
@@ -179,7 +194,7 @@ namespace Boolean
         }
     }
 
-    void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab, bool hasNeighbor)
+    void calcFaceIndicator(SSeed& seed, std::vector<Relation>& relTab)
     {
         MyEdge& edge = xedge(seed.edgeId);
         IPolygon* polygon = seed.pFace;
@@ -189,33 +204,25 @@ namespace Boolean
         for (size_t i = 0; i < nMesh; i++)
         {
             relTab[i] = (Relation)seed.eIndicators.get()->at(i);
-#ifdef XR_DEBUG
-            bool flag = true;
-            if (i != polygon->meshId() && relTab[i] == REL_ON_BOUNDARY)
-            {
-                flag = false;
-                for (auto& neigh : *edge.neighbor)
-                {
-                    if (neigh.first == i)
-                    {
-                        flag = true;
-                        break;
-                    }
-                }
-            }
-
-            //if (!flag)
-            //{
-            //    g_debug_mesh->faces().push_back(polygon);
-            //    throw std::exception();
-            //}
-            //assert(flag);
-#endif
+//#ifdef XR_DEBUG
+//            bool flag = true;
+//            if (i != polygon->meshId() && relTab[i] == REL_ON_BOUNDARY)
+//            {
+//                flag = false;
+//                for (auto& neigh : *edge.neighbor)
+//                {
+//                    if (neigh.first == i)
+//                    {
+//                        flag = true;
+//                        break;
+//                    }
+//                }
+//            }
+//#endif
         }
 
         relTab[polygon->meshId()] = REL_SAME;
 
-        assert(!hasNeighbor || edge.neighbor->size());
         if (!edge.neighbor || edge.neighbor->empty()) return;
 
         MyVertex& repVertex = xvertex(seed.pFace->get_rep_vertex(seed.edgeId));
@@ -345,7 +352,7 @@ namespace Boolean
                     if (inverse)
                         inversePair.first = result->faces().size();
 
-                    bool seedFlag = true;
+                    //bool seedFlag = true;
                     while (!intraQueue.empty())
                     {
                         curSeed = intraQueue.front();
@@ -358,7 +365,7 @@ namespace Boolean
 
                         try
                         {
-                            calcFaceIndicator(curSeed, relTab, seedFlag ? false : true);
+                            calcFaceIndicator(curSeed, relTab);
                         }
                         catch (int e)
                         {
@@ -368,7 +375,7 @@ namespace Boolean
                                 continue;
                             }
                         }
-                        if (seedFlag) seedFlag = false; // only for debug use
+                        //if (seedFlag) seedFlag = false; // only for debug use
 
                         relation = ParsingCSGTree(meshList[curMeshId], relTab.data(),
                             nMesh, tree0, curTreeLeaves, dummyForest);

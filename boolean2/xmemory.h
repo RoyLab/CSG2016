@@ -20,6 +20,14 @@ namespace Boolean
         bool triangulation = false;
     };
 
+    struct CsgResult
+    {
+        double total_time = 0;
+        double step_time[4] = {0};
+        size_t n_vertices = 0, n_faces = 0;
+        bool error = 0;
+    };
+
     struct MergedVertex
     {
         std::set<VertexIndex> refs;
@@ -37,6 +45,9 @@ namespace Boolean
         std::deque<MyEdge>         edges;
         std::deque<MyVertex>       vertices;
         std::vector<RegularMesh*>   meshes;
+
+        CsgOption                   options;
+        CsgResult                   results;
 
         static GlobalData* getObject();
 

@@ -111,7 +111,8 @@ extern "C"
 {
 	using namespace Boolean;
 
-	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, const std::string& output)
+	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, 
+        const std::string& output, const std::string& log)
 	{
         XLOG_INFO << "\n***Test Begin***";
         XLOG_INFO << names.size() << " meshes:";
@@ -121,9 +122,10 @@ extern "C"
 #ifdef XR_PROFILE
         XLOG_INFO << "______tHIS iS pROFILING vERTION_____";
 #endif
+        GlobalData* pMem = GlobalData::getObject();
         initContext();
 
-        auto& meshlist = GlobalData::getObject()->meshes;
+        auto& meshlist = pMem->meshes;
         meshlist.resize(names.size());
 		for (int i = 0; i < names.size(); i++)
 		{
@@ -131,16 +133,43 @@ extern "C"
 		}
 
         XTIMER_HELPER(setClock("main"));
-		RegularMesh* result = solveCSG(expr, meshlist);
-        XLOG_INFO << "Overall time: " << XTIMER_HELPER(milliseconds("main")) << " ms";
-
-		RegularMesh::writeFile(*result, output.c_str());
+        RegularMesh* result = nullptr;
+        try
+        {
+            result = solveCSG(expr, meshlist);
+            pMem->results.total_time = XTIMER_HELPER(milliseconds("main"));
+            XLOG_INFO << "Overall time: " << pMem->results.total_time << " ms";
+            RegularMesh::writeFile(*result, output.c_str());
+            pMem->results.error = 0;
+        }
+        catch (...)
+        {
+            XLOG_FATAL << "Unexpected error.";
+            pMem->results.n_faces = 0;
+            pMem->results.n_vertices = 0;
+            pMem->results.error = 1;
+        }
 
 		SAFE_DELETE(result);
         for (auto mesh : meshlist)
         {
             mesh->clearFaces();
 			SAFE_DELETE(mesh);
+        }
+
+        // record results
+        if (log.size())
+        {
+            std::ofstream log_file(log);
+            log_file << "my\n";
+            log_file << pMem->results.total_time << std::endl;
+            log_file << pMem->results.n_faces << std::endl;
+            log_file << pMem->results.n_vertices << std::endl;
+            log_file << pMem->results.error << std::endl;
+            for (int i = 0; i < 4; ++i)
+            {
+                log_file << pMem->results.step_time[i] << std::endl;
+            }
         }
 
 		releaseContext();
@@ -220,41 +249,47 @@ extern "C"
 		auto cgalbbox = Bbox_3(-1,-1,-1, 1, 1, 1);
 		cgalbbox = enlarge(cgalbbox, padding);
 		pOctree->build(meshes, cgalbbox, false, &intersectLeaves);
-        XLOG_INFO << "build octree time: " << XTIMER_HELPER(milliseconds("octree")) << " ms";
+        pMem->results.step_time[0] = XTIMER_HELPER(milliseconds("octree"));
+        XLOG_INFO << "build octree time: " << pMem->results.step_time[0] << " ms";
         XLOG_INFO << "Number of triaabb test: " << xrcount <<" / " << pre_count << " / " << after_count;
 
 
         XTIMER_HELPER(setClock("insct"));
         std::vector<Triangle*> insct_triangles;
         doIntersection(meshes, intersectLeaves, insct_triangles);
-        XLOG_INFO << "intersection test time: " << XTIMER_HELPER(milliseconds("insct")) << " ms";
+        pMem->results.step_time[1] = XTIMER_HELPER(milliseconds("insct"));
+        XLOG_INFO << "intersection test time: " << pMem->results.step_time[1] << " ms";
 
         XTIMER_HELPER(setClock("tess"));
         tessellation(meshes, insct_triangles);
-        XLOG_INFO << "tessellation time: " << XTIMER_HELPER(milliseconds("tess")) << " ms";
+        pMem->results.step_time[2] = XTIMER_HELPER(milliseconds("tess"));
+        XLOG_INFO << "tessellation time: " << pMem->results.step_time[2] << " ms";
 
         //pMem->outputIntersection("C:/Users/XRwy/Desktop/x2.xyz", center, scale);
         //meshes[0]->invCoords(center, scale);
-        //RegularMesh::writeFile(*meshes[0], "D:/a.off");
+
+        //for (int i = 0; i < 1; ++i)
+        //{
+        //    char a[80];
+        //    sprintf(a, "F:/a%d.off", i);
+
+        //    RegularMesh::writeFile(*meshes[i], a);
+        //}
+        //exit(0);
 
         XTIMER_HELPER(setClock("classify"));
         VertexIndex seed = pickSeed(xmins);
         RegularMesh* csgResult = new RegularMesh;
         RegularMesh* debug_mesh = new RegularMesh;
 
-        try
-        {
-            doClassification(pOctree, pCsg, meshes, csgResult, seed, debug_mesh);
-        }
-        catch (std::exception& e)
-        {
-            XLOG_ERROR << "Bugs here.";
-        }
+        doClassification(pOctree, pCsg, meshes, csgResult, seed, debug_mesh);
 
-        XLOG_INFO << "classification time: " << XTIMER_HELPER(milliseconds("classify")) << " ms";
+        pMem->results.step_time[3] = XTIMER_HELPER(milliseconds("classify"));
+        XLOG_INFO << "classification time: " << pMem->results.step_time[3] << " ms";
 
         csgResult->set_transform(center, scale);
         debug_mesh->set_transform(center, scale);
+
         //RegularMesh::writeFile(*debug_mesh, "D:/debug.off");
         delete debug_mesh;
 

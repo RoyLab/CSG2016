@@ -138,7 +138,7 @@ namespace Boolean
         void addAjacentFace(VertexIndex s, VertexIndex e, IPolygon* fPtr);
         int faceOrientation(const IPolygon*) const;
         XPlane get_vertical_plane(const XPlane&, int* = nullptr) const;
-        bool correct_plane_orientation(const IPolygon*, XPlane& plane) const;
+        bool correct_plane_orientation(EdgeIndex thiz, const IPolygon*, XPlane& plane) const;
         bool remove(const IPolygon*); // BUG: vertex √ª¥¶¿Ì
         uint32_t faceCount() const;
         VertexIndex theOtherVId(VertexIndex thiz) const;

@@ -51,6 +51,7 @@ namespace Boolean
         // state
         bool is_valid() const { return id_ != 0; }
         bool is_inverse() const { return id_ < 0; }
+        bool is_degenerate() const;
 
         // access
         const XPlaneBase& get_base() const;

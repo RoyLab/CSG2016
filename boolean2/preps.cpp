@@ -179,6 +179,19 @@ namespace Boolean
         return parallel(p);
     }
 
+    bool XPlane::is_degenerate() const
+    {
+        const Real* data = get_data();
+        for (int i = 0; i < 3; ++i)
+        {
+            if (data[i] != 0.0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     const XPlaneBase & XPlane::get_base() const
     {
         assert(is_valid());

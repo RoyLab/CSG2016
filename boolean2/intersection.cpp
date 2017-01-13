@@ -475,7 +475,25 @@ namespace Boolean
 		/* 统一正方向cross(n0, n1) */
 		Triangle* t[2] = { fh0, fh1};
 		TriTriInsctResult insctRes;
-		IntersectionType sres = tri_tri_intersect(t, insctRes);
+        IntersectionType sres = NOT_INTERSECT;
+
+        try
+        {
+            sres = tri_tri_intersect(t, insctRes);
+        }
+        catch (const std::pair<MeshIndex, uint32_t>& e)
+        {
+            XLOG_ERROR << "find degenerate triangle.";
+            sres = NOT_INTERSECT;
+
+            for (int i = 0; i < 2; ++i)
+            {
+                if (meshId[i] == e.first && t[i]->id())
+                {
+                    t[i]->invalidate();
+                }
+            }
+        }
 
 		if (sres == NOT_INTERSECT || sres == COPLANAR)
 			return false;
@@ -642,8 +660,14 @@ namespace Boolean
 
 					for (auto fh0 : meshItr[0]->second)
 					{
+                        if (!fh0->isValid())
+                            continue;
+
 						for (auto fh1 : meshItr[1]->second)
 						{
+                            if (!fh1->isValid())
+                                continue;
+
 							uint32_t triId[2] = { fh0->id(), fh1->id() };
 							IndexPair triIdPair;
 							MakeIndex(triId, triIdPair);

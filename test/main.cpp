@@ -9,6 +9,17 @@
 #include "cgaleval.h"
 //#include <vld.h>
 
+int self_main(int argc, char* argv[]);
+int multi_instance_main(int argc, char* argv[]);
+
+int main(int argc, char* argv[])
+{
+    //char* a[] = { "mycsg" ,"-m", "my" ,"-n" ,"D:/Codes/Boolean2016/models/box1.off" ,"-o", "F:\\a.off", "-l", "F:\\a.log" };
+    //argc = 9;
+    return multi_instance_main(argc, argv);
+}
+
+
 std::stringstream getValidStream(std::ifstream& file)
 {
     std::string line;
@@ -21,17 +32,18 @@ std::stringstream getValidStream(std::ifstream& file)
     throw std::exception();
 }
 
-void TestByMethod(std::vector<std::string>& names, std::string& expr, const std::string& output, std::string method)
+void TestByMethod(std::vector<std::string>& names, std::string& expr,
+    const std::string& output, std::string method, const std::string& tmp_log)
 {
     if (method == "my")
-        test(names, expr, output);
+        test(names, expr, output, tmp_log);
     else if (method == "cgal")
         cgaleval(names, expr, output);
     else if (method == "cork")
         corkeval(names, expr, output);
 }
 
-int main(int argc, char* argv[])
+int multi_instance_main(int argc, char* argv[])
 {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
@@ -43,18 +55,6 @@ int main(int argc, char* argv[])
 
     std::string expr;
     std::vector<std::string> names;
-
-    if (false && argc == 1)
-    {
-        expr = "0+1";
-        names.clear();
-        names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/buddha.off");
-        names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/lion.off");
-        TestByMethod(names, expr, "D:/result.off", method);
-        system("pause");
-        return 0;
-    }
-
     std::ifstream configFile(config_filename);
     if (!configFile.is_open())
     {
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
             buffer = getValidStream(configFile);
             buffer >> output;
 
-            TestByMethod(names, expr, output, method);
+            TestByMethod(names, expr, output, method, "");
         }
     //}
     //catch (...)

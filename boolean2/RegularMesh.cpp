@@ -98,6 +98,10 @@ namespace Boolean
         memcpy(itmp, iSlot.data(), sizeof(int) * iSlot.size());
         file.indices.reset(itmp);
         
+        GlobalData* pMem = GlobalData::getObject();
+        pMem->results.n_faces = file.nFaces;
+        pMem->results.n_vertices = file.nVertices;
+
         writeOffFile(fileName, file);
     }
 
@@ -207,6 +211,21 @@ namespace Boolean
         }
         assert(edgeIndexInFace != -1);
         return vertexId(edgeIndexInFace);
+    }
+
+    bool Triangle::get_edge_endpoint_in_order(EdgeIndex eid,
+        VertexIndex & prev, VertexIndex & next) const
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            if (eIds[i] == eid)
+            {
+                prev = (vIds[i] + 1) % 3;
+                next = (prev + 1) % 3;
+                return true;
+            }
+        }
+        return false;
     }
 
     VertexIndex Triangle::findFaceVertex(const PlanePoint& pt, 
@@ -413,6 +432,11 @@ namespace Boolean
             assert(sPlane.has_on(xcpoint(vIds[0])));
             assert(sPlane.has_on(xcpoint(vIds[1])));
             assert(sPlane.has_on(xcpoint(vIds[2])));
+
+            if (sPlane.is_degenerate())
+            {
+                throw std::pair<MeshIndex, uint32_t>(meshId(), id());
+            }
         }
     }
 
@@ -524,33 +548,15 @@ namespace Boolean
             throw "";
         }
 
-        boundPlane = edge.get_vertical_plane(supportingPlane());
+        boundPlane = edge.get_vertical_plane(supportingPlane(), &test_plane_count);
 
         if (!boundPlane.is_valid())
         {
             XLOG_ERROR << "Cannot find a vertical plane. test: " << test_plane_count;
-            throw "";
+            throw 2;
         }
 
-        //int edgeIndexInFace = -1;
-        //for (int i = 0; i < degree(); i++)
-        //{
-        //    if (edgeId(i) == id)
-        //    {
-        //        edgeIndexInFace = i;
-        //        break;
-        //    }
-        //}
-        //assert(edgeIndexInFace != -1);
-
-        //// correct the direction of bounding plane
-        //PlaneLine edgeLine(supportingPlane(), boundPlane);
-        //int tmpSide = linear_order(edgeLine, xvertex(vertexId((edgeIndexInFace + 1) % degree())),
-        //    xvertex(vertexId(edgeIndexInFace)));
-
-        //assert(tmpSide != 0);
-        //if (tmpSide < 0)
-        //    boundPlane.inverse();
+        edge.correct_plane_orientation(id, this, boundPlane);
 
         // pick a correct rep vertex
         VertexIndex repVertexId = INVALID_UINT32;
@@ -590,6 +596,29 @@ namespace Boolean
         return xvertex(vertexId(i));
     }
 
+    bool SubPolygon::get_edge_endpoint_in_order(EdgeIndex eId, 
+        VertexIndex & prev, VertexIndex & next) const
+    {
+        int edgeIndexInFace = -1;
+        for (int i = 0; i < degree(); i++)
+        {
+            if (edgeId(i) == eId)
+            {
+                edgeIndexInFace = i;
+                break;
+            }
+        }
+        if (edgeIndexInFace == -1)
+        {
+            return false;
+        }
+
+        // correct the direction of bounding plane
+        prev = vertexId(edgeIndexInFace);
+        next = vertexId((edgeIndexInFace + 1) % degree());
+        return true;
+    }
+
     MyEdge & Triangle::edge(int i) const
     {
         return xedge(edgeId(i));
@@ -608,22 +637,12 @@ namespace Boolean
         for (auto& loop : loops)
         {
             auto itr = loop.begin();
-            //VertexIndex v0, v1;
             auto pMem = GlobalData::getObject();
 
             loops_[count].vIds.resize(loop.size());
             loops_[count].eIds.resize(loop.size());
             for (int i = 0; i < loop.size(); i++)
             {
-                //v0 = *itr; ++itr;
-                //if (itr != loop.end())
-                //{
-                //    v1 = *itr;
-                //}
-                //else
-                //{
-                //    v1 = loop.front();
-                //}
 
                 loops_[count].vIds[i] = pMem->get_main_vertexId(*itr);
                 ++itr;
@@ -673,7 +692,7 @@ namespace Boolean
             throw "";
         }
 
-        boundPlane = edge.get_vertical_plane(supportingPlane());
+        boundPlane = edge.get_vertical_plane(supportingPlane(), &test_plane_count);
 
         if (!boundPlane.is_valid())
         {
@@ -681,34 +700,7 @@ namespace Boolean
             throw "";
         }
 
-        edge.correct_plane_orientation(this, boundPlane);
-
-        //// correct the direction of bounding plane
-        //int edgeIndexInFace = -1, edgeIndexInFace2 = -1;
-        //for (int i = 0; i < loops_.size(); ++i)
-        //{
-        //    for (int j = 0; j < loops_[i].vIds.size(); ++j)
-        //    {
-        //        if (edgeId(i, j) == id)
-        //        {
-        //            edgeIndexInFace = i;
-        //            edgeIndexInFace2 = j;
-        //            break;
-        //        }
-        //    }
-        //}
-        //assert(edgeIndexInFace != -1 && edgeIndexInFace2 != -1);
-
-        //PlaneLine edgeLine(supportingPlane(), boundPlane);
-        //assert(!supportingPlane().id_equals(boundPlane));
-        //int tmpSide = linear_order(edgeLine, 
-        //    xvertex(vertexId(edgeIndexInFace, (edgeIndexInFace2 + 1) % loops_[edgeIndexInFace].vIds.size())),
-        //    xvertex(vertexId(edgeIndexInFace, edgeIndexInFace2))
-        //);
-
-        //assert(tmpSide != 0);
-        //if (tmpSide < 0)
-        //    boundPlane.inverse();
+        edge.correct_plane_orientation(id, this, boundPlane);
 
         // pick a correct rep vertex
         VertexIndex repVertexId = INVALID_UINT32;
@@ -741,6 +733,33 @@ namespace Boolean
     MyVertex & SubPolygonWithHoles::vertex(int i, int j) const
     {
         return xvertex(vertexId(i, j));
+    }
+
+    bool SubPolygonWithHoles::get_edge_endpoint_in_order(EdgeIndex eId,
+        VertexIndex & prev, VertexIndex & next) const
+    {
+        // correct the direction of bounding plane
+        int edgeIndexInFace = -1, edgeIndexInFace2 = -1;
+        for (int i = 0; i < loops_.size(); ++i)
+        {
+            for (int j = 0; j < loops_[i].vIds.size(); ++j)
+            {
+                if (edgeId(i, j) == eId)
+                {
+                    edgeIndexInFace = i;
+                    edgeIndexInFace2 = j;
+                    break;
+                }
+            }
+        }
+        if (edgeIndexInFace == -1 || edgeIndexInFace2 == -1)
+        {
+            return false;
+        }
+
+        prev = vertexId(edgeIndexInFace, edgeIndexInFace2);
+        next = vertexId(edgeIndexInFace, (edgeIndexInFace2 + 1) % loops_[edgeIndexInFace].vIds.size());
+        return true;
     }
 }
 
