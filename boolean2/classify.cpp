@@ -239,7 +239,7 @@ namespace Boolean
             {
                 std::vector<Triangle*> faces;
                 auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
-                for (; fItr; fItr.incrementToTriangle())
+                for (; fItr && fItr.face(); fItr.incrementToTriangle())
                 {
                     faces.push_back(fItr.as_triangle());
                 }

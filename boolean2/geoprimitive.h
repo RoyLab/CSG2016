@@ -102,7 +102,7 @@ namespace Boolean
         public:
             FaceIterator(MyEdge& edge, bool triangle = false);
 
-            FaceIterator& operator++();
+            FaceIterator& operator++(); // face() can be nullptr, so must be check.
             FaceIterator& incrementToTriangle();
 
             operator bool() const { return stage != -1; }

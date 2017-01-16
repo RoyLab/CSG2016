@@ -91,21 +91,26 @@ namespace Boolean
 	IntersectionType compute_intervals_isectline(Oriented_side d[3], const Triangle &pr,
 		PosTag& tagA, PosTag& tagB, XPlane& posA, XPlane& posB)
 	{
-		std::vector<int> zeroCount;
-		std::vector<int> posCount;
-		std::vector<int> negCount;
+		//std::vector<int> zeroCount;
+		//std::vector<int> posCount;
+		//std::vector<int> negCount;
+        int zeroCount = 0, posCount = 0, negCount = 0;
+        int zero = -1, pos = -1, neg = -1;
 		for (int i = 0; i < 3; i++)
 		{
 			switch (d[i])
 			{
 			case ON_ORIENTED_BOUNDARY:
-				zeroCount.push_back(i);
+				//zeroCount.push_back(i);
+                ++zeroCount; zero = i;
 				break;
 			case ON_POSITIVE_SIDE:
-				posCount.push_back(i);
+				//posCount.push_back(i);
+                ++posCount; pos = i;
 				break;
 			case ON_NEGATIVE_SIDE:
-				negCount.push_back(i);
+				//negCount.push_back(i);
+                ++negCount; neg = i;
 				break;
 			default:
 				ReportError("");
@@ -113,9 +118,9 @@ namespace Boolean
 			}
 		}
 
-		if (zeroCount.size() == 0)
+		if (zeroCount == 0)
 		{
-			int isoVId = (posCount.size() == 1 ? posCount[0] : negCount[0]);
+			int isoVId = (posCount == 1 ? pos : neg);
 			posA = pr.boundingPlane((isoVId + 2) % 3);
 			posB = pr.boundingPlane((isoVId + 1) % 3);
 			tagA = edge_tag((isoVId + 2) % 3);
@@ -128,16 +133,16 @@ namespace Boolean
 			}
 			return INTERSECT_ON_LINE;
 		}
-		else if (zeroCount.size() == 1)
+		else if (zeroCount == 1)
 		{
-			if (posCount.size() != 1)
+			if (posCount != 1)
 			{
-				int zeroId = zeroCount[0];
+				int zeroId = zero;
 				tagA = tagB = vertex_tag(zeroId);
                 int id1 = (zeroId + 1) % 3;
                 int id2 = (zeroId + 2) % 3;
 
-                if (posCount.size() == 2)
+                if (posCount == 2)
                 {
                     posA = pr.boundingPlane(id1);
                     posB = pr.boundingPlane(id2);
@@ -151,13 +156,13 @@ namespace Boolean
 			}
             else
             {
-                int posId = posCount[0];
+                int posId = pos;
                 int id1 = (posId + 1) % 3;
                 int id2 = (posId + 2) % 3;
                 posA = pr.boundingPlane(id2);
                 posB = pr.boundingPlane(id1);
 
-                if (id1 == zeroCount[0])
+                if (id1 == zero)
                 {
                     tagA = vertex_tag(id1);
                     tagB = edge_tag(id1);
@@ -170,9 +175,9 @@ namespace Boolean
                 return INTERSECT_ON_LINE;
             }
 		}
-		else if (zeroCount.size() == 2)
+		else if (zeroCount == 2)
 		{
-			int isoVId = (posCount.size() == 1 ? posCount[0] : negCount[0]);
+			int isoVId = (posCount == 1 ? pos : neg);
 			posA = pr.boundingPlane((isoVId + 2) % 3);
 			posB = pr.boundingPlane((isoVId + 1) % 3);
 

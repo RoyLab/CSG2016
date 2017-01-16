@@ -185,6 +185,20 @@ extern "C"
 		releaseContext();
 	}
 
+    XRWY_DLL bool is_pwn(const char * name)
+    {
+        RegularMesh *mesh = RegularMesh::loadFromFile(name, 0);
+        if (!mesh)
+        {
+            XLOG_FATAL << "Cannot load the mesh " << name;
+            throw std::exception();
+        }
+
+        bool ret = mesh->is_pwn();
+        delete mesh;
+        return ret;
+    }
+
 	XRWY_DLL RegularMesh* solveCSG(const std::string& expr, std::vector<RegularMesh*>& meshes)
 	{
         if (meshes.size() > MAX_MESH_COUNT)

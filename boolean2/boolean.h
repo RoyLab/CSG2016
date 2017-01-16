@@ -19,7 +19,9 @@ extern "C"
 {
 
 	XRWY_DLL Boolean::RegularMesh* solveCSG(const std::string& expr, std::vector<Boolean::RegularMesh*>& meshes);
-	XRWY_DLL void test(const CsgInputs& inputs);
+    XRWY_DLL void test(const CsgInputs& inputs);
+    XRWY_DLL bool is_pwn(const char* name);
+
 
     XRWY_DLL void test1();
     XRWY_DLL void test2();

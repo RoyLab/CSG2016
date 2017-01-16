@@ -197,7 +197,7 @@ namespace Boolean
             if (neigh.second.type == NeighborInfo::Edge)
             {
                 for (auto fItr = MyEdge::FaceIterator(xedge(neigh.second.neighborEdgeId), true);
-                    fItr; fItr.incrementToTriangle())
+                    fItr && fItr.face(); fItr.incrementToTriangle())
                 {
                     assert(fItr.face()->getType() == IPolygon::TRIANGLE);
                     tmpPlane = ((Triangle*)fItr.face())->supportingPlane();
@@ -395,7 +395,7 @@ namespace Boolean
     {
         do {
             ++*this;
-        } while (*this && face()->getType() != IPolygon::TRIANGLE);
+        } while (*this && face()&& face()->getType() != IPolygon::TRIANGLE);
         return *this;
     }
 
