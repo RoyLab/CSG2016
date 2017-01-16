@@ -53,7 +53,8 @@ namespace csg
 
 using namespace csg;
 
-extern "C" XRWY_DLL void cgaleval(std::vector<std::string>& names, std::string& expr, const std::string& output)
+extern "C" XRWY_DLL void cgaleval(std::vector<std::string>& names, const std::string& expr, 
+    const std::string& output, const std::string& log)
 {
     XLOG_DEBUG << "\nHere is cgal evaluation.";
 
@@ -61,38 +62,68 @@ extern "C" XRWY_DLL void cgaleval(std::vector<std::string>& names, std::string& 
     vector<Polyhedron*> meshes;
     vector<Nef_polyhedron*> nef_meshes;
 
-    Polyhedron* polyheron = nullptr;
-    for (string& meshname : names)
+    bool error = false;
+    double total = 0;
+    int ovn = 0;
+    int ofn = 0;
+    Polyhedron* result = nullptr;
+    try
     {
-        std::ifstream file(meshname);
-        polyheron = new Polyhedron;
-        file >> *polyheron;
-        file.close();
-        XLOG_INFO << "Reading off file: " << meshname << " : " << polyheron->size_of_facets();
-        meshes.push_back(polyheron);
+        Polyhedron* polyheron = nullptr;
+        for (string& meshname : names)
+        {
+            std::ifstream file(meshname);
+            polyheron = new Polyhedron;
+            file >> *polyheron;
+            file.close();
+            XLOG_INFO << "Reading off file: " << meshname << " : " << polyheron->size_of_facets();
+            meshes.push_back(polyheron);
+        }
+
+        XTIMER_OBJ.setClock("main");
+        XTIMER_OBJ.setClock("step");
+        Nef_polyhedron *nefpoly = nullptr;
+        for (Polyhedron* poly : meshes)
+        {
+            nefpoly = new Nef_polyhedron(*poly);
+            nef_meshes.push_back(nefpoly);
+        }
+
+        XLOG_INFO << "Convert to  nef polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        csg.createCSGTreeFromExpr(expr, nef_meshes);
+        CgalEval eval_obj;
+        Nef_polyhedron *nef_result = csg.eval(&eval_obj);
+
+        XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        result = new Polyhedron;
+        nef_result->convert_to_polyhedron(*result);
+        ovn = result->size_of_vertices();
+        ofn = result->size_of_facets();
+        delete nef_result;
+
+        XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+
+        total = XTIMER_OBJ.millisecondsAndReset("main");
+        XLOG_INFO << "total time: " << total << " ms";
+    }
+    catch (...)
+    {
+        XLOG_FATAL << "eval failed!";
+        error = true;
     }
 
-    XTIMER_OBJ.setClock("main");
-    XTIMER_OBJ.setClock("step");
-    Nef_polyhedron *nefpoly = nullptr;
-    for (Polyhedron* poly : meshes)
+    if (log.size())
     {
-        nefpoly = new Nef_polyhedron(*poly);
-        nef_meshes.push_back(nefpoly);
+        std::ofstream out(log);
+        if (out.is_open())
+        {
+            out << total << std::endl;
+            out << ofn << std::endl;
+            out << ovn << std::endl;
+            out << error << std::endl;
+            out.close();
+        }
     }
-
-    XLOG_INFO << "Convert to  nef polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    csg.createCSGTreeFromExpr(expr, nef_meshes);
-    CgalEval eval_obj;
-    Nef_polyhedron *nef_result = csg.eval(&eval_obj);
-
-    XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    Polyhedron* result = new Polyhedron;
-    nef_result->convert_to_polyhedron(*result);
-    delete nef_result;
-
-    XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    XLOG_INFO << "total time: " << XTIMER_OBJ.millisecondsAndReset("main") << " ms";
 
     for (Nef_polyhedron* nefpoly : nef_meshes)
         delete nefpoly;

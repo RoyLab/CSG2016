@@ -26,6 +26,7 @@ namespace Boolean
         double step_time[4] = {0};
         size_t n_vertices = 0, n_faces = 0;
         bool error = 0;
+        bool is_pwn = false;
     };
 
     struct MergedVertex

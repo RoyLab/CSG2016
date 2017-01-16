@@ -232,6 +232,7 @@ namespace Boolean
 
         // geometry info
 		void prepareBoolean();
+        bool is_pwn() const;
 	};
 
 

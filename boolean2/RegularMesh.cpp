@@ -159,6 +159,32 @@ namespace Boolean
 		assert(!memmgr || memmgr == GlobalData::getObject());
 	}
 
+    bool RegularMesh::is_pwn() const
+    {
+        for (int i = 0; i < faces().size(); ++i)
+        {
+            Triangle* tri = reinterpret_cast<Triangle*>(faces()[i]);
+            for (int j = 0; j < 3; ++j)
+            {
+                int sum = 0;
+                auto fItr = MyEdge::ConstFaceIterator(tri->edge(j));
+                for (; fItr; ++fItr)
+                {
+                    if (fItr.face())
+                    {
+                        sum += fItr.faceHandle().orientation;
+                    }
+                }
+
+                if (sum != 0)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     Triangle::~Triangle()
     {
         SAFE_DELETE(inscts);

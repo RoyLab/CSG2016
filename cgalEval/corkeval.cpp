@@ -160,7 +160,8 @@ void corkMesh2CorkTriMesh(
     CorkTriMesh *out
 );
 
-extern "C" XRWY_DLL void corkeval(std::vector<std::string>& names, std::string& expr, const std::string& output)
+extern "C" XRWY_DLL void corkeval(std::vector<std::string>& names, const std::string& expr, 
+    const std::string& output, const std::string& log)
 {
     XLOG_DEBUG << "\nHere is cgal evaluation.";
 
@@ -177,37 +178,67 @@ extern "C" XRWY_DLL void corkeval(std::vector<std::string>& names, std::string& 
         meshes.push_back(polyheron);
     }
 
-    XTIMER_OBJ.setClock("main");
-    XTIMER_OBJ.setClock("step");
-    CorkMesh *nefpoly = nullptr;
-    for (CorkTriMesh* poly : meshes)
+    bool error = false;
+    double total = 0;
+    int ovn = 0;
+    int ofn = 0;
+
+    try
     {
-        nefpoly = new CorkMesh;
-        corkTriMesh2CorkMesh(*poly, nefpoly);
-        nef_meshes.push_back(nefpoly);
+        XTIMER_OBJ.setClock("main");
+        XTIMER_OBJ.setClock("step");
+        CorkMesh *nefpoly = nullptr;
+        for (CorkTriMesh* poly : meshes)
+        {
+            nefpoly = new CorkMesh;
+            corkTriMesh2CorkMesh(*poly, nefpoly);
+            nef_meshes.push_back(nefpoly);
+        }
+
+        XLOG_INFO << "Convert to  nef polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        csg.createCSGTreeFromExpr(expr, nef_meshes);
+        CorkEval eval_obj;
+        CorkMesh *nef_result = csg.eval(&eval_obj);
+
+        XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        CorkTriMesh* result = new CorkTriMesh;
+        corkMesh2CorkTriMesh(nef_result, result);
+
+        XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+
+        total = XTIMER_OBJ.millisecondsAndReset("main");
+        XLOG_INFO << "total time: " << total << " ms";
+
+        ofn = result->n_triangles;
+        ovn = result->n_vertices;
+
+        delete nef_result;
+
+        for (CorkMesh* nefpoly : nef_meshes)
+            delete nefpoly;
+        for (CorkTriMesh*poly : meshes)
+            delete poly;
+
+        saveMesh(output, *result);
+        delete result;
+    }
+    catch (...)
+    {
+        error = true;
     }
 
-    XLOG_INFO << "Convert to  nef polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    csg.createCSGTreeFromExpr(expr, nef_meshes);
-    CorkEval eval_obj;
-    CorkMesh *nef_result = csg.eval(&eval_obj);
-
-    XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    CorkTriMesh* result = new CorkTriMesh;
-    corkMesh2CorkTriMesh(nef_result, result);
-    delete nef_result;
-
-    XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    XLOG_INFO << "total time: " << XTIMER_OBJ.millisecondsAndReset("main") << " ms";
-
-    for (CorkMesh* nefpoly : nef_meshes)
-        delete nefpoly;
-    for (CorkTriMesh*poly : meshes)
-        delete poly;
-
-    saveMesh(output, *result);
-
-    delete result;
+    if (log.size())
+    {
+        std::ofstream out(log);
+        if (out.is_open())
+        {
+            out << total << std::endl;
+            out << ofn << std::endl;
+            out << ovn << std::endl;
+            out << error << std::endl;
+            out.close();
+        }
+    }
 }
 
 

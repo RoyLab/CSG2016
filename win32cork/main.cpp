@@ -159,7 +159,8 @@ void corkMesh2CorkTriMesh(
     CorkTriMesh *out
 );
 
-void corkeval(std::vector<std::string>& names, std::string& expr, const std::string& output)
+int corkeval(std::vector<std::string>& names, std::string& expr,
+    const std::string& output, const std::string& log)
 {
     XLOG_DEBUG << "\nHere is cork evaluation.";
 
@@ -167,46 +168,84 @@ void corkeval(std::vector<std::string>& names, std::string& expr, const std::str
     vector<CorkTriMesh*> meshes;
     vector<CorkMesh*> nef_meshes;
 
-    CorkTriMesh* polyheron = nullptr;
-    for (string& meshname : names)
+    bool error = false;
+    double total = 0;
+    int ovn = 0;
+    int ofn = 0;
+
+    try
     {
-        polyheron = new CorkTriMesh;
-        loadMesh(meshname, polyheron);
-        XLOG_INFO << "Reading off file: " << meshname << " : " << polyheron->n_triangles;
-        meshes.push_back(polyheron);
+        CorkTriMesh* polyheron = nullptr;
+        for (string& meshname : names)
+        {
+            polyheron = new CorkTriMesh;
+            loadMesh(meshname, polyheron);
+            XLOG_INFO << "Reading off file: " << meshname << " : " << polyheron->n_triangles;
+            meshes.push_back(polyheron);
+        }
+
+        XTIMER_OBJ.setClock("main");
+        XTIMER_OBJ.setClock("step");
+        CorkMesh *nefpoly = nullptr;
+        for (CorkTriMesh* poly : meshes)
+        {
+            nefpoly = new CorkMesh;
+            corkTriMesh2CorkMesh(*poly, nefpoly);
+            nef_meshes.push_back(nefpoly);
+        }
+
+        XLOG_INFO << "Convert to  cork polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        csg.createCSGTreeFromExpr(expr, nef_meshes);
+        CorkEval eval_obj;
+        CorkMesh *nef_result = csg.eval(&eval_obj);
+
+        XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        CorkTriMesh* result = new CorkTriMesh;
+        corkMesh2CorkTriMesh(nef_result, result);
+        ofn = result->n_triangles;
+        ovn = result->n_vertices;
+
+        delete nef_result;
+
+        XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
+        total = XTIMER_OBJ.millisecondsAndReset("main");
+        XLOG_INFO << "total time: " << total << " ms";
+
+        for (CorkMesh* nefpoly : nef_meshes)
+            delete nefpoly;
+        for (CorkTriMesh*poly : meshes)
+            delete poly;
+
+        saveMesh(output, *result);
+
+        delete result;
+    }
+    catch (...)
+    {
+        error = true;
     }
 
-    XTIMER_OBJ.setClock("main");
-    XTIMER_OBJ.setClock("step");
-    CorkMesh *nefpoly = nullptr;
-    for (CorkTriMesh* poly : meshes)
+    if (log.size())
     {
-        nefpoly = new CorkMesh;
-        corkTriMesh2CorkMesh(*poly, nefpoly);
-        nef_meshes.push_back(nefpoly);
+        std::ofstream out(log);
+        if (out.is_open())
+        {
+            out << total << std::endl;
+            out << ofn << std::endl;
+            out << ovn << std::endl;
+            out << error << std::endl;
+            out.close();
+        }
     }
 
-    XLOG_INFO << "Convert to  cork polygon: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    csg.createCSGTreeFromExpr(expr, nef_meshes);
-    CorkEval eval_obj;
-    CorkMesh *nef_result = csg.eval(&eval_obj);
-
-    XLOG_INFO << "eval: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    CorkTriMesh* result = new CorkTriMesh;
-    corkMesh2CorkTriMesh(nef_result, result);
-    delete nef_result;
-
-    XLOG_INFO << "Convert back: " << XTIMER_OBJ.millisecondsAndReset("step") << " ms";
-    XLOG_INFO << "total time: " << XTIMER_OBJ.millisecondsAndReset("main") << " ms";
-
-    for (CorkMesh* nefpoly : nef_meshes)
-        delete nefpoly;
-    for (CorkTriMesh*poly : meshes)
-        delete poly;
-
-    saveMesh(output, *result);
-
-    delete result;
+    if (error)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 
@@ -222,8 +261,31 @@ std::stringstream getValidStream(std::ifstream& file)
     }
     throw std::exception();
 }
+int multi_main(int argc, char* argv[]);
+int self_main(int argc, char* argv[])
+{
+    cmdline::parser cmd_parser;
+    cmd_parser.add<std::string>("name", 'n', "filename");
+    cmd_parser.add<std::string>("out", 'o', "output filename");
+    cmd_parser.add<std::string>("log", 'l', "log filename");
+    cmd_parser.parse_check(argc, argv);
+
+
+    std::string input = cmd_parser.get<std::string>("name");
+    std::string output = cmd_parser.get<std::string>("out");
+    std::string log = cmd_parser.get<std::string>("log");
+    
+    std::vector<std::string> names(2, input);
+    std::string expr = "0+1";
+    return corkeval(names, expr, output, log);
+}
 
 int main(int argc, char* argv[])
+{
+    return self_main(argc, argv);
+}
+
+int multi_main(int argc, char* argv[])
 {
     cmdline::parser cmd_parser;
     cmd_parser.add<std::string>("script", 's', "the script to run", false, "./mycsg.ini");
@@ -234,16 +296,16 @@ int main(int argc, char* argv[])
     std::string expr;
     std::vector<std::string> names;
 
-    if (false && argc == 1)
-    {
-        expr = "0+1";
-        names.clear();
-        names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/buddha.off");
-        names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/lion.off");
-        corkeval(names, expr, "D:/result.off");
-        system("pause");
-        return 0;
-    }
+    //if (false && argc == 1)
+    //{
+    //    expr = "0+1";
+    //    names.clear();
+    //    names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/buddha.off");
+    //    names.push_back("D:/Codes/Boolean2016/exps/data/cmp_meshworks/lion.off");
+    //    corkeval(names, expr, "D:/result.off");
+    //    system("pause");
+    //    return 0;
+    //}
 
     std::ifstream configFile(config_filename);
     if (!configFile.is_open())
@@ -314,7 +376,7 @@ int main(int argc, char* argv[])
             buffer = getValidStream(configFile);
             buffer >> output;
 
-            corkeval(names, expr, output);
+            corkeval(names, expr, output, "");
         }
     }
     catch (...)

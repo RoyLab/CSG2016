@@ -111,13 +111,12 @@ extern "C"
 {
 	using namespace Boolean;
 
-	XRWY_DLL void test(std::vector<std::string>& names, std::string& expr, 
-        const std::string& output, const std::string& log)
+	XRWY_DLL void test(const CsgInputs& inputs)
 	{
         XLOG_INFO << "\n***Test Begin***";
-        XLOG_INFO << names.size() << " meshes:";
-        for (int i = 0; i < names.size(); i++)
-            XLOG_INFO << names[i];
+        XLOG_INFO << inputs.names.size() << " meshes:";
+        for (int i = 0; i < inputs.names.size(); i++)
+            XLOG_INFO << inputs.names[i];
 
 #ifdef XR_PROFILE
         XLOG_INFO << "______tHIS iS pROFILING vERTION_____";
@@ -126,20 +125,25 @@ extern "C"
         initContext();
 
         auto& meshlist = pMem->meshes;
-        meshlist.resize(names.size());
-		for (int i = 0; i < names.size(); i++)
+        meshlist.resize(inputs.names.size());
+		for (int i = 0; i < inputs.names.size(); i++)
 		{
-            meshlist[i] = RegularMesh::loadFromFile(names[i].c_str(), i);
+            meshlist[i] = RegularMesh::loadFromFile(inputs.names[i].c_str(), i);
 		}
+
+        if (inputs.need_pwn_test)
+        {
+            pMem->results.is_pwn = meshlist[0]->is_pwn();
+        }
 
         XTIMER_HELPER(setClock("main"));
         RegularMesh* result = nullptr;
         try
         {
-            result = solveCSG(expr, meshlist);
+            result = solveCSG(inputs.expr, meshlist);
             pMem->results.total_time = XTIMER_HELPER(milliseconds("main"));
             XLOG_INFO << "Overall time: " << pMem->results.total_time << " ms";
-            RegularMesh::writeFile(*result, output.c_str());
+            RegularMesh::writeFile(*result, inputs.output.c_str());
             pMem->results.error = 0;
         }
         catch (...)
@@ -158,10 +162,9 @@ extern "C"
         }
 
         // record results
-        if (log.size())
+        if (inputs.need_log)
         {
-            std::ofstream log_file(log);
-            log_file << "my\n";
+            std::ofstream log_file(inputs.log);
             log_file << pMem->results.total_time << std::endl;
             log_file << pMem->results.n_faces << std::endl;
             log_file << pMem->results.n_vertices << std::endl;
@@ -170,6 +173,13 @@ extern "C"
             {
                 log_file << pMem->results.step_time[i] << std::endl;
             }
+
+            if (inputs.need_pwn_test)
+            {
+                log_file << pMem->results.is_pwn << std::endl;
+            }
+
+            log_file.close();
         }
 
 		releaseContext();

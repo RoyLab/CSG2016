@@ -8,9 +8,29 @@
 #include "boolean.h"
 #include "cgaleval.h"
 
+void TestSelfInsct(const std::string& name, const std::string& output,
+    const std::string& method, const std::string& temp)
+{
+    std::vector<std::string> names(2, name);
+    std::string expr = "0+1";
+    if (method == "my")
+    {
+        CsgInputs inputs;
+        inputs.names = names;
+        inputs.expr = expr;
+        inputs.output = output;
+        inputs.log = temp;
 
-void TestByMethod(std::vector<std::string>& names, std::string& expr, 
-    const std::string& output, std::string method, const std::string& tmp_log);
+        inputs.need_log = true;
+        inputs.need_pwn_test = true;
+        test(inputs);
+    }
+    else if (method == "cgal")
+        cgaleval(names, expr, output, temp);
+    else if (method == "cork")
+        corkeval(names, expr, output, temp);
+}
+
 
 int self_main(int argc, char* argv[])
 {
@@ -26,25 +46,15 @@ int self_main(int argc, char* argv[])
     std::string output = cmd_parser.get<std::string>("output");
     std::string temp_log = cmd_parser.get<std::string>("tmplop");
 
-    std::string expr;
-    std::vector<std::string> names;
-
-    expr = "0+1";
-    names.clear();
-    names.push_back(filename);
-    names.push_back(filename);
-
     try
     {
-        TestByMethod(names, expr, output, method, temp_log);
+        TestSelfInsct(filename, output, method, temp_log);
     }
     catch (...)
     {
         std::cerr << "IO error\n";
-        system("pause");
         return 1;
     }
 
-    system("pause");
     return 0;
 }

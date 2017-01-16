@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
     //char* a[] = { "mycsg" ,"-m", "my" ,"-n" ,"D:/Codes/Boolean2016/models/box1.off" ,"-o", "F:\\a.off", "-l", "F:\\a.log" };
     //argc = 9;
-    return multi_instance_main(argc, argv);
+    return self_main(argc, argv);
 }
 
 
@@ -33,14 +33,20 @@ std::stringstream getValidStream(std::ifstream& file)
 }
 
 void TestByMethod(std::vector<std::string>& names, std::string& expr,
-    const std::string& output, std::string method, const std::string& tmp_log)
+    const std::string& output, std::string method)
 {
     if (method == "my")
-        test(names, expr, output, tmp_log);
+    {
+        CsgInputs inputs;
+        inputs.names = names;
+        inputs.expr = expr;
+        inputs.output = output;
+        test(inputs);
+    }
     else if (method == "cgal")
-        cgaleval(names, expr, output);
+        cgaleval(names, expr, output, "");
     else if (method == "cork")
-        corkeval(names, expr, output);
+        corkeval(names, expr, output, "");
 }
 
 int multi_instance_main(int argc, char* argv[])
@@ -124,7 +130,7 @@ int multi_instance_main(int argc, char* argv[])
             buffer = getValidStream(configFile);
             buffer >> output;
 
-            TestByMethod(names, expr, output, method, "");
+            TestByMethod(names, expr, output, method);
         }
     //}
     //catch (...)
