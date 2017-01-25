@@ -112,12 +112,15 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_USE_MATH_DEFINES;NOMINMAX;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Codes\Boolean2016\Boolean2016\cgalEval;D:\Codes\Repos\cork\src\rawmesh;D:\Codes\Repos\cork\src\util;D:\Codes\Repos\cork\src\isct;D:\Codes\Repos\cork\src\accel;D:\Codes\Repos\cork\src\file_formats;D:\Codes\Repos\cork\src\math;D:\Codes\Repos\cork\src\mesh;D:\Codes\Repos\cork\src;D:\Libs\common;$(BOOST_INCLUDEDIR);C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\Libs\boost_1_59_0\lib64-msvc-14.0;D:\Codes\Repos\cork\mpir\x64;C:\Program Files (x86)\Visual Leak Detector\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>mpir.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

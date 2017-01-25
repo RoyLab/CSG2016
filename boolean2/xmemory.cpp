@@ -94,6 +94,7 @@ namespace Boolean
         ppoints.clear();
         meshes.clear();
         mergedvertices_.clear();
+        adj_graph.release();
     }
 
     //void mergeVertices(VertexIndex to, VertexIndex from)

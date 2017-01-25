@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
     //char* a[] = { "mycsg" ,"-m", "my" ,"-n" ,"D:/Codes/Boolean2016/models/box1.off" ,"-o", "F:\\a.off", "-l", "F:\\a.log" };
     //argc = 9;
-    return self_main(argc, argv);
+    return multi_instance_main(argc, argv);
 }
 
 

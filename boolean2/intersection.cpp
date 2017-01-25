@@ -67,23 +67,6 @@ namespace Boolean
 
 	}
 
-	class AdjacentGraph :
-		public XR::UndirectedGraph<bool>
-	{
-	public:
-		AdjacentGraph(size_t n) :XR::UndirectedGraph<bool>(n) {}
-		void getIntersectPrimitives(int meshId, std::vector<int>& prims);
-	};
-
-	void AdjacentGraph::getIntersectPrimitives(int meshId, std::vector<int>& prims)
-	{
-		for (size_t i = 0; i < m_sz; i++)
-		{
-			if (getValue(meshId, i))
-				prims.push_back(i);
-		}
-	}
-
 	typedef std::unordered_set<IndexPair> TriIdSet;
 	typedef std::unordered_map<IndexPair, TriIdSet*> MeshIdTriIdMap;
 
@@ -571,7 +554,7 @@ namespace Boolean
                             t[i], edge);
                     }
 
-                    XR_assert(edge->inscts->checkOrientation(&epbi));
+                    assert(edge->inscts->checkOrientation(&epbi));
 					edge->inscts->inscts[meshId[i]].push_back(epbi);
 				}
 				else
@@ -626,10 +609,10 @@ namespace Boolean
 
 	void doIntersection(std::vector<RegularMesh*>& meshes, std::vector<Octree::Node*>& intersectLeaves, std::vector<Triangle*>& insct_triangles)
 	{
-		AdjacentGraph *adjGraph = nullptr;
+		AdjacentGraph *adjGraph = new AdjacentGraph(meshes.size());
+        GlobalData::getObject()->adj_graph.reset(adjGraph);
 		MeshIdTriIdMap antiOverlapMap;
 		antiOverlapMap.max_load_factor(0.6f);
-		adjGraph = new AdjacentGraph(meshes.size());
 		auto &meshList = meshes;
 
         // debug info

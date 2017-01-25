@@ -549,7 +549,7 @@ namespace Boolean
                             PlaneLine line(triangle->supportingPlane(), pbi_itrs[i]->vertPlane);
                             for (int j = 0; j < insct_count[i]; ++j)
                             {
-                                XR_assert(line.dot(insct_item_slots[2 * i + j].plane) > 0);
+                                assert(line.dot(insct_item_slots[2 * i + j].plane) > 0);
                                 pbi_search_result->second->points.
                                     push_back(insct_item_slots[2*i+j]);
                             }

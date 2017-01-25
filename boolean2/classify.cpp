@@ -261,6 +261,7 @@ namespace Boolean
             }
         }
     }
+    Relation transformRelation(Relation x, bool inverse);
 
     void doClassification(Octree* pOctree, CSGTree<RegularMesh>* pCSG,
         std::vector<RegularMesh*>& meshList, RegularMesh* result,
@@ -303,6 +304,7 @@ namespace Boolean
                     tmpSeed.edgeId = *seedV.edges_local().begin();
                     calcFirstSeed(seedId, tmpSeed, nMesh);
                     ++seed_count;
+                    --iface;
                 }
                 else
                 {
@@ -352,7 +354,19 @@ namespace Boolean
                     if (inverse)
                         inversePair.first = result->faces().size();
 
-                    //bool seedFlag = true;
+                    // compress the original tree
+                    std::vector<int> itstPrims;
+                    pMem->adj_graph->getIntersectPrimitives(curMeshId, itstPrims);
+
+                    CSGTreeNode* tree_thiz = copy2(tree->pRoot, curTreeLeaves);
+                    bool init_tree_thiz = false;
+                    Relation meshRel = REL_NOT_AVAILABLE;
+
+                    if (meshRel == REL_SAME)
+                    {
+                        XLOG_WARNING << "Skip mesh due to early rejection: " << curMeshId;
+                    }
+
                     while (!intraQueue.empty())
                     {
                         curSeed = intraQueue.front();
@@ -360,8 +374,6 @@ namespace Boolean
 
                         if (curSeed.pFace->mark == VISITED)
                             continue;
-
-                        CSGTreeNode* tree0 = copy2(tree->pRoot, curTreeLeaves);
 
                         try
                         {
@@ -375,13 +387,34 @@ namespace Boolean
                                 continue;
                             }
                         }
-                        //if (seedFlag) seedFlag = false; // only for debug use
+                        
+                        if (!init_tree_thiz)
+                        {
+                            for (size_t id = 0; id < nMesh; id++)
+                                curTreeLeaves[id]->relation = transformRelation(relTab[id], meshList[id]->inverse());
 
-                        relation = ParsingCSGTree(meshList[curMeshId], relTab.data(),
-                            nMesh, tree0, curTreeLeaves, dummyForest);
-                        assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
+                            for (size_t id : itstPrims)
+                                curTreeLeaves[id]->relation = REL_UNKNOWN;
+                            meshRel = CompressCSGNodeIteration(tree_thiz);
+                            init_tree_thiz = true;
+                        }
 
-                        added = (relation == REL_SAME);
+                        bool added = false;
+                        if (meshRel == REL_NOT_AVAILABLE)
+                        {
+                            memset(curTreeLeaves, 0, sizeof(CSGTreeNode*)*nMesh);
+                            CSGTreeNode* tree0 = copy2(tree_thiz, curTreeLeaves);
+
+                            relation = ParsingCSGTree(meshList[curMeshId], relTab.data(),
+                                nMesh, tree0, curTreeLeaves, dummyForest);
+                            assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
+                            added = (relation == REL_SAME);
+                        }
+                        else
+                        {
+                            added = (meshRel == REL_SAME);
+                        }
+
                         faceQueue.push(curSeed.pFace);
                         while (!faceQueue.empty())
                         {
@@ -477,6 +510,8 @@ namespace Boolean
                             }
                         }
                     } // loop inseed mesh
+
+                    SAFE_DELETE(tree_thiz);
 
                     if (inverse)
                     {

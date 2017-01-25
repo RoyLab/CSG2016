@@ -7,6 +7,7 @@
 #include "preps.h"
 #include "global.h"
 #include "RegularMesh.h"
+#include "UndirectedGraph.hpp"
 
 namespace Boolean
 {
@@ -35,6 +36,21 @@ namespace Boolean
         //std::vector<EdgeIndex> edges;
     };
 
+    class AdjacentGraph :
+        public XR::UndirectedGraph<bool>
+    {
+    public:
+        AdjacentGraph(size_t n) :XR::UndirectedGraph<bool>(n) {}
+        void getIntersectPrimitives(int meshId, std::vector<int>& prims)
+        {
+            for (size_t i = 0; i < m_sz; i++)
+            {
+                if (getValue(meshId, i))
+                    prims.push_back(i);
+            }
+        }
+    };
+
     class GlobalData
     {
     public:
@@ -46,6 +62,8 @@ namespace Boolean
         std::deque<MyEdge>         edges;
         std::deque<MyVertex>       vertices;
         std::vector<RegularMesh*>   meshes;
+
+        std::unique_ptr<AdjacentGraph> adj_graph;
 
         CsgOption                   options;
         CsgResult                   results;
