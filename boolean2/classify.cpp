@@ -24,6 +24,8 @@ namespace Boolean
         IPolygon* pFace = nullptr;
         AutoPtr<IIndicatorVector> eIndicators;
 
+        std::shared_ptr<std::vector<Relation>> orig_indicators;
+
         SSeed() {}
         SSeed(const SSeed& other) { *this = other; }
         SSeed& operator=(const SSeed& other);
@@ -282,7 +284,6 @@ namespace Boolean
         std::pair<uint32_t, uint32_t> inversePair;
         Relation relation = REL_NOT_AVAILABLE;
         TestTree dummyForest;
-        std::vector<Relation> relTab(nMesh);
         std::vector<EdgeIndex> edges;
 
         int seed_count = 0;
@@ -334,6 +335,7 @@ namespace Boolean
                     XLOG_DEBUG << "new seed " << seed_count;
                 }
 
+                tmpSeed.orig_indicators.reset(); // reset original inds because it is seed
                 interQueue.push(tmpSeed);
                 tmpSeed.pFace->mark = SEEDED0;
                 assert(tmpSeed.pFace->isValid());
@@ -366,6 +368,7 @@ namespace Boolean
                     {
                         XLOG_WARNING << "Skip mesh due to early rejection: " << curMeshId;
                     }
+                    std::shared_ptr<std::vector<Relation>> relTab;
 
                     while (!intraQueue.empty())
                     {
@@ -375,9 +378,45 @@ namespace Boolean
                         if (curSeed.pFace->mark == VISITED)
                             continue;
 
+                        if (curSeed.orig_indicators)
+                        {
+                            const std::vector<Relation>& orig_rels = *curSeed.orig_indicators.get();
+                            for (int i = 0; i < nMesh; i++)
+                            {
+                                Indicator tmpInd = REL_NOT_AVAILABLE;
+                                switch (orig_rels[i])
+                                {
+                                case REL_SAME:
+                                case REL_OPPOSITE:
+                                    curSeed.eIndicators->at(i) = REL_ON_BOUNDARY;
+                                    break;
+                                default:
+                                    curSeed.eIndicators->at(i) = orig_rels[i];
+                                    break;
+                                }
+                            }
+
+                            MyEdge& thiz_edge = xedge(curSeed.edgeId);
+                            if (thiz_edge.neighbor)
+                            {
+                                for (auto& nInfo : *thiz_edge.neighbor)
+                                    curSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
+                            }
+                            else
+                            {
+                                XLOG_ERROR << "There should be neigborhood.";
+                            }
+                            curSeed.orig_indicators.reset();
+                        }
+                        else
+                        {
+                            int a = 1;
+                        }
+
+                        relTab.reset(new std::vector<Relation>(nMesh));
                         try
                         {
-                            calcFaceIndicator(curSeed, relTab);
+                            calcFaceIndicator(curSeed, *relTab);
                         }
                         catch (int e)
                         {
@@ -391,7 +430,7 @@ namespace Boolean
                         if (!init_tree_thiz)
                         {
                             for (size_t id = 0; id < nMesh; id++)
-                                curTreeLeaves[id]->relation = transformRelation(relTab[id], meshList[id]->inverse());
+                                curTreeLeaves[id]->relation = transformRelation(relTab->at(id), meshList[id]->inverse());
 
                             for (size_t id : itstPrims)
                                 curTreeLeaves[id]->relation = REL_UNKNOWN;
@@ -405,7 +444,7 @@ namespace Boolean
                             memset(curTreeLeaves, 0, sizeof(CSGTreeNode*)*nMesh);
                             CSGTreeNode* tree0 = copy2(tree_thiz, curTreeLeaves);
 
-                            relation = ParsingCSGTree(meshList[curMeshId], relTab.data(),
+                            relation = ParsingCSGTree(meshList[curMeshId], relTab->data(),
                                 nMesh, tree0, curTreeLeaves, dummyForest);
                             assert(relation != REL_NOT_AVAILABLE || relation != REL_UNKNOWN);
                             added = (relation == REL_SAME);
@@ -452,32 +491,33 @@ namespace Boolean
 
                                         tmpSeed.edgeId = edges[i];
                                         tmpSeed.pFace = fItr.face();
+                                        tmpSeed.orig_indicators = relTab;
 
-                                        for (int i = 0; i < nMesh; i++)
-                                        {
-                                            Indicator tmpInd = REL_NOT_AVAILABLE;
-                                            switch (relTab[i])
-                                            {
-                                            case REL_SAME:
-                                            case REL_OPPOSITE:
-                                                tmpInd = REL_ON_BOUNDARY;
-                                                break;
-                                            default:
-                                                tmpInd = relTab[i];
-                                                break;
-                                            }
-                                            tmpSeed.eIndicators->at(i) = tmpInd;
-                                        }
+                                        //for (int i = 0; i < nMesh; i++)
+                                        //{
+                                        //    Indicator tmpInd = REL_NOT_AVAILABLE;
+                                        //    switch (relTab[i])
+                                        //    {
+                                        //    case REL_SAME:
+                                        //    case REL_OPPOSITE:
+                                        //        tmpInd = REL_ON_BOUNDARY;
+                                        //        break;
+                                        //    default:
+                                        //        tmpInd = relTab[i];
+                                        //        break;
+                                        //    }
+                                        //    tmpSeed.eIndicators->at(i) = tmpInd;
+                                        //}
 
-                                        for (auto& nInfo : *curEdge.neighbor)
-                                            tmpSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
+                                        //for (auto& nInfo : *curEdge.neighbor)
+                                        //    tmpSeed.eIndicators->at(nInfo.first) = REL_ON_BOUNDARY;
 
                                         if (fItr.face()->meshId() == curMeshId)
                                         {
                                             if (fItr.face()->mark < SEEDED1)
                                             {
                                                 tmpSeed.pFace->mark = SEEDED1;
-                                                intraQueue.push(tmpSeed);
+                                                intraQueue.push(tmpSeed); // copy constructor is overloaded
                                             }
                                         }
                                         else
@@ -485,7 +525,7 @@ namespace Boolean
                                             if (fItr.face()->mark < SEEDED0)
                                             {
                                                 tmpSeed.pFace->mark = SEEDED0;
-                                                interQueue.push(tmpSeed);
+                                                interQueue.push(tmpSeed); // copy constructor is overloaded
                                             }
                                         }
                                     }
@@ -529,6 +569,7 @@ namespace Boolean
     {
         edgeId = other.edgeId;
         pFace = other.pFace;
+        orig_indicators = other.orig_indicators;
 
         if (other.eIndicators->getType() == IIndicatorVector::FULL)
             eIndicators.reset(new FullIndicatorVector(
